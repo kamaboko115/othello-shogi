@@ -1,0 +1,14 @@
+import {readFile,mkdir,writeFile,cp} from 'node:fs/promises';
+const out='.sites-runtime/release/dist';
+await mkdir(out+'/server',{recursive:true});await mkdir(out+'/.openai/drizzle/meta',{recursive:true});
+const assets={};for(const name of ['index.html','style.css','app.js','engine.js','sound.js','ai.js','ai-worker.js','ai-client.js','move-effect.js','flip-light.js','fonts/OFL-MPLUSRounded1c.txt'])assets['/'+name]=await readFile('dist/'+name,'utf8');assets['/']=assets['/index.html'];
+const binary={};for(const name of ['tutorial.mp4','tutorial-poster.jpg','fonts/title-mplus-rounded.woff2'])binary['/'+name]=(await readFile('dist/'+name)).toString('base64');
+const engine=await readFile('dist/engine.js','utf8');const apiSource=(await readFile('worker/api.js','utf8')).replace(/^import .*;\r?\n/gm,'');
+const worker=engine+'\n'+apiSource+'\nconst assets='+JSON.stringify(assets)+';\nconst binary='+JSON.stringify(binary)+';\n'+`export default {async fetch(request,env){const path=new URL(request.url).pathname;if(path.startsWith('/api/'))return api(request,env);if(binary[path]){const bytes=Uint8Array.from(atob(binary[path]),c=>c.charCodeAt(0));const headers={'Content-Type':path.endsWith('.mp4')?'video/mp4':path.endsWith('.woff2')?'font/woff2':'image/jpeg','Accept-Ranges':'bytes','Cache-Control':'no-cache'};let start=0,end=bytes.length-1,status=200;const range=request.headers.get('Range');if(range){const match=/^bytes=([0-9]+)-([0-9]*)$/.exec(range);if(!match)return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+bytes.length}});start=Number(match[1]);end=match[2]?Math.min(Number(match[2]),end):end;if(start>end)return new Response(null,{status:416,headers:{'Content-Range':'bytes */'+bytes.length}});status=206;headers['Content-Range']='bytes '+start+'-'+end+'/'+bytes.length;}headers['Content-Length']=String(end-start+1);return new Response(request.method==='HEAD'?null:bytes.slice(start,end+1),{status,headers});}const body=assets[path];if(body===undefined)return new Response('Not found',{status:404});const type=path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':'text/html';return new Response(request.method==='HEAD'?null:body,{headers:{'Content-Type':type+'; charset=utf-8','Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});}};`;
+await writeFile(out+'/server/index.js',worker);
+// Also expose the standard entrypoint used by the Sites packaging workflow.
+await mkdir('dist/server',{recursive:true});
+await writeFile('dist/server/index.js',worker);
+await cp('.openai/hosting.json',out+'/.openai/hosting.json');
+await cp('drizzle',out+'/.openai/drizzle',{recursive:true});
+console.log('Worker and migrations built: '+out);
