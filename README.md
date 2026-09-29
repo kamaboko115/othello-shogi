@@ -2,7 +2,7 @@
 
 将棋に「挟むと敵駒が味方になる」ルールを加えたWebゲーム。
 
-[ゲームを遊ぶ](https://othello-shogi.yuki-s-115.workers.dev/)
+[ゲームを遊ぶ](https://othello-shogi.oshogi-games.workers.dev/)
 
 ## ルール
 - 移動・駒打ちの直後、縦横斜め8方向で隙間なく挟んだ敵駒を反転。成りと位置を維持します。
