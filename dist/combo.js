@@ -7,8 +7,8 @@ export async function runSword(board,square,signal){
  layer.className='sword-impact';layer.setAttribute('aria-hidden','true');layer.style.left=b.left-r.left+b.width/2+'px';layer.style.top=b.top-r.top+b.height/2+'px';
  const sword='<svg viewBox="0 0 120 320"><path fill="#172432" stroke="#d6e6eb" stroke-width="2" d="M53 9L60 2 67 9 65 60H55Z"/><path fill="#b98938" d="M54 16H66V21H54ZM54 30H66V35H54ZM54 44H66V49H54Z"/><path fill="#d7ad5d" stroke="#fff0bf" stroke-width="1.5" d="M12 61L46 68 60 60 74 68 108 61 97 79 71 82 60 94 49 82 23 79Z"/><path fill="#26394a" stroke="#d7eef7" stroke-width="2" d="M48 85L60 96 72 85 69 259 60 312 51 259Z"/><path fill="#e2f6ff" d="M60 97L68 90 65 255 60 300Z"/><path fill="#8babc1" d="M52 90L60 97V300L55 255Z"/><path fill="#fff" d="M59 105H61V283L60 303Z"/><path fill="#b3ffff" stroke="#fff" d="M60 65L66 75 60 85 54 75Z"/></svg>';
  layer.innerHTML='<span class="blade-column"></span><span class="hero-blade">'+sword+'</span><span class="blade-flash"></span><span class="blade-wave"></span><span class="blade-wave second"></span>'+Array.from({length:10},(_,i)=>'<i class="blade-spark" style="--angle:'+i*36+'deg;--reach:'+(45+i%3*14)+'px"></i>').join('');
- board.append(layer);let timer;
- try{await new Promise(resolve=>{const done=()=>{clearTimeout(timer);signal?.removeEventListener('abort',done);resolve();};timer=setTimeout(done,950);signal?.addEventListener('abort',done,{once:true});if(signal?.aborted)done();});}finally{layer.remove();}
+ board.append(layer);const stopSound=playSwordSound(signal);let timer;
+ try{await new Promise(resolve=>{const done=()=>{clearTimeout(timer);signal?.removeEventListener('abort',done);resolve();};timer=setTimeout(done,950);signal?.addEventListener('abort',done,{once:true});if(signal?.aborted)done();});}finally{stopSound();layer.remove();}
 }
 export function slidingMove(before,after){
  if(after.ply!==before.ply+1)return null;
@@ -80,7 +80,7 @@ export function shakeScreen(root,signal,strong=false){
  const anim=target.animate([{transform:'translate(0,0)'},{transform:`translate(${-amount}px,2px)`},{transform:`translate(${amount}px,-3px)`},{transform:`translate(${-amount*.65}px,1px)`},{transform:`translate(${amount*.35}px,-1px)`},{transform:'translate(0,0)'}],{duration:220,easing:'ease-out'});
  const cancel=()=>anim.cancel();signal?.addEventListener('abort',cancel,{once:true});anim.finished.catch(()=>{}).finally(()=>signal?.removeEventListener('abort',cancel));return anim;
 }
-import {playComboSound,quietComboSounds,playComboImpact,playSmallComboFinish,playFireworks,fireworkInterval,playCaptureSound,playMoveSound} from './sound.js';
+import {playComboSound,quietComboSounds,playComboImpact,playSmallComboFinish,playFireworks,fireworkInterval,playCaptureSound,playMoveSound,playSwordSound} from './sound.js';
 export function capturedPiece(before,after){
  if(after.result||after.ply!==before.ply+1||after.last.length!==2)return null;
  const piece=before.board[after.last[1]];

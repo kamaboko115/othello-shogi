@@ -1,13 +1,15 @@
 import {paradoxSound} from './paradox.js';
 import {encodeBoard,decodeBoard} from './board-code.js';
 import {initial,empty,moves,play,label,collapseAfterMove} from './engine.js';
-import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide} from './combo.js';
+import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide,runSword} from './combo.js';
 import {moveEffects,runEffects,showVictory} from './move-effect.js';
 import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue} from './sound.js';
 export function initDeveloper(getCurrent){
  const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0;
  for(const side of [1,0]){const tray=document.createElement('div');tray.id='devHand'+side;tray.className='dev-capture-hand';tray.setAttribute('aria-label',side?'相手の駒台':'自分の駒台');$('devBoard').insertAdjacentElement(side?'beforebegin':'afterend',tray);}
  const six=document.createElement('option');six.value='6';six.textContent='6枚';$('devDemoCount').append(six);
+ const swordPreview=document.createElement('button');swordPreview.textContent='剣の演出を試す';$('devDemo').after(swordPreview);
+ swordPreview.onclick=async()=>{if(working)return;controller?.abort();controller=new AbortController();const current=controller;working=true;draw();try{await runSword($('devBoard'),40,current.signal);}finally{if(controller===current){working=false;draw();}}};
  state.moveLimit=false;state.paradoxAt=false;
  const copyCurrent=()=>{const current=getCurrent(),s=structuredClone(current.state);if(current.side===1){s.board.reverse();s.board.forEach(p=>{if(p)p.side=1-p.side;});s.hands.reverse();s.turn=1-s.turn;}return s;};
  const reset=(s,remember=true)=>{if(remember)history.push(structuredClone(state));controller?.abort();working=false;state=structuredClone(s);state.result='';state.flipped=[];state.last=[];state.moveLimit=false;state.paradoxAt=tutorial&&lesson===3?150:false;selected=null;$('devTurn').value=String(state.turn);draw();};
