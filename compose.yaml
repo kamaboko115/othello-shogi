@@ -1,0 +1,22 @@
+services:
+  app:
+    image: node:24-bookworm-slim
+    working_dir: /app
+    init: true
+    environment:
+      HOST: 0.0.0.0
+    ports:
+      - "127.0.0.1:4173:4173"
+    volumes:
+      - .:/app
+      - runtime:/app/.sites-runtime
+    command: node --watch server.mjs
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4173/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+volumes:
+  runtime:

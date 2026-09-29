@@ -18,6 +18,35 @@ AI対局（4段階）、友人との招待リンク対局、振り駒、合意�
 全難易度で0.5／1／3／5秒の思考時間に対応し、Web Workerで探索します。
 
 ## 開発環境
+
+### Dockerで開発する（推奨）
+
+Docker Desktop（Linuxコンテナ）とDocker Composeがあれば、PCへのNode.jsインストールは不要です。リポジトリのルートで実行してください。
+
+```sh
+docker compose up -d --wait
+```
+
+初回はNode.js 24のイメージを取得します。起動後は http://127.0.0.1:4173 を開いてください。このPCからアクセスできます。
+ソースはPC上のファイルを共有します。画面のHTML・CSS・JavaScriptの変更はブラウザの再読み込みで反映し、サーバーが読み込むコードの変更はNode.jsのwatch機能で自動再起動します。変更が反映されない場合は `docker compose restart app` を実行してください。
+
+```sh
+# 起動中のコンテナでテスト・ビルド
+docker compose exec app npm test
+docker compose exec app npm run build
+
+# ログの確認
+docker compose logs -f app
+
+# 停止・コンテナの削除（対局データは保持）
+docker compose down
+```
+
+対局データはDockerの名前付きボリューム `runtime` 内の `/app/.sites-runtime/rooms.sqlite` に保存します。PC側の `.sites-runtime/rooms.sqlite` とは別のデータです。`docker compose down -v` は対局データも削除するため、初期化したい場合だけ使用してください。
+ビルド結果はコンテナ内の `.sites-runtime/release/dist` と、PC側にも共有される `dist/server/index.js` に生成されます。
+
+### Node.jsを直接使う
+
 Node.js 24以降。外部npmパッケージは不要です。
 
 ```sh
