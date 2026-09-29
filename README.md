@@ -28,7 +28,12 @@ node build.mjs
 
 起動後は http://127.0.0.1:4173 を開いてください。ローカル対局データは .sites-runtime/rooms.sqlite に保存されます。
 オンライン公開にはAPIと永続DBを動かすホストが必要です。GitHub Pagesだけではオンライン対局は動きません。
-Sitesへ新規配信する場合は自身のプロジェクトを作り、.openai/hosting.jsonに自身のproject_idを設定してください。
+
+## 公開と共同開発
+
+GitHubの `main` をCloudflare Workers Buildsに接続しています。Pull Requestを確認して `main` に取り込むと、Cloudflareがビルドして新しい版を公開します。ビルドコマンドは `npm run build`、デプロイコマンドは `npx wrangler deploy` です。D1データベース `othello-shogi-db` は `DB` に割り当て、初期スキーマは `drizzle/0000_rooms.sql` にあります。設定は `wrangler.jsonc` を参照してください。
+
+変更前に `npm test` と `npm run build` を実行してください。ローカルでは `npm start` で遊べます。既存のChatGPT Sites版は別の公開先で、Cloudflareへ対局データは自動移行しません。
 
 ## 著作権
 Copyright (c) 2026 kamaboko. All rights reserved.

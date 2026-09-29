@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  "name": "othello-shogi",
+  "main": "dist/server/index.js",
+  "compatibility_date": "2026-09-29",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "othello-shogi-db",
+      "database_id": "c09ec12d-aec3-4118-b3cb-de717980a157",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}
