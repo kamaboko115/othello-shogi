@@ -3,7 +3,7 @@ import {moves} from './engine.js';
 // Search never blocks the UI or holds an HTTP request open. The main thread
 // enforces the budget and retains the last completed search's legal move.
 export function startAI(state,level,thinkMs){
- const budget=['strong','expert'].includes(level)&&[500,1000,3000,5000].includes(thinkMs)?thinkMs:1000;
+ const budget=[500,1000,3000,5000].includes(thinkMs)?thinkMs:1000;
  const started=performance.now();
  const sources=[...state.board.flatMap((p,i)=>p?.side===state.turn?[i]:[]),...Object.keys(state.hands[state.turn])];
  let best=null;

@@ -1,10 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {empty} from '../dist/engine.js';
-import {moveEffect} from '../dist/move-effect.js';
+import {moveEffect,moveEffects,runEffects,showVictory} from '../dist/move-effect.js';
+test('勝利表示は見る側に合わせる',()=>{globalThis.document={createElement:()=>({setAttribute(){},append(child){this.child=child;}})};const parent={append(){}};for(const side of [0,1]){const effect={text:(side===0?'先手':'後手')+'の勝ち'};assert.equal(showVictory(effect,side,parent).child.textContent,'YOU WIN');assert.equal(showVictory(effect,1-side,parent).child.textContent,'YOU LOSE');}});
 
 function checked(side){const s=empty();s.turn=side;s.board[4]={type:'K',side};s.board[76]={type:'K',side:1-side};s.board[22]={type:'R',side:1-side};return s;}
 test('通常の利きによる王手は先手・後手とも枚抜きより優先',()=>{for(const side of [0,1]){const s=checked(side);s.flipped=[30,31,32];assert.deepEqual(moveEffect(s),{kind:'check',text:'王手'});}});
-test('王手も反転もある勝利では勝利だけを表示',()=>{const s=checked(1);s.flipped=[30,31,32];for(const reason of ['王を反転','王を取った','81手判定']){s.result='先手の勝ち（'+reason+'）';assert.deepEqual(moveEffect(s),{kind:'victory',text:'先手の勝ち'});}});
+test('王手も反転もある勝利では勝利だけを表示',()=>{const s=checked(1);s.flipped=[30,31,32];for(const reason of ['王を反転','王を取った','60手判定']){s.result='先手の勝ち（'+reason+'）';assert.deepEqual(moveEffect(s),{kind:'victory',text:'先手の勝ち'});}});
 test('遮られた飛車の利きは王手にせず反転演出を表示',()=>{const s=checked(1);s.board[13]={type:'P',side:1};s.flipped=[30,31];assert.deepEqual(moveEffect(s),{kind:'flip',text:'2枚抜き'});s.flipped=[30];assert.equal(moveEffect(s),null);});
 test('引き分け終了後に王手や枚抜きを表示しない',()=>{const s=checked(0);s.flipped=[30,31];s.result='引き分け';assert.equal(moveEffect(s),null);});
+test('4枚以上は枚抜き・拍手・王手の順、3枚までは王手優先',()=>{for(const side of [0,1]){const s=checked(side);for(const count of [4,5,8]){s.flipped=Array.from({length:count},(_,i)=>30+i);assert.deepEqual(moveEffects(s),[{kind:'flip',text:count+'枚抜き'},{kind:'applause'},{kind:'check',text:'王手'}]);}s.flipped=[30,31,32];assert.deepEqual(moveEffects(s),[{kind:'check',text:'王手'}]);}});
+test('4枚以上でも勝利・引き分けが優先され、通常反転では拍手が続く',()=>{const s=checked(1);s.flipped=[30,31,32,33];s.result='先手の勝ち（王を反転）';assert.deepEqual(moveEffects(s),[{kind:'victory',text:'先手の勝ち'}]);s.result='引き分け';assert.deepEqual(moveEffects(s),[]);s.result='';s.board[13]={type:'P',side:1};assert.deepEqual(moveEffects(s),[{kind:'flip',text:'4枚抜き'},{kind:'applause'}]);});
+test('枚抜き表示中に拍手し、表示後は王手に進む。中断後は次の音を出さない',async()=>{const events=[],controller=new AbortController();await runEffects([{kind:'flip',text:'4枚抜き'},{kind:'applause'},{kind:'check',text:'王手'}],{signal:controller.signal,show:e=>{events.push(e.text);if(e.kind==='check')controller.abort();},hide:()=>events.push('hide'),applause:()=>events.push('clap'),victory:()=>events.push('win')});assert.deepEqual(events.slice(0,4),['4枚抜き','clap','hide','王手']);const cancelled=new AbortController();await runEffects([{kind:'flip',text:'4枚抜き'},{kind:'applause'}],{signal:cancelled.signal,show:()=>cancelled.abort(),hide:()=>{},applause:()=>assert.fail('中断後の拍手'),victory:()=>{}});});

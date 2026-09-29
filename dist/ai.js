@@ -8,7 +8,7 @@ const budgetError=new Error('AI budget');
 function terminal(s,side){
  if(!s.board.some(p=>p?.type==='K'&&p.side===side))return -WIN;
  if(!s.board.some(p=>p?.type==='K'&&p.side!==side))return WIN;
- if(s.moveLimit!==false&&s.ply>=81){const count=points(s);return Math.sign(count[side]-count[1-side])*900000;}
+ if(s.moveLimit!==false&&s.ply>=60){const count=points(s);return Math.sign(count[side]-count[1-side])*900000;}
  return null;
 }
 function attacks(s){
@@ -56,7 +56,7 @@ export function evaluateAI(s,side){
  }
  if(!s.noDrops)for(const n of [0,1])for(const [type,amount] of Object.entries(s.hands[n]))score[n]+=amount*VALUE[type]*.8;
  // Near the limit the actual board-only count matters more than piece value.
- if(s.moveLimit!==false){const weight=Math.max(0,s.ply-51)*16;score[0]+=count[0]*weight;score[1]+=count[1]*weight;}
+ if(s.moveLimit!==false){const weight=Math.max(0,s.ply-30)*16;score[0]+=count[0]*weight;score[1]+=count[1]*weight;}
  const flipScore=[0,0];
  if(s.mode)for(let anchor=0;anchor<81;anchor++){
  const p=s.board[anchor];if(!p)continue;const n=p.side;
@@ -122,13 +122,13 @@ function evaluateLegacy(s,side){
  }
  if(!s.noDrops)for(const n of [0,1])for(const [type,amount] of Object.entries(s.hands[n]))score[n]+=amount*VALUE[type]*.8;
  // Near the limit the actual board-only count matters more than piece value.
- if(s.moveLimit!==false){const weight=Math.max(0,s.ply-51)*16;score[0]+=count[0]*weight;score[1]+=count[1]*weight;}
+ if(s.moveLimit!==false){const weight=Math.max(0,s.ply-30)*16;score[0]+=count[0]*weight;score[1]+=count[1]*weight;}
  return score[side]-score[1-side];
 }
 
 export function chooseAI(s,level='normal',thinkMs=1000,onBest=()=>{},onStats=()=>{}){
  const evaluate=['strong','expert'].includes(level)?evaluateAI:evaluateLegacy;
- const started=performance.now(),budget=['strong','expert'].includes(level)&&[500,1000,3000,5000].includes(thinkMs)?thinkMs:level==='normal'?200:1000;
+ const started=performance.now(),budget=[500,1000,3000,5000].includes(thinkMs)?thinkMs:level==='normal'?200:1000;
  const deadline=started+budget;
  let nodes=0,completedDepth=0,best=null,root;
  const checkBudget=()=>{if(performance.now()>=deadline)throw budgetError;};

@@ -1,0 +1,34 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {initial} from '../dist/engine.js';
+import {startClock,clockBudget,chargeClock,finishClockMove,applyHandicap,normalizeTime} from '../dist/match-options.js';
+test('自由設定の加算と秒読みを併用、全0は無制限、加算のみ0分でも初手を確保',()=>{
+ const d={kind:'friend',settings:{timeControl:normalizeTime({minutes:1,increment:5,byoyomi:10})},state:initial()};startClock(d,0);
+ assert.equal(clockBudget(d,0,74000),1000);chargeClock(d,74000);d.state.turn=1;finishClockMove(d,0,74000);assert.equal(d.clock.remaining[0],5000);assert.equal(clockBudget(d,0,74000),15000);
+ d.settings.timeControl={minutes:0,increment:0,byoyomi:0};startClock(d,0);assert.equal(d.clock,null);
+ d.settings.timeControl={minutes:0,increment:2,byoyomi:0};startClock(d,0);assert.equal(d.clock.remaining[0],2000);
+ for(const value of [{minutes:31,increment:0,byoyomi:0},{minutes:1,increment:16,byoyomi:0},{minutes:1,increment:0,byoyomi:61},null])assert.throws(()=>normalizeTime(value));
+});
+import {api} from '../worker/api.js';import {localDB} from '../worker/local-db.js';
+test('切れ負け・毎手・加算・秒読みの境界と演出猶予',()=>{
+ for(const key of ['turn30','sudden3','fischer3','byo5']){
+  const d={kind:'friend',settings:{timeControl:key},state:initial()};startClock(d,1000);const base=d.clock.remaining[0];
+  assert.equal(clockBudget(d,0,5000),base+(key==='byo5'?30000:0));
+  chargeClock(d,7000);assert.equal(d.clock.remaining[0],base-1000);d.state.turn=1;finishClockMove(d,0,7000);
+  assert.equal(d.clock.remaining[0],key==='turn30'?base:key==='fischer3'?base+1000:base-1000);
+  assert.ok(d.clock.since>7000);assert.equal(clockBudget(d,1,7000),base+(key==='byo5'?30000:0));
+ }
+ const d={kind:'friend',settings:{timeControl:'byo0'},state:initial()};startClock(d,0);assert.equal(clockBudget(d,0,35000),0);chargeClock(d,34000);d.state.turn=1;finishClockMove(d,0,34000);assert.equal(clockBudget(d,0,34000),30000);
+});
+test('駒落ちは先後によらず作成者だけ、玉は残る',()=>{for(const side of [0,1])for(const [key,count] of [['none',20],['bishop',19],['rook',19],['two',18],['four',16],['six',14]]){const s=initial();applyHandicap(s,side,key);assert.equal(s.board.filter(p=>p?.side===side).length,count);assert.equal(s.board.filter(p=>p?.side===1-side).length,20);assert.equal(s.board.filter(p=>p?.type==='K').length,2);}});
+const h='a'.repeat(64),g='b'.repeat(64),invite='d'.repeat(64);
+async function call(db,path,token=h,body){const res=await api(new Request('https://test.local/api/rooms'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}),{DB:db});return {status:res.status,data:await res.json()};}
+test('時間切れはGETでも確定・遅い着手拒否・再試合で時計と作成者駒落ちを再設定',async()=>{const db=localDB();try{
+ let d=(await call(db,'',h,{invite,settings:{timeControl:'turn30',handicap:'six'}})).data;const path='/'+d.room;
+ assert.equal(d.clock,undefined);d=(await call(db,path+'/join',g,{invite})).data;
+ const hostSide=d.toss.hostSide;assert.equal(d.state.board.filter(p=>p?.side===hostSide).length,14);assert.equal(d.clock.remaining[0],30000);
+ const row=await db.prepare('SELECT * FROM rooms WHERE id = ?').bind(d.room).first(),raw=JSON.parse(row.data);raw.clock.since=Date.now()-31000;
+ await db.prepare('UPDATE rooms SET data = ? WHERE id = ?').bind(JSON.stringify(raw),d.room).run();
+ d=(await call(db,path,g)).data;assert.match(d.state.result,/後手の勝ち（時間切れ）/);assert.equal((await call(db,path+'/action',h,{action:'move',version:d.version,move:{from:54,to:45,prom:false}})).status,409);
+ d=(await call(db,path+'/action',h,{action:'offer-rematch',version:d.version})).data;d=(await call(db,path+'/action',g,{action:'accept-rematch',version:d.version})).data;
+ assert.equal(d.state.result,'');assert.equal(d.clock.remaining[0],30000);assert.ok(d.clock.since>Date.now());assert.equal(d.state.board.filter(p=>p?.side===d.toss.hostSide).length,14);
+ }finally{db.close();}});

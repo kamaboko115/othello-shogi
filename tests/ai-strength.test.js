@@ -28,9 +28,9 @@ test('自玉が狙われていても王反転での即勝利を優先',()=>{
  const s=base();s.board[4]=null;s.board[39]={type:'K',side:1};s.board[38]={type:'P',side:0};s.hands[0].G=1;s.board[67]={type:'R',side:1};
  const next=play(s,chooseAI(s,'expert',500));assert.match(next.result,/先手の勝ち.*王を反転/);
 });
-test('81手では駒の価値や持ち駒より盤上の枚数で勝つ手を選ぶ',()=>{
- const s=base();s.moveLimit=true;s.ply=80;s.board[49]={type:'G',side:0};s.board[39]={type:'P',side:1};s.board[38]={type:'P',side:1};s.board[37]={type:'P',side:0};s.hands[1].R=9;
- const next=play(s,chooseAI(s,'expert',500));assert.match(next.result,/先手の勝ち.*81手/);
+test('60手では駒の価値や持ち駒より盤上の枚数で勝つ手を選ぶ',()=>{
+ const s=base();s.moveLimit=true;s.ply=59;s.board[49]={type:'G',side:0};s.board[39]={type:'P',side:1};s.board[38]={type:'P',side:1};s.board[37]={type:'P',side:0};s.hands[1].R=9;
+ const next=play(s,chooseAI(s,'expert',500));assert.match(next.result,/先手の勝ち.*60手/);
 });
 test('探索は入力盤面を変更しない・深さの完了値を通知する',()=>{
  const s=initial(),before=structuredClone(s);let stats;const move=chooseAI(s,'expert',500,()=>{},value=>stats=value);
