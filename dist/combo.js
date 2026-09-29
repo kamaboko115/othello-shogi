@@ -5,17 +5,28 @@ export async function runSword(board,square,signal){
  const cell=board.querySelector(`[data-square="${square}"]`);if(!cell)return;
  const b=cell.getBoundingClientRect(),r=board.getBoundingClientRect(),layer=document.createElement('span');
  layer.className='sword-impact';layer.setAttribute('aria-hidden','true');layer.style.left=b.left-r.left+b.width/2+'px';layer.style.top=b.top-r.top+b.height/2+'px';
- layer.innerHTML='<span class="sword-halo"></span><svg class="falling-sword" viewBox="0 0 100 240"><path fill="#26385a" stroke="#b5edff" stroke-width="3" d="M43 8H57V53H43Z"/><path fill="#ffd66d" stroke="#fff3b0" stroke-width="3" d="M18 49L50 61L82 49L88 65L55 77H45L12 65Z"/><path fill="#dbf7ff" stroke="#68caff" stroke-width="3" d="M39 76H61L58 194L50 233L42 194Z"/><path fill="#fff" d="M49 77H53L50 223Z"/><circle cx="50" cy="61" r="9" fill="#ff58ce"/></svg><span class="sword-shock"></span>';
+ const sword='<svg viewBox="0 0 160 260"><path fill="#fff7be" stroke="#e5b748" stroke-width="2" d="M78 70Q36 8 3 54L38 52 12 66 47 61 25 80 61 67 78 85M82 70Q124 8 157 54L122 52 148 66 113 61 135 80 99 67 82 85"/><path fill="#bb7b12" stroke="#fff0a0" stroke-width="3" d="M73 5H87V62H73Z"/><path fill="#ffda66" stroke="#fff6ca" stroke-width="3" d="M45 61L80 71 115 61 122 78 91 90H69L38 78Z"/><path fill="#f5be3d" stroke="#fff6b7" stroke-width="3" d="M67 90H93L91 211 80 252 69 211Z"/><path fill="#fffbd7" d="M78 91H84L80 239Z"/><path fill="#ff9035" stroke="#fffbd7" stroke-width="2" d="M80 62L91 75 80 87 69 75Z"/></svg>';
+ layer.innerHTML='<span class="sword-halo"></span>'+[-1,0,1].map(n=>'<span class="royal-sword sword-'+n+'">'+sword+'</span>').join('')+'<span class="sword-shock"></span><span class="sword-shock echo"></span><span class="sword-rays"></span>';
  board.append(layer);let timer;
  try{await new Promise(resolve=>{const done=()=>{clearTimeout(timer);signal?.removeEventListener('abort',done);resolve();};timer=setTimeout(done,950);signal?.addEventListener('abort',done,{once:true});if(signal?.aborted)done();});}finally{layer.remove();}
 }
 export function slidingMove(before,after){
- if(after.ply!==before.ply+1||after.last.length!==2)return null;
+ if(after.ply!==before.ply+1)return null;
+ if(after.last.length===1){const to=after.last[0],p=after.board[to];return p&&!before.board[to]?{drop:true,to,major:['R','B'].includes(p.type)}:null;}
+ if(after.last.length!==2)return null;
  const [from,to]=after.last,p=before.board[from];
  return p?{from,to,major:['R','B'].includes(p.type),rainbow:['R','B'].includes(p.type)&&!!p.prom,promoting:!p.prom&&!!after.board[to]?.prom,beforeLabel:label(p)}:null;
 }
 export async function runSlide(move,board,signal){
  if(!move||signal?.aborted||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+ if(move.drop){
+  if(move.major){await runSword(board,move.to,signal);return;}
+  const cell=board.querySelector(`[data-square="${move.to}"]`);if(!cell)return;
+  const b=cell.getBoundingClientRect(),r=board.getBoundingClientRect(),ring=document.createElement('span');
+  ring.className='drop-ring';ring.setAttribute('aria-hidden','true');ring.style.cssText=`left:${b.left-r.left+b.width/2}px;top:${b.top-r.top+b.height/2}px;width:${b.width}px;height:${b.height}px;`;board.append(ring);
+  const anim=ring.animate([{opacity:0,transform:'translate(-50%,-50%) scale(.2)'},{offset:.25,opacity:1},{opacity:0,transform:'translate(-50%,-50%) scale(1.5)'}],{duration:280,easing:'ease-out'}),abort=()=>anim.cancel();signal?.addEventListener('abort',abort,{once:true});
+  try{await anim.finished.catch(()=>{});}finally{signal?.removeEventListener('abort',abort);anim.cancel();ring.remove();}return;
+ }
  const from=board.querySelector(`[data-square="${move.from}"]`),to=board.querySelector(`[data-square="${move.to}"]`),piece=to?.querySelector('.piece');
  if(!from||!piece)return;
  const a=from.getBoundingClientRect(),b=to.getBoundingClientRect(),r=board.getBoundingClientRect(),dx=a.left-b.left,dy=a.top-b.top,duration= Math.min(480,260+Math.hypot(dx,dy)*.4),rotation=piece.classList.contains('enemy')?' rotate(180deg)':'',animations=[],nodes=[],oldZ=to.style.zIndex;
