@@ -2,8 +2,11 @@
 let context,flipBufferPromise=Promise.resolve(null);
 const shogiUrl='https://taira-komori.net/sound/playing01/Shogi3.mp3';
 let shogiSample;
+function prepareShogi(){try{if(shogiSample)return;shogiSample=new Audio(shogiUrl);shogiSample.preload='auto';shogiSample.load();}catch{}}
+window.addEventListener('pointerdown',prepareShogi,{once:true,passive:true});
+window.addEventListener('keydown',prepareShogi,{once:true});
 function playShogi(rate=1,volume=.7){
- try{shogiSample ||= new Audio(shogiUrl);shogiSample.preload='auto';const sound=shogiSample.cloneNode();sound.playbackRate=rate;sound.volume=volume;sound.play().catch(()=>tone(700,.06));}
+ try{if(!shogiSample)prepareShogi();const sound=rate===1?shogiSample:shogiSample.cloneNode();if(sound===shogiSample)sound.currentTime=0;sound.playbackRate=rate;sound.volume=volume;sound.play().catch(()=>tone(700,.06));}
  catch{tone(700,.06);}
 }
 function prepare(){try{context ||= new (window.AudioContext||window.webkitAudioContext)();if(context.state==='suspended')context.resume().catch(()=>{});}catch{}}
