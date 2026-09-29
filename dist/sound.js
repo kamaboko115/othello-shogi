@@ -1,9 +1,15 @@
-// GitHub edition: synthesized effects; original third-party recordings are omitted.
+// Load Shogi3 from its creator at runtime; do not redistribute the audio file.
 let context,flipBufferPromise=Promise.resolve(null);
+const shogiUrl='https://taira-komori.net/sound/playing01/Shogi3.mp3';
+let shogiSample;
+function playShogi(rate=1,volume=.7){
+ try{shogiSample ||= new Audio(shogiUrl);shogiSample.preload='auto';const sound=shogiSample.cloneNode();sound.playbackRate=rate;sound.volume=volume;sound.play().catch(()=>tone(700,.06));}
+ catch{tone(700,.06);}
+}
 function prepare(){try{context ||= new (window.AudioContext||window.webkitAudioContext)();if(context.state==='suspended')context.resume().catch(()=>{});}catch{}}
 function tone(freq,duration){prepare();if(!context||context.state!=='running')return;const o=context.createOscillator(),g=context.createGain(),at=context.currentTime;o.type='triangle';o.frequency.setValueAtTime(freq,at);o.frequency.exponentialRampToValueAtTime(freq*.45,at+duration);g.gain.setValueAtTime(.12,at);g.gain.exponentialRampToValueAtTime(.001,at+duration);o.connect(g);g.connect(context.destination);o.start(at);o.stop(at+duration);}
-export function playMoveSound(){tone(700,.06);}
-export function playMultiFlipSound(){tone(1000,.25);}
+export function playMoveSound(){playShogi();}
+export function playMultiFlipSound(){for(let i=0;i<3;i++)setTimeout(()=>playShogi(1+i*.14,.42),i*85);}
 export function playVictorySound(){
  prepare();if(!context||context.state!=='running')return;
  const start=context.currentTime;
@@ -83,6 +89,7 @@ export async function playComboSound(count){
  prepare();try{
   const buffer=await flipBufferPromise;if(!context||context.state!=='running')return;
   const semitones=Math.min(19,(count-1)*3),rate=2**(semitones/12);
+  playShogi(rate,.7);
   if(buffer){const sound=context.createBufferSource(),gain=context.createGain();sound.buffer=buffer;sound.playbackRate.value=rate;gain.gain.value=.7;sound.connect(gain);gain.connect(context.destination);rememberComboGain(gain);sound.start();}
   if(count<2)return;
   const base=440*rate,tones=count>=4?[1,1.25,1.5]:count===3?[1,2]:[1];

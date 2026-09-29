@@ -35,4 +35,4 @@ Copyright (c) 2026 kamaboko. All rights reserved.
 
 ソース公開は、利用・改変・再配布を自由に許可するオープンソースライセンスの付与を意味しません。法令・GitHub利用規約等で認められる範囲を除き、利用許諾はkamabokoにお問い合わせください。第三者素材は各提供元のライセンスに従います。
 
-詳しくはLICENSEとTHIRD_PARTY_NOTICES.mdを参照してください。GitHub版の効果音は合成音で、公開ゲームの効果音とは異なります。
+詳しくはLICENSEとTHIRD_PARTY_NOTICES.mdを参照してください。駒を指す音は作者のサイトから再生します。ネット接続がないときは合成音に切り替わります。
