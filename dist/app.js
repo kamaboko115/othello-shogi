@@ -1,3 +1,4 @@
+import {paintCollapse} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget} from './match-options.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide} from './combo.js';
@@ -29,10 +30,8 @@ let autoHelperAttempt=null;
 let aiJob=null,aiTiming=null,helperJob=null,helperDeparting=false,helperLingering=false,helperIdea=false,helperFarewell=false,helperIdeaTimer=null;
 let collapseEffect=null,collapseTimer=null,removeParadoxBanner=null;
 function cancelCollapse(){clearTimeout(collapseTimer);removeParadoxBanner?.();removeParadoxBanner=null;collapseEffect=null;}
-function paintCollapse(){
- if(!collapseEffect)return;
- const d=collapseEffect.destroyed,cell=document.querySelector('[data-square="'+d.square+'"]');if(!cell)return;
- const e=document.createElement('span');e.className='piece paradox-ghost'+(d.piece.side!==(online?.side??0)?' enemy':'')+(collapseEffect.breaking?' paradox-breaking':'');e.textContent=label(d.piece);cell.append(e);
+function paintLastCollapse(){
+ paintCollapse($('board'),collapseEffect?.destroyed||state.destroyed,{perspective:online?.side??0,phase:collapseEffect?(collapseEffect.breaking?'breaking':'waiting'):'ash'});
 }
 function beginCollapse(next){
  cancelCollapse();collapseEffect={destroyed:next.destroyed,breaking:false};
@@ -214,7 +213,7 @@ function render(){
  if(!online)$('furigoma').hidden=true;
  if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;$('tossCoins').replaceChildren(...online.toss.coins.map((face,i)=>{const el=document.createElement('span');el.className='toss-piece';el.textContent=face?'歩':'と';el.style.animationDelay=(i*.1)+'s';return el;}));$('tossResult').textContent='歩 '+online.toss.coins.filter(Boolean).length+'枚・と '+online.toss.coins.filter(v=>!v).length+'枚。あなたは'+side(online.side)+'です。';$('furigoma').hidden=false;}}
 
- paintCollapse();syncAI();
+ paintLastCollapse();syncAI();
 }
 function select(src){if(!canAct())return;selected=selected===src?null:src;legal=selected===null?[]:moves(state,selected);message=selected===null?'駒を選んで、移動先をクリック。':legal.length?'緑の印のマスへ移動できます。':'この駒は今、動かせません。';render();}
 function click(i){if(!canAct())return;const choices=legal.filter(m=>m.to===i);if(choices.length>1){pending=choices;$('promotion').showModal();return;}if(choices.length){commit(choices[0]);return;}if(state.board[i]?.side===state.turn)select(i);else{selected=null;legal=[];message='自分の駒、または駒台の駒を選んでください。';render();}}
@@ -260,7 +259,7 @@ function adopt(data){
    }else{if(!state.destroyed&&!state.result){if(state.flipped.length)playMultiFlipSound();else playMoveSound();}finish();}
   }
  }
- if(changed||reconnected)render();else paintCollapse();syncAI();
+ if(changed||reconnected)render();else paintLastCollapse();syncAI();
 }
 async function poll(){
  clearTimeout(pollTimer);if(!online)return;const room=online.room,token=online.token;
@@ -282,7 +281,7 @@ function enter(data,token,invite){
 for(const [value,name] of Object.entries(handicapOptions)){const option=document.createElement('option');option.value=value;option.textContent=name;$('handicap').append(option);$('aiHandicap').append(option.cloneNode(true));}
 const explainTime=()=>{const unlimited=Number($('mainTime').value)===minuteSteps.length;$('incrementTime').disabled=$('byoyomiTime').disabled=unlimited;const minutes=minuteSteps[Number($('mainTime').value)],increment=Number($('incrementTime').value),byoyomi=byoyomiSteps[Number($('byoyomiTime').value)];for(const [id,out,value,unit] of [['mainTime','mainTimeValue',minutes,'分'],['incrementTime','incrementValue',increment,'秒'],['byoyomiTime','byoyomiValue',byoyomi,'秒']]){const text=id==='mainTime'&&unlimited?'無限':value+unit;$(out).textContent=text;$(id).setAttribute('aria-valuetext',text);}$('timeHelp').textContent=unlimited?'時間無制限':!minutes&&!increment&&!byoyomi?'時間制限なし（持ち時間の右端で「無限」を選べます）':(!increment&&!byoyomi?'持ち時間が切れたら負け。':`毎手＋${increment}秒 ／ 持ち時間の後は秒読み${byoyomi}秒。`)+(minutes===0&&increment>0&&byoyomi===0?' 初手も加算秒数から開始。':'');};
 for(const id of ['mainTime','incrementTime','byoyomiTime'])$(id).oninput=explainTime;explainTime();
-for(const id of ['chooseRules','openRulesAlways'])$(id).onclick=()=>$('rulesDialog').showModal();$('closeRules').onclick=()=>$('rulesDialog').close();
+for(const id of ['chooseRules','openRulesAlways','openRulesSettings'])$(id).onclick=()=>$('rulesDialog').showModal();$('closeRules').onclick=()=>$('rulesDialog').close();
 setInterval(()=>{for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock;if(el.hidden)continue;const now=Date.now()+clockOffset,ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}},100);
 const advancedOpen={ai:false,friend:false};
 function selectKind(kind){advancedOpen[selectedKind]=$('advancedSettings').open;selectedKind=kind;$('advancedSettings').open=advancedOpen[kind];render();}

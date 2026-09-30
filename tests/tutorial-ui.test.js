@@ -13,7 +13,7 @@ function view(){
   children=[];dataset={};style={};value='';open=false;events={};
   classList={add(){},remove(){},toggle(){}};
   set id(value){this._id=value;ids.set(value,this);} get id(){return this._id;}
-  setAttribute(){} append(...els){this.children.push(...els);}
+  setAttribute(){} getAttribute(){return null;} removeAttribute(){} querySelectorAll(){return [];} append(...els){this.children.push(...els);}
   replaceChildren(...els){this.children=els;}
   insertAdjacentElement(){} after(){} remove(){} getAnimations(){return [];}
   addEventListener(name,fn){this.events[name]=fn;}

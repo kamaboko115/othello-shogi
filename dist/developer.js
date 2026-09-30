@@ -1,3 +1,4 @@
+import {paintCollapse} from './collapse-view.js';
 import {lessons,lessonState,collapseReply} from './tutorial-lessons.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {paradoxSound} from './paradox.js';
@@ -7,14 +8,14 @@ import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShak
 import {moveEffects,runEffects,showVictory} from './move-effect.js';
 import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue} from './sound.js';
 export function initDeveloper(getCurrent){
- const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0,collapseTrial=0;
+ const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0,collapseTrial=0,collapsePhase='ash';
  for(const side of [1,0]){const tray=document.createElement('div');tray.id='devHand'+side;tray.className='dev-capture-hand';tray.setAttribute('aria-label',side?'相手の駒台':'自分の駒台');$('devBoardFrame').insertAdjacentElement(side?'beforebegin':'afterend',tray);}
  const six=document.createElement('option');six.value='6';six.textContent='6枚';$('devDemoCount').append(six);
  const swordPreview=document.createElement('button');swordPreview.textContent='剣の演出を試す';$('devDemo').after(swordPreview);
  swordPreview.onclick=async()=>{if(working)return;controller?.abort();controller=new AbortController();const current=controller;working=true;draw();try{await runSword($('devBoard'),40,current.signal);}finally{if(controller===current){working=false;draw();}}};
  state.moveLimit=false;state.paradoxAt=false;
  const copyCurrent=()=>{const current=getCurrent(),s=structuredClone(current.state);if(current.side===1){s.board.reverse();s.board.forEach(p=>{if(p)p.side=1-p.side;});s.hands.reverse();s.turn=1-s.turn;}return s;};
- const reset=(s,remember=true)=>{if(remember)history.push(structuredClone(state));controller?.abort();working=false;state=structuredClone(s);state.result='';state.flipped=[];state.last=[];state.moveLimit=false;state.paradoxAt=tutorial&&lessons[lesson].collapse?150:false;selected=null;$('devTurn').value=String(state.turn);draw();};
+ const reset=(s,remember=true)=>{if(remember)history.push(structuredClone(state));controller?.abort();working=false;state=structuredClone(s);state.result='';state.flipped=[];state.last=[];state.moveLimit=false;state.paradoxAt=tutorial&&lessons[lesson].collapse?150:false;collapsePhase='ash';selected=null;$('devTurn').value=String(state.turn);draw();};
  function draw(){
   document.querySelectorAll('#developerDialog select,#developerDialog input,.dev-buttons button').forEach(el=>el.disabled=working);
   $('devUndo').disabled=working||!history.length;
@@ -27,6 +28,7 @@ export function initDeveloper(getCurrent){
   $('lessonProgress').hidden=!tutorial||!lessons[lesson].collapse;$('lessonProgress').textContent='崩壊 '+collapseTrial+' / '+(lessons[lesson].collapseSequence?.length||0);
   const board=$('devBoard');board.replaceChildren();const legal=selected===null?[]:moves(state,selected);
   for(let i=0;i<81;i++){const b=document.createElement('button'),p=state.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(tutorial&&!working&&i===(lessons[lesson].move.from??lessons[lesson].move.to)&&state.ply===(lessons[lesson].collapse?149:0))b.classList.add('tutorial-hint');b.dataset.square=i;b.disabled=working;b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き'));if(p){const el=document.createElement('span');el.className='piece'+((working&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'');el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
+  paintCollapse(board,state.destroyed,{phase:collapsePhase});
  }
  async function click(i){
   if(working)return;
@@ -51,13 +53,13 @@ export function initDeveloper(getCurrent){
     const choices=state.board.flatMap((p,i)=>p?[i]:[]),preferred=lessons[lesson].collapseSequence?.[collapseTrial],picked=choices.indexOf(preferred);
     collapseAfterMove(state,()=>picked>=0?picked:0);collapseTrial++;
     if(!state.destroyed)return;
+    collapsePhase='waiting';draw();
     const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':'穴熊の守りから1枚壊れます';$('devBoard').append(note);
     try{
      if(state.paradoxStarted){paradoxSound(true);await wait(3000);}
      if(current.signal.aborted)return;
-     const cell=$('devBoard').querySelector('[data-square="'+state.destroyed.square+'"] .piece'),base=state.destroyed.piece.side?180:0;paradoxSound(false);
-     const animation=cell?.animate([{opacity:1,transform:'scale(1) rotate('+base+'deg)'},{opacity:.7,transform:'scale(1.25) rotate('+(base+12)+'deg)'},{opacity:0,transform:'scale(.1) rotate('+(base-20)+'deg)'}],{duration:600,fill:'forwards'});
-     try{await wait(600);}finally{animation?.cancel();}
+     paradoxSound(false);collapsePhase='breaking';paintCollapse($('devBoard'),state.destroyed,{phase:collapsePhase});
+     await wait(600);collapsePhase='ash';
     }finally{note.remove();}
     draw();
    };
