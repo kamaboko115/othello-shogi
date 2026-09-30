@@ -20,7 +20,7 @@ export function slidingMove(before,after){
 export async function runSlide(move,board,signal){
  if(!move||signal?.aborted||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  if(move.drop){
-  if(move.major){await runSword(board,move.to,signal);return;}
+  if(move.major){await runMajorDrop(board,move.to,signal);return;}
   const cell=board.querySelector(`[data-square="${move.to}"]`);if(!cell)return;
   const b=cell.getBoundingClientRect(),r=board.getBoundingClientRect(),ring=document.createElement('span');
   ring.className='drop-ring';ring.setAttribute('aria-hidden','true');ring.style.cssText=`left:${b.left-r.left+b.width/2}px;top:${b.top-r.top+b.height/2}px;width:${b.width}px;height:${b.height}px;`;board.append(ring);
@@ -61,15 +61,33 @@ export async function runSlide(move,board,signal){
     if(signal?.aborted)return;
     piece.textContent=finalLabel;piece.classList.toggle('prom',wasProm);
     const turn=piece.animate([{transform:`${rotation} rotateY(0deg) scale(1)`},{offset:.5,transform:`${rotation} rotateY(180deg) scale(${move.major?1.4:1.16})`,filter:move.major?'brightness(1.7) drop-shadow(0 0 12px #ffe780)':'brightness(1.2)'},{transform:`${rotation} rotateY(360deg) scale(1)`}],{duration:move.major?600:400,easing:'ease-in-out'});animations.push(turn);
-    if(move.major)for(let i=0;i<16;i++){
-     const dot=document.createElement('span');dot.className='slide-spark';dot.style.cssText=`left:${b.left-r.left+b.width/2}px;top:${b.top-r.top+b.height/2}px;background:hsl(${i*22.5} 100% 75%);color:hsl(${i*22.5} 100% 75%)`;
-     const angle=i*Math.PI/8,reach=b.width*.95;
-     add(dot,[{opacity:0,transform:'translate(0,0) scale(.2)'},{offset:.2,opacity:1},{opacity:0,transform:`translate(${Math.cos(angle)*reach}px,${Math.sin(angle)*reach}px) scale(.1)`}],{duration:500,delay:100,fill:'both'});
-    }
     await Promise.all(animations.slice(promotionStart).map(a=>a.finished.catch(()=>{})));
    }
   }finally{signal?.removeEventListener('abort',abort);}
  }finally{animations.forEach(a=>a.cancel());nodes.forEach(n=>n.remove());piece.textContent=finalLabel;piece.classList.toggle('prom',wasProm);to.style.zIndex=oldZ;}
+}
+async function runMajorDrop(board,square,signal){
+ const cell=board.querySelector(`[data-square="${square}"]`);if(!cell||signal?.aborted)return;
+ const b=cell.getBoundingClientRect(),r=board.getBoundingClientRect(),nodes=[],animations=[];
+ const add=(className,frames,options,extra='')=>{
+  const node=document.createElement('span');node.className=className;node.setAttribute('aria-hidden','true');
+  node.style.cssText=`left:${b.left-r.left+b.width/2}px;top:${b.top-r.top+b.height/2}px;width:${b.width}px;height:${b.height}px;${extra}`;
+  board.append(node);nodes.push(node);animations.push(node.animate(frames,options));
+ };
+ const abort=()=>animations.forEach(animation=>animation.cancel());signal?.addEventListener('abort',abort,{once:true});
+ try{
+  for(const angle of [0,90])add('drop-ring major-drop-wave',[
+   {opacity:0,transform:`translate(-50%,-50%) rotate(${angle}deg) scale(.15,.15)`},
+   {offset:.15,opacity:1,transform:`translate(-50%,-50%) rotate(${angle}deg) scale(.7,.35)`},
+   {opacity:0,transform:`translate(-50%,-50%) rotate(${angle}deg) scale(3,.8)`}
+  ],{duration:440,easing:'cubic-bezier(.12,.65,.25,1)',fill:'both'});
+  // Optional accent: separate sparks, removable without changing the shockwave.
+  for(let i=0;i<8;i++){
+   const angle=i*Math.PI/4,reach=b.width*(i%2?.7:1.2);
+   add('major-drop-spark',[{opacity:0,transform:'translate(-50%,-50%) scale(.3)'},{offset:.2,opacity:1},{offset:.65,opacity:1},{opacity:0,transform:`translate(calc(-50% + ${Math.cos(angle)*reach}px),calc(-50% + ${Math.sin(angle)*reach}px)) scale(.3)`}],{duration:560,delay:90,fill:'both',easing:'ease-out'},'width:9px;height:9px;');
+  }
+  await Promise.all(animations.map(animation=>animation.finished.catch(()=>{})));
+ }finally{signal?.removeEventListener('abort',abort);animations.forEach(animation=>animation.cancel());nodes.forEach(node=>node.remove());}
 }
 export const isImpactPiece=piece=>!!piece&&(piece.prom||piece.type==='R'||piece.type==='B');
 export const flipNeedsShake=state=>state.flipped.length>=2||state.flipped.some(i=>isImpactPiece(state.board[i]));

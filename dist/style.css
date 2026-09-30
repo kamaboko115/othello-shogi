@@ -237,3 +237,5 @@ header .brand span{color:#254b40}
 @keyframes blade-flash{0%,38%{opacity:0;transform:scaleX(.1)}41%{opacity:1;transform:scaleX(1)}65%,100%{opacity:0;transform:scaleX(1.3)}}
 @keyframes blade-wave{0%,38%{opacity:0;transform:scale(.15)}43%{opacity:.95}100%{opacity:0;transform:scale(2.3)}}
 @keyframes blade-spark{0%,39%{opacity:0;transform:rotate(var(--angle)) translateY(0) scale(.2)}44%{opacity:1}100%{opacity:0;transform:rotate(var(--angle)) translateY(calc(-1 * var(--reach))) scale(.1)}}
+
+.major-drop-wave{border-color:#d4f7ff;box-shadow:0 0 10px #68dfff,inset 0 0 7px #fff9}.major-drop-spark{position:absolute;pointer-events:none;z-index:111;border-radius:50%;background:#fffbe5;box-shadow:0 0 5px 2px #fff4b5,0 0 13px 4px #ffbf38}

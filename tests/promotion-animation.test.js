@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 globalThis.window={addEventListener(){}};
 globalThis.matchMedia=()=>({matches:false});
-const {runSlide,slidingMove}=await import('../dist/combo.js');
+const {runSlide,slidingMove,runSword}=await import('../dist/combo.js');
 
 test('駒打ちは通常駒と大駒を分け、同じ局面の再受信では再生しない',()=>{
  const before={ply:8,board:Array(81).fill(null)};
@@ -17,7 +17,18 @@ test('剣の途中で閉じても演出が完了し装飾を片付ける',async(
  let removed=0;const rect={left:0,top:0,width:40,height:40};
  globalThis.document={createElement:()=>({style:{},setAttribute(){},remove(){removed++;}})};
  const board={querySelector:()=>({getBoundingClientRect:()=>rect}),getBoundingClientRect:()=>rect,append(){}};
- const controller=new AbortController();const done=runSlide({drop:true,to:40,major:true},board,controller.signal);controller.abort();await done;assert.equal(removed,1);
+ const controller=new AbortController();const done=runSword(board,40,controller.signal);controller.abort();await done;assert.equal(removed,1);
+});
+
+test('駒打ちは通常リングと大駒の縦横衝撃波を使い分け、剣を出さない',async()=>{
+ const rect={left:0,top:0,width:40,height:40};
+ for(const major of [false,true]){
+  const layers=[];
+  globalThis.document={createElement:()=>({style:{},setAttribute(){},remove(){},animate(){return {finished:Promise.resolve(),cancel(){}};}})};
+  const board={querySelector:()=>({getBoundingClientRect:()=>rect}),getBoundingClientRect:()=>rect,append(node){layers.push(node);}};
+  await runSlide({drop:true,to:40,major},board,new AbortController().signal);
+  assert.deepEqual(layers.map(node=>node.className),major?['drop-ring major-drop-wave','drop-ring major-drop-wave',...Array(8).fill('major-drop-spark')]:['drop-ring']);
+ }
 });
 
 test('成り演出はキャンセル済み移動の新しい完了Promiseを待たない',async()=>{
