@@ -257,3 +257,4 @@ header .brand span{color:#254b40}
 .dev-capture-hand button:disabled{opacity:.5;cursor:default}
 .tutorial-mode.tutorial-drop #devHand0{display:flex;justify-content:center}
 .tutorial-mode.tutorial-drop #devHand0 button{min-width:90px}
+.status.home-message #count,.status.home-message #turn,.status.home-message #scores{display:none}
