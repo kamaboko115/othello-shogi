@@ -292,7 +292,7 @@ $('osesho').onclick=()=>{if(canAct()&&online?.kind==='ai'&&(online.settings?.hel
 $('oseshoNo').onclick=()=>$('oseshoDialog').close();
 $('oseshoYes').onclick=async()=>{
  $('oseshoDialog').close();if(!canAct()||online?.kind!=='ai'||(!online.settings?.helperUnlimited&&online.helperUsedRound===(online.round||1)))return;
- const room=online.room,version=online.version,token=online.token,task=startAI(state,'expert',5000);helperJob=task;busy=true;selected=null;legal=[];render();
+ const room=online.room,version=online.version,token=online.token,task=startAI(state,'osesho',5000);helperJob=task;busy=true;selected=null;legal=[];render();
  try{
   const result=await task.promise;
   if(helperJob!==task||online?.room!==room||online.version!==version)return;
