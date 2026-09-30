@@ -22,10 +22,3 @@ export async function runKingImpact(board,square,signal){
   layer.classList.remove('impact-hold');layer.classList.add('impact-burst');await wait(420,signal);
  }finally{layer.remove();}
 }
-export async function runDropImpact(board,square,major,signal){
- if(signal?.aborted)return;
- if(major)playCaptureSound(true);
- if(reduced())return;
- const layer=layerAt(board,square,'drop-impact'+(major?' major':''));if(!layer)return;
- try{await wait(major?650:280,signal);}finally{layer.remove();}
-}

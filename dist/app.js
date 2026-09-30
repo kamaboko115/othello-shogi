@@ -233,7 +233,7 @@ function adopt(data){
    if(state.flipped.length>=1||capture||slide||kingImpact!==null){
     comboPreparing=true;render();comboActive=true;comboPreparing=false;
     const controller=new AbortController();comboController=controller;
-    (async()=>{if(slide)await runSlide(slide,$('board'),controller.signal);if(controller.signal.aborted)return;if(kingImpact!==null)await runKingImpact($('board'),kingImpact,controller.signal);if(controller.signal.aborted)return;if(!capture&&!state.flipped.length&&!state.result)playMoveSound();if(capture)await runCapture(capture,controller.signal,{shake:!flipNeedsShake(state)});if(controller.signal.aborted)return;if(state.flipped.length)await runCombo(state,document.querySelector('.board-area'),online.side,controller.signal);})().finally(()=>{if(controller.signal.aborted)return;comboActive=false;comboController=null;animationKey='';finish();render();});
+    (async()=>{if(slide)await runSlide(slide,$('board'),controller.signal,playMoveSound);if(controller.signal.aborted)return;if(kingImpact!==null)await runKingImpact($('board'),kingImpact,controller.signal);if(controller.signal.aborted)return;if(!slide&&!capture&&!state.flipped.length&&!state.result)playMoveSound();if(capture)await runCapture(capture,controller.signal,{moveSound:!slide,shake:!flipNeedsShake(state)});if(controller.signal.aborted)return;if(state.flipped.length)await runCombo(state,document.querySelector('.board-area'),online.side,controller.signal);})().finally(()=>{if(controller.signal.aborted)return;comboActive=false;comboController=null;animationKey='';finish();render();});
    }else{if(!state.destroyed&&!state.result){if(state.flipped.length)playMultiFlipSound();else playMoveSound();}finish();}
   }
  }
@@ -294,7 +294,7 @@ $('osesho').onclick=()=>{if(canAct()&&online?.kind==='ai'&&(online.settings?.hel
 $('oseshoNo').onclick=()=>$('oseshoDialog').close();
 $('oseshoYes').onclick=async()=>{
  $('oseshoDialog').close();if(!canAct()||online?.kind!=='ai'||(!online.settings?.helperUnlimited&&online.helperUsedRound===(online.round||1)))return;
- const room=online.room,version=online.version,token=online.token,task=startAI(state,'expert',5000);helperJob=task;busy=true;selected=null;legal=[];render();
+ const room=online.room,version=online.version,token=online.token,task=startAI(state,'osesho',5000);helperJob=task;busy=true;selected=null;legal=[];render();
  try{
   const result=await task.promise;
   if(helperJob!==task||online?.room!==room||online.version!==version)return;

@@ -13,12 +13,23 @@ test('駒打ちは通常駒と大駒を分け、同じ局面の再受信では�
  }
 });
 
-test('大駒の着地と剣の途中で閉じても演出が完了し装飾を片付ける',async()=>{
+test('剣の途中で閉じても演出が完了し装飾を片付ける',async()=>{
  let removed=0;const rect={left:0,top:0,width:40,height:40};
- globalThis.document={createElement:()=>({style:{setProperty(){}},setAttribute(){},remove(){removed++;}})};
+ globalThis.document={createElement:()=>({style:{},setAttribute(){},remove(){removed++;}})};
  const board={querySelector:()=>({getBoundingClientRect:()=>rect}),getBoundingClientRect:()=>rect,append(){}};
- const controller=new AbortController();const done=runSlide({drop:true,to:40,major:true},board,controller.signal);controller.abort();await done;assert.equal(removed,1);
- const swordController=new AbortController();const sword=runSword(board,40,swordController.signal);swordController.abort();await sword;assert.equal(removed,2);
+ const controller=new AbortController();const done=runSword(board,40,controller.signal);controller.abort();await done;assert.equal(removed,1);
+});
+
+test('駒打ちは通常リングと大駒の縦横衝撃波を使い分け、剣を出さない',async()=>{
+ const rect={left:0,top:0,width:40,height:40};
+ for(const major of [false,true]){
+  const layers=[];let landed=0;
+  globalThis.document={createElement:()=>({style:{},setAttribute(){},remove(){},animate(){return {finished:Promise.resolve(),cancel(){}};}})};
+  const board={querySelector:()=>({getBoundingClientRect:()=>rect}),getBoundingClientRect:()=>rect,append(node){assert.equal(landed,1);layers.push(node);}};
+  await runSlide({drop:true,to:40,major},board,new AbortController().signal,()=>landed++);
+  assert.equal(landed,1);
+  assert.deepEqual(layers.map(node=>node.className),major?['drop-ring major-drop-wave','drop-ring major-drop-wave',...Array(8).fill('major-drop-spark')]:['drop-ring']);
+ }
 });
 
 test('成り演出はキャンセル済み移動の新しい完了Promiseを待たない',async()=>{
@@ -35,4 +46,12 @@ test('成り演出はキャンセル済み移動の新しい完了Promiseを待�
   assert.equal(piece.textContent,'馬');
  }
  assert.equal(cancelledReads,0);assert.ok(removed>0);
+});
+
+test('剣の着弾通知は後片付けより先に一度だけ発生する',async()=>{
+ let removed=false,hits=0;const rect={left:0,top:0,width:40,height:40};
+ globalThis.document={createElement:()=>({style:{},setAttribute(){},remove(){removed=true;}})};
+ const board={querySelector:()=>({getBoundingClientRect:()=>rect}),getBoundingClientRect:()=>rect,append(){}};
+ await runSword(board,40,new AbortController().signal,()=>{hits++;assert.equal(removed,false);});
+ assert.equal(hits,1);assert.equal(removed,true);
 });

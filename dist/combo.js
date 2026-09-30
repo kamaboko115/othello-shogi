@@ -1,17 +1,15 @@
-import {runDropImpact} from './impact.js';
 import {label} from './engine.js';
 export const comboTier=count=>count>=4?'tier-rainbow':count===3?'tier-platinum':count===2?'tier-gold':'';
-let swordSequence=0;
-export async function runSword(board,square,signal){
- if(signal?.aborted||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
- const cell=board.querySelector(`[data-square="${square}"]`);if(!cell)return;
+export async function runSword(board,square,signal,onImpact=()=>{}){
+ if(signal?.aborted)return;
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches){onImpact();return;}
+ const cell=board.querySelector(`[data-square="${square}"]`);if(!cell){onImpact();return;}
  const b=cell.getBoundingClientRect(),r=board.getBoundingClientRect(),layer=document.createElement('span');
  layer.className='sword-impact';layer.setAttribute('aria-hidden','true');layer.style.left=b.left-r.left+b.width/2+'px';layer.style.top=b.top-r.top+b.height/2+'px';
- const steel='sword-steel-'+(++swordSequence),gold='sword-gold-'+swordSequence;
- const sword='<svg viewBox="0 0 120 320"><defs><linearGradient id="'+steel+'"><stop stop-color="#182735"/><stop offset=".35" stop-color="#83a9bc"/><stop offset=".49" stop-color="#e9ffff"/><stop offset=".51" stop-color="#49677f"/><stop offset=".8" stop-color="#bce1ef"/><stop offset="1" stop-color="#314458"/></linearGradient><linearGradient id="'+gold+'" x2="0" y2="1"><stop stop-color="#fff0be"/><stop offset=".45" stop-color="#d4a04c"/><stop offset="1" stop-color="#745022"/></linearGradient></defs><path fill="#172432" stroke="#d6e6eb" stroke-width="2" d="M53 9L60 2 67 9 65 60H55Z"/><path fill="#b98938" d="M54 16H66V21H54ZM54 30H66V35H54ZM54 44H66V49H54Z"/><path fill="url(#'+gold+')" stroke="#fff0bf" stroke-width="1.5" d="M12 61L46 68 60 60 74 68 108 61 97 79 71 82 60 94 49 82 23 79Z"/><path fill="url(#'+steel+')" stroke="#d7eef7" stroke-width="2" d="M48 85L60 96 72 85 69 259 60 312 51 259Z"/><path fill="#e2f6ff" d="M60 97L68 90 65 255 60 300Z"/><path fill="#8babc1" d="M52 90L60 97V300L55 255Z"/><path fill="#fff" d="M59 105H61V283L60 303Z"/><path fill="#b3ffff" stroke="#fff" d="M60 65L66 75 60 85 54 75Z"/></svg>';
- layer.innerHTML='<span class="blade-column"></span><span class="hero-blade">'+sword+'</span><span class="blade-flash"></span><span class="blade-wave"></span><span class="blade-wave second"></span>'+Array.from({length:10},(_,i)=>'<i class="blade-spark" style="--angle:'+i*36+'deg;--reach:'+(45+i%3*14)+'px"></i>').join('');
- board.append(layer);const stopSound=playSwordSound(signal);let timer;
- try{await new Promise(resolve=>{const done=()=>{clearTimeout(timer);signal?.removeEventListener('abort',done);resolve();};timer=setTimeout(done,950);signal?.addEventListener('abort',done,{once:true});if(signal?.aborted)done();});}finally{stopSound();layer.remove();}
+ const sword='<svg viewBox="0 0 80 260" width="100%" height="100%"><defs><linearGradient id="steelPromotion"><stop stop-color="#344a61"/><stop offset=".4" stop-color="#a9c2d1"/><stop offset=".5" stop-color="#ffffff"/><stop offset=".57" stop-color="#e4f7ff"/><stop offset="1" stop-color="#667f95"/></linearGradient><linearGradient id="goldPromotion"><stop stop-color="#8d6130"/><stop offset=".5" stop-color="#ffebb0"/><stop offset="1" stop-color="#b07a2c"/></linearGradient></defs><path fill="#253746" stroke="#9caeb7" d="M36 4h8v43h-8z"/><path stroke="#c6a367" d="M36 12h8m-8 9h8m-8 9h8"/><path fill="url(#goldPromotion)" d="M10 45l24 6 6-5 6 5 24-6-6 11-18 2-6 8-6-8-18-2z"/><path fill="url(#steelPromotion)" d="M31 60L40 67 49 60 45 216 40 258 35 216z"/><path stroke="#fff" stroke-width=".8" d="M40 72v171"/></svg>';
+ layer.innerHTML='<span class="promotion-blade">'+sword+'</span><span class="promotion-flash"></span><span class="promotion-glow"></span><span class="promotion-ring"></span>';
+ board.append(layer);const stopSound=playSwordSound(signal);let timer;const impactTimer=setTimeout(()=>{if(!signal?.aborted)onImpact();},380);
+ try{await new Promise(resolve=>{const done=()=>{clearTimeout(timer);signal?.removeEventListener('abort',done);resolve();};timer=setTimeout(done,950);signal?.addEventListener('abort',done,{once:true});if(signal?.aborted)done();});}finally{clearTimeout(impactTimer);stopSound();layer.remove();}
 }
 export function slidingMove(before,after){
  if(after.ply!==before.ply+1)return null;
@@ -20,11 +18,20 @@ export function slidingMove(before,after){
  const [from,to]=after.last,p=before.board[from];
  return p?{from,to,major:['R','B'].includes(p.type),rainbow:['R','B'].includes(p.type)&&!!p.prom,promoting:!p.prom&&!!after.board[to]?.prom,beforeLabel:label(p)}:null;
 }
-export async function runSlide(move,board,signal){
- if(!move||signal?.aborted||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
- if(move.drop){await runDropImpact(board,move.to,move.major,signal);return;}
+export async function runSlide(move,board,signal,onLand=()=>{}){
+ if(!move||signal?.aborted)return;
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches){onLand();return;}
+ if(move.drop){
+  onLand();
+  if(move.major){await runMajorDrop(board,move.to,signal);return;}
+  const cell=board.querySelector(`[data-square="${move.to}"]`);if(!cell)return;
+  const b=cell.getBoundingClientRect(),r=board.getBoundingClientRect(),ring=document.createElement('span');
+  ring.className='drop-ring';ring.setAttribute('aria-hidden','true');ring.style.cssText=`left:${b.left-r.left+b.width/2}px;top:${b.top-r.top+b.height/2}px;width:${b.width}px;height:${b.height}px;`;board.append(ring);
+  const anim=ring.animate([{opacity:0,transform:'translate(-50%,-50%) scale(.2)'},{offset:.25,opacity:1},{opacity:0,transform:'translate(-50%,-50%) scale(1.5)'}],{duration:280,easing:'ease-out'}),abort=()=>anim.cancel();signal?.addEventListener('abort',abort,{once:true});
+  try{await anim.finished.catch(()=>{});}finally{signal?.removeEventListener('abort',abort);anim.cancel();ring.remove();}return;
+ }
  const from=board.querySelector(`[data-square="${move.from}"]`),to=board.querySelector(`[data-square="${move.to}"]`),piece=to?.querySelector('.piece');
- if(!from||!piece)return;
+ if(!from||!piece){onLand();return;}
  const a=from.getBoundingClientRect(),b=to.getBoundingClientRect(),r=board.getBoundingClientRect(),dx=a.left-b.left,dy=a.top-b.top,duration= Math.min(480,260+Math.hypot(dx,dy)*.4),rotation=piece.classList.contains('enemy')?' rotate(180deg)':'',animations=[],nodes=[],oldZ=to.style.zIndex;
  to.style.zIndex='8';
  const finalLabel=piece.textContent,wasProm=piece.classList.contains('prom');if(move.promoting){piece.textContent=move.beforeLabel;piece.classList.remove('prom');}
@@ -48,24 +55,47 @@ export async function runSlide(move,board,signal){
   animations.push(glide);
   const abort=()=>animations.forEach(a=>a.cancel());signal?.addEventListener('abort',abort,{once:true});
   try{
+   await glide.finished.catch(()=>{});
+   if(!signal?.aborted)onLand();
    await Promise.all(animations.map(a=>a.finished.catch(()=>{})));
    if(move.promoting&&!signal?.aborted){
     // Cancelling a finished Web Animation creates a new pending finished promise.
     // Only await animations created for the promotion phase.
     const promotionStart=animations.length;glide.cancel();
-    if(move.major)await runSword(board,move.to,signal);
-    if(signal?.aborted)return;
-    piece.textContent=finalLabel;piece.classList.toggle('prom',wasProm);
-    const turn=piece.animate([{transform:`${rotation} rotateY(0deg) scale(1)`},{offset:.5,transform:`${rotation} rotateY(180deg) scale(${move.major?1.4:1.16})`,filter:move.major?'brightness(1.7) drop-shadow(0 0 12px #ffe780)':'brightness(1.2)'},{transform:`${rotation} rotateY(360deg) scale(1)`}],{duration:move.major?600:400,easing:'ease-in-out'});animations.push(turn);
-    if(move.major)for(let i=0;i<16;i++){
-     const dot=document.createElement('span');dot.className='slide-spark';dot.style.cssText=`left:${b.left-r.left+b.width/2}px;top:${b.top-r.top+b.height/2}px;background:hsl(${i*22.5} 100% 75%);color:hsl(${i*22.5} 100% 75%)`;
-     const angle=i*Math.PI/8,reach=b.width*.95;
-     add(dot,[{opacity:0,transform:'translate(0,0) scale(.2)'},{offset:.2,opacity:1},{opacity:0,transform:`translate(${Math.cos(angle)*reach}px,${Math.sin(angle)*reach}px) scale(.1)`}],{duration:500,delay:100,fill:'both'});
-    }
+    const turnPiece=()=>{
+     if(signal?.aborted)return;
+     piece.textContent=finalLabel;piece.classList.toggle('prom',wasProm);
+     animations.push(piece.animate([{transform:`${rotation} rotateY(0deg)`},{offset:.5,transform:`${rotation} rotateY(180deg) scale(1.16)`,filter:'brightness(1.3)'},{transform:`${rotation} rotateY(360deg)`}],{duration:move.major?600:400,easing:'ease-in-out'}));
+     if(move.major)animations.push(to.animate([{transform:'translateY(0)'},{transform:'translateY(2px)'},{transform:'translateY(-1px)'},{transform:'translateY(0)'}],{delay:80,duration:130}));
+    };
+    if(move.major)await runSword(board,move.to,signal,turnPiece);else turnPiece();
     await Promise.all(animations.slice(promotionStart).map(a=>a.finished.catch(()=>{})));
    }
   }finally{signal?.removeEventListener('abort',abort);}
  }finally{animations.forEach(a=>a.cancel());nodes.forEach(n=>n.remove());piece.textContent=finalLabel;piece.classList.toggle('prom',wasProm);to.style.zIndex=oldZ;}
+}
+async function runMajorDrop(board,square,signal){
+ const cell=board.querySelector(`[data-square="${square}"]`);if(!cell||signal?.aborted)return;
+ const b=cell.getBoundingClientRect(),r=board.getBoundingClientRect(),nodes=[],animations=[];
+ const add=(className,frames,options,extra='')=>{
+  const node=document.createElement('span');node.className=className;node.setAttribute('aria-hidden','true');
+  node.style.cssText=`left:${b.left-r.left+b.width/2}px;top:${b.top-r.top+b.height/2}px;width:${b.width}px;height:${b.height}px;${extra}`;
+  board.append(node);nodes.push(node);animations.push(node.animate(frames,options));
+ };
+ const abort=()=>animations.forEach(animation=>animation.cancel());signal?.addEventListener('abort',abort,{once:true});
+ try{
+  for(const angle of [0,90])add('drop-ring major-drop-wave',[
+   {opacity:0,transform:`translate(-50%,-50%) rotate(${angle}deg) scale(.15,.15)`},
+   {offset:.15,opacity:1,transform:`translate(-50%,-50%) rotate(${angle}deg) scale(.7,.35)`},
+   {opacity:0,transform:`translate(-50%,-50%) rotate(${angle}deg) scale(3,.8)`}
+  ],{duration:440,easing:'cubic-bezier(.12,.65,.25,1)',fill:'both'});
+  // Optional accent: separate sparks, removable without changing the shockwave.
+  for(let i=0;i<8;i++){
+   const angle=i*Math.PI/4,reach=b.width*(i%2?.7:1.2);
+   add('major-drop-spark',[{opacity:0,transform:'translate(-50%,-50%) scale(.3)'},{offset:.2,opacity:1},{offset:.65,opacity:1},{opacity:0,transform:`translate(calc(-50% + ${Math.cos(angle)*reach}px),calc(-50% + ${Math.sin(angle)*reach}px)) scale(.3)`}],{duration:560,delay:90,fill:'both',easing:'ease-out'},'width:9px;height:9px;');
+  }
+  await Promise.all(animations.map(animation=>animation.finished.catch(()=>{})));
+ }finally{signal?.removeEventListener('abort',abort);animations.forEach(animation=>animation.cancel());nodes.forEach(node=>node.remove());}
 }
 export const isImpactPiece=piece=>!!piece&&(piece.prom||piece.type==='R'||piece.type==='B');
 export const flipNeedsShake=state=>state.flipped.length>=2||state.flipped.some(i=>isImpactPiece(state.board[i]));
@@ -84,7 +114,7 @@ export function capturedPiece(before,after){
 }
 export async function runCapture(capture,signal,view={}){
  if(signal?.aborted)return;
- playMoveSound();
+ if(view.moveSound!==false)playMoveSound();
  const source=(view.board||document.querySelector('#board')).querySelector('[data-square="'+capture.square+'"]'),target=(view.hand||document.querySelector('#hand'+capture.side)).querySelector('[data-type="'+capture.type+'"]');
  if(!source||!target)return;
  const major=['R','B'].includes(capture.type),a=source.getBoundingClientRect(),b=target.getBoundingClientRect(),dot=document.createElement('span'),animations=[];

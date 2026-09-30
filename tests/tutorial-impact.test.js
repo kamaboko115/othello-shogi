@@ -4,7 +4,7 @@ import {lessons,lessonState} from '../dist/tutorial-lessons.js';
 import {play,collapseAfterMove} from '../dist/engine.js';
 globalThis.window={addEventListener(){}};
 globalThis.matchMedia=()=>({matches:false});
-const {kingCaptureSquare,runKingImpact,runDropImpact}=await import('../dist/impact.js');
+const {kingCaptureSquare,runKingImpact}=await import('../dist/impact.js');
 
 test('全レッスンの案内手が合法で、説明どおり反転・勝利・崩壊する',()=>{
  for(let i=0;i<lessons.length;i++){
@@ -37,7 +37,7 @@ test('王取りの停止中に閉じても衝撃波を残さず完了する',asy
  const {events,board}=view(),controller=new AbortController(),done=runKingImpact(board,31,controller.signal);controller.abort();await done;
  assert.deepEqual(events,['king-impact','impact-hold','removed']);
 });
-test('動きを減らす設定では王取り・駒打ちの装飾を作らない',async()=>{
+test('動きを減らす設定では王取りの装飾を作らない',async()=>{
  const {events,board}=view();globalThis.matchMedia=()=>({matches:true});
- try{await runKingImpact(board,31);await runDropImpact(board,40,true);assert.deepEqual(events,[]);}finally{globalThis.matchMedia=()=>({matches:false});}
+ try{await runKingImpact(board,31);assert.deepEqual(events,[]);}finally{globalThis.matchMedia=()=>({matches:false});}
 });

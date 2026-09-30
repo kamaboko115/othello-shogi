@@ -36,14 +36,14 @@ export function initDeveloper(getCurrent){
   if(!options.length){selected=state.board[i]?.side===state.turn?i:null;draw();return;}
   history.push(structuredClone(state));const before=state,mover=state.turn;state=play(state,options.find(m=>!m.prom)||options[0]);const slide=slidingMove(before,state),capture=capturedPiece(before,state),kingImpact=kingCaptureSquare(before,state),effects=moveEffects(state).filter(e=>!(tutorial&&e.kind==='check'&&before.board[state.last.at(-1)]?.type==='K'&&before.board[state.last.at(-1)]?.side!==mover));state.turn=mover;selected=null;working=true;draw();controller=new AbortController();const current=controller;
   if(!before.board[state.last[0]]?.prom&&state.board[state.last[1]]?.prom&&!state.result)playArcadeCue('promote');
-  if(slide)await runSlide(slide,$('devBoard'),current.signal);
+  if(slide)await runSlide(slide,$('devBoard'),current.signal,playMoveSound);
   if(current.signal.aborted)return;
   if(kingImpact!==null)await runKingImpact($('devBoard'),kingImpact,current.signal);
   if(current.signal.aborted)return;
-  if(capture)await runCapture(capture,current.signal,{shake:!flipNeedsShake(state),board:$('devBoard'),hand:$('devHand'+mover),overlay:$('developerDialog')});
+  if(capture)await runCapture(capture,current.signal,{moveSound:!slide,shake:!flipNeedsShake(state),board:$('devBoard'),hand:$('devHand'+mover),overlay:$('developerDialog')});
   if(current.signal.aborted)return;
   if(state.flipped.length>=1)await runCombo(state,$('devBoard'),0,current.signal);
-  else if(!capture&&!state.result)playMoveSound();
+  else if(!slide&&!capture&&!state.result)playMoveSound();
   if(current.signal.aborted)return;
   if(tutorial&&lessons[lesson].collapse){
    state.turn=1-mover;collapseAfterMove(state);state.turn=mover;
