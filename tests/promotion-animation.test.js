@@ -47,3 +47,11 @@ test('成り演出はキャンセル済み移動の新しい完了Promiseを待�
  }
  assert.equal(cancelledReads,0);assert.ok(removed>0);
 });
+
+test('剣の着弾通知は後片付けより先に一度だけ発生する',async()=>{
+ let removed=false,hits=0;const rect={left:0,top:0,width:40,height:40};
+ globalThis.document={createElement:()=>({style:{},setAttribute(){},remove(){removed=true;}})};
+ const board={querySelector:()=>({getBoundingClientRect:()=>rect}),getBoundingClientRect:()=>rect,append(){}};
+ await runSword(board,40,new AbortController().signal,()=>{hits++;assert.equal(removed,false);});
+ assert.equal(hits,1);assert.equal(removed,true);
+});
