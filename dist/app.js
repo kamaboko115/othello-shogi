@@ -1,3 +1,4 @@
+import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget} from './match-options.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide} from './combo.js';
 import {initDeveloper} from './developer.js';
@@ -221,6 +222,7 @@ function adopt(data){
   const last=data.state.last,promotedNow=moved&&last.length===2&&!state.board[last[0]]?.prom&&data.state.board[last[1]]?.prom;
   const slide=moved?slidingMove(state,data.state):null;
   const capture=moved?capturedPiece(state,data.state):null;
+  const kingImpact=moved?kingCaptureSquare(state,data.state):null;
   state=data.state;logs=data.logs;selected=null;legal=[];
   if(rewound)animationKey='';if($('promotion').open)$('promotion').close();
   message=state.result||(state.flipped.length?`${state.flipped.length}枚が寝返りました。`:logs.at(-1)||'相手が参加しました。あなたの手番で指してください。');
@@ -228,10 +230,10 @@ function adopt(data){
    if(promotedNow&&!state.result)playArcadeCue('promote');
    animationStarted=performance.now();animationKey=data.room+':'+(data.round||1)+':'+state.ply;
    const finish=()=>{if(state.destroyed)beginCollapse(state);else presentEffects(state);};
-   if(state.flipped.length>=1||capture||slide){
+   if(state.flipped.length>=1||capture||slide||kingImpact!==null){
     comboPreparing=true;render();comboActive=true;comboPreparing=false;
     const controller=new AbortController();comboController=controller;
-    (async()=>{if(slide)await runSlide(slide,$('board'),controller.signal);if(controller.signal.aborted)return;if(!capture&&!state.flipped.length&&!state.result)playMoveSound();if(capture)await runCapture(capture,controller.signal,{shake:!flipNeedsShake(state)});if(controller.signal.aborted)return;if(state.flipped.length)await runCombo(state,document.querySelector('.board-area'),online.side,controller.signal);})().finally(()=>{if(controller.signal.aborted)return;comboActive=false;comboController=null;animationKey='';finish();render();});
+    (async()=>{if(slide)await runSlide(slide,$('board'),controller.signal);if(controller.signal.aborted)return;if(kingImpact!==null)await runKingImpact($('board'),kingImpact,controller.signal);if(controller.signal.aborted)return;if(!capture&&!state.flipped.length&&!state.result)playMoveSound();if(capture)await runCapture(capture,controller.signal,{shake:!flipNeedsShake(state)});if(controller.signal.aborted)return;if(state.flipped.length)await runCombo(state,document.querySelector('.board-area'),online.side,controller.signal);})().finally(()=>{if(controller.signal.aborted)return;comboActive=false;comboController=null;animationKey='';finish();render();});
    }else{if(!state.destroyed&&!state.result){if(state.flipped.length)playMultiFlipSound();else playMoveSound();}finish();}
   }
  }

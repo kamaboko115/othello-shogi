@@ -232,8 +232,27 @@ header .brand span{color:#254b40}
 .blade-flash{position:absolute;left:-90px;top:-2px;width:180px;height:4px;background:#fff8ce;box-shadow:0 0 14px 4px #80dfff;animation:blade-flash .95s both}
 .blade-wave{position:absolute;left:-45px;top:-22px;width:90px;height:44px;border:2px solid #b8eeff;border-radius:50%;box-shadow:0 0 7px #85caff;animation:blade-wave .95s both}.blade-wave.second{animation-delay:65ms;border-color:#ecc784;border-width:1px}
 .blade-spark{position:absolute;width:3px;height:14px;left:-1px;top:-7px;background:#fff0bb;box-shadow:0 0 5px #ffc766;animation:blade-spark .95s both}
-@keyframes hero-blade{0%{opacity:0;transform:translateY(-135px) scaleY(1.2)}15%{opacity:1;transform:translateY(-125px)}30%{transform:translateY(-122px)}40%{opacity:1;transform:translateY(3px)}46%{transform:translateY(-2px)}60%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(0)}}
+@keyframes hero-blade{0%{opacity:0;transform:translateY(-135px) scaleY(1.2)}15%{opacity:1;transform:translateY(-125px)}30%{transform:translateY(-122px)}40%,52%{opacity:1;transform:translateY(3px)}58%{transform:translateY(-2px)}60%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(0)}}
 @keyframes blade-column{0%,28%{opacity:0;transform:scaleX(.3)}37%{opacity:1;transform:scaleX(1)}52%,100%{opacity:0}}
 @keyframes blade-flash{0%,38%{opacity:0;transform:scaleX(.1)}41%{opacity:1;transform:scaleX(1)}65%,100%{opacity:0;transform:scaleX(1.3)}}
 @keyframes blade-wave{0%,38%{opacity:0;transform:scale(.15)}43%{opacity:.95}100%{opacity:0;transform:scale(2.3)}}
 @keyframes blade-spark{0%,39%{opacity:0;transform:rotate(var(--angle)) translateY(0) scale(.2)}44%{opacity:1}100%{opacity:0;transform:rotate(var(--angle)) translateY(calc(-1 * var(--reach))) scale(.1)}}
+
+/* Landing effects stay inside the board, leaving controls readable. */
+.king-impact,.drop-impact{position:absolute;pointer-events:none;z-index:125;width:var(--cell-size);height:var(--cell-size);transform:translate(-50%,-50%)}
+.king-impact::before,.king-impact::after,.drop-impact::before,.drop-impact::after{content:'';position:absolute;inset:0;border-radius:50%;box-sizing:border-box}
+.king-impact.impact-hold::before{background:radial-gradient(circle,#fff6da,#ffda7666 35%,transparent 70%)}
+.king-impact.impact-burst::before{border:3px solid #fff1af;box-shadow:0 0 16px #ffc14b;animation:king-wave .42s ease-out both}
+.king-impact.impact-burst::after{border:1px solid #a9ecff;animation:king-wave .42s .06s ease-out both}
+@keyframes king-wave{from{opacity:1;transform:scale(.3)}to{opacity:0;transform:scale(3.2)}}
+.drop-impact::before{border:2px solid #d4f5ea;animation:drop-land .28s ease-out both}
+.drop-impact.major::before{border:3px double #e6bc61;box-shadow:0 0 15px #b9edff,inset 0 0 12px #e7c984;animation:major-seal .65s ease-out both}
+.drop-impact.major::after{inset:-75% 35% 25%;border-radius:0;background:linear-gradient(transparent,#c9f5ff);animation:drop-column .65s both}
+@keyframes drop-land{from{opacity:1;transform:scale(.3)}to{opacity:0;transform:scale(1.7)}}
+@keyframes major-seal{0%{opacity:0;transform:scale(.15) rotate(-35deg)}30%,45%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:scale(2)}}
+@keyframes drop-column{0%{opacity:0;transform:translateY(-30px) scaleX(.4)}25%{opacity:1}45%,100%{opacity:0;transform:translateY(0)}}
+.dev-capture-hand button{font:inherit;color:inherit;background:#fff1;border:1px solid #b6cbbb66;border-radius:5px;padding:4px 7px}
+.dev-capture-hand button[aria-pressed=true]{outline:2px solid #ffc767;background:#b9923e44}
+.dev-capture-hand button:disabled{opacity:.5;cursor:default}
+.tutorial-mode.tutorial-drop #devHand0{display:flex;justify-content:center}
+.tutorial-mode.tutorial-drop #devHand0 button{min-width:90px}

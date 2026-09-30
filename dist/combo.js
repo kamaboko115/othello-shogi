@@ -1,11 +1,14 @@
+import {runDropImpact} from './impact.js';
 import {label} from './engine.js';
 export const comboTier=count=>count>=4?'tier-rainbow':count===3?'tier-platinum':count===2?'tier-gold':'';
+let swordSequence=0;
 export async function runSword(board,square,signal){
  if(signal?.aborted||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const cell=board.querySelector(`[data-square="${square}"]`);if(!cell)return;
  const b=cell.getBoundingClientRect(),r=board.getBoundingClientRect(),layer=document.createElement('span');
  layer.className='sword-impact';layer.setAttribute('aria-hidden','true');layer.style.left=b.left-r.left+b.width/2+'px';layer.style.top=b.top-r.top+b.height/2+'px';
- const sword='<svg viewBox="0 0 120 320"><path fill="#172432" stroke="#d6e6eb" stroke-width="2" d="M53 9L60 2 67 9 65 60H55Z"/><path fill="#b98938" d="M54 16H66V21H54ZM54 30H66V35H54ZM54 44H66V49H54Z"/><path fill="#d7ad5d" stroke="#fff0bf" stroke-width="1.5" d="M12 61L46 68 60 60 74 68 108 61 97 79 71 82 60 94 49 82 23 79Z"/><path fill="#26394a" stroke="#d7eef7" stroke-width="2" d="M48 85L60 96 72 85 69 259 60 312 51 259Z"/><path fill="#e2f6ff" d="M60 97L68 90 65 255 60 300Z"/><path fill="#8babc1" d="M52 90L60 97V300L55 255Z"/><path fill="#fff" d="M59 105H61V283L60 303Z"/><path fill="#b3ffff" stroke="#fff" d="M60 65L66 75 60 85 54 75Z"/></svg>';
+ const steel='sword-steel-'+(++swordSequence),gold='sword-gold-'+swordSequence;
+ const sword='<svg viewBox="0 0 120 320"><defs><linearGradient id="'+steel+'"><stop stop-color="#182735"/><stop offset=".35" stop-color="#83a9bc"/><stop offset=".49" stop-color="#e9ffff"/><stop offset=".51" stop-color="#49677f"/><stop offset=".8" stop-color="#bce1ef"/><stop offset="1" stop-color="#314458"/></linearGradient><linearGradient id="'+gold+'" x2="0" y2="1"><stop stop-color="#fff0be"/><stop offset=".45" stop-color="#d4a04c"/><stop offset="1" stop-color="#745022"/></linearGradient></defs><path fill="#172432" stroke="#d6e6eb" stroke-width="2" d="M53 9L60 2 67 9 65 60H55Z"/><path fill="#b98938" d="M54 16H66V21H54ZM54 30H66V35H54ZM54 44H66V49H54Z"/><path fill="url(#'+gold+')" stroke="#fff0bf" stroke-width="1.5" d="M12 61L46 68 60 60 74 68 108 61 97 79 71 82 60 94 49 82 23 79Z"/><path fill="url(#'+steel+')" stroke="#d7eef7" stroke-width="2" d="M48 85L60 96 72 85 69 259 60 312 51 259Z"/><path fill="#e2f6ff" d="M60 97L68 90 65 255 60 300Z"/><path fill="#8babc1" d="M52 90L60 97V300L55 255Z"/><path fill="#fff" d="M59 105H61V283L60 303Z"/><path fill="#b3ffff" stroke="#fff" d="M60 65L66 75 60 85 54 75Z"/></svg>';
  layer.innerHTML='<span class="blade-column"></span><span class="hero-blade">'+sword+'</span><span class="blade-flash"></span><span class="blade-wave"></span><span class="blade-wave second"></span>'+Array.from({length:10},(_,i)=>'<i class="blade-spark" style="--angle:'+i*36+'deg;--reach:'+(45+i%3*14)+'px"></i>').join('');
  board.append(layer);const stopSound=playSwordSound(signal);let timer;
  try{await new Promise(resolve=>{const done=()=>{clearTimeout(timer);signal?.removeEventListener('abort',done);resolve();};timer=setTimeout(done,950);signal?.addEventListener('abort',done,{once:true});if(signal?.aborted)done();});}finally{stopSound();layer.remove();}
@@ -19,14 +22,7 @@ export function slidingMove(before,after){
 }
 export async function runSlide(move,board,signal){
  if(!move||signal?.aborted||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
- if(move.drop){
-  if(move.major){await runSword(board,move.to,signal);return;}
-  const cell=board.querySelector(`[data-square="${move.to}"]`);if(!cell)return;
-  const b=cell.getBoundingClientRect(),r=board.getBoundingClientRect(),ring=document.createElement('span');
-  ring.className='drop-ring';ring.setAttribute('aria-hidden','true');ring.style.cssText=`left:${b.left-r.left+b.width/2}px;top:${b.top-r.top+b.height/2}px;width:${b.width}px;height:${b.height}px;`;board.append(ring);
-  const anim=ring.animate([{opacity:0,transform:'translate(-50%,-50%) scale(.2)'},{offset:.25,opacity:1},{opacity:0,transform:'translate(-50%,-50%) scale(1.5)'}],{duration:280,easing:'ease-out'}),abort=()=>anim.cancel();signal?.addEventListener('abort',abort,{once:true});
-  try{await anim.finished.catch(()=>{});}finally{signal?.removeEventListener('abort',abort);anim.cancel();ring.remove();}return;
- }
+ if(move.drop){await runDropImpact(board,move.to,move.major,signal);return;}
  const from=board.querySelector(`[data-square="${move.from}"]`),to=board.querySelector(`[data-square="${move.to}"]`),piece=to?.querySelector('.piece');
  if(!from||!piece)return;
  const a=from.getBoundingClientRect(),b=to.getBoundingClientRect(),r=board.getBoundingClientRect(),dx=a.left-b.left,dy=a.top-b.top,duration= Math.min(480,260+Math.hypot(dx,dy)*.4),rotation=piece.classList.contains('enemy')?' rotate(180deg)':'',animations=[],nodes=[],oldZ=to.style.zIndex;

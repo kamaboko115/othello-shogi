@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 globalThis.window={addEventListener(){}};
 globalThis.matchMedia=()=>({matches:false});
-const {runSlide,slidingMove}=await import('../dist/combo.js');
+const {runSlide,slidingMove,runSword}=await import('../dist/combo.js');
 
 test('駒打ちは通常駒と大駒を分け、同じ局面の再受信では再生しない',()=>{
  const before={ply:8,board:Array(81).fill(null)};
@@ -13,11 +13,12 @@ test('駒打ちは通常駒と大駒を分け、同じ局面の再受信では�
  }
 });
 
-test('剣の途中で閉じても演出が完了し装飾を片付ける',async()=>{
+test('大駒の着地と剣の途中で閉じても演出が完了し装飾を片付ける',async()=>{
  let removed=0;const rect={left:0,top:0,width:40,height:40};
- globalThis.document={createElement:()=>({style:{},setAttribute(){},remove(){removed++;}})};
+ globalThis.document={createElement:()=>({style:{setProperty(){}},setAttribute(){},remove(){removed++;}})};
  const board={querySelector:()=>({getBoundingClientRect:()=>rect}),getBoundingClientRect:()=>rect,append(){}};
  const controller=new AbortController();const done=runSlide({drop:true,to:40,major:true},board,controller.signal);controller.abort();await done;assert.equal(removed,1);
+ const swordController=new AbortController();const sword=runSword(board,40,swordController.signal);swordController.abort();await sword;assert.equal(removed,2);
 });
 
 test('成り演出はキャンセル済み移動の新しい完了Promiseを待たない',async()=>{
