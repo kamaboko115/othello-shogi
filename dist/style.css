@@ -244,3 +244,16 @@ header .brand span{color:#254b40}
 @keyframes promotion-flash{0%{opacity:0;transform:rotate(-25deg) scaleX(.1)}12%{opacity:1}100%{opacity:0;transform:rotate(-25deg) scaleX(1.1)}}
 @keyframes promotion-glow{0%{opacity:0;transform:rotate(-25deg) scaleX(.15)}18%{opacity:.9;transform:rotate(-25deg) scaleX(1)}60%{opacity:.65}100%{opacity:0;transform:rotate(-25deg) scaleX(1.2)}}
 @keyframes promotion-ring{0%{opacity:0;transform:scale(.25)}20%{opacity:.8}100%{opacity:0;transform:scale(1.5)}}
+
+/* Direct king capture holds briefly, then waves before the existing victory. */
+.king-impact{position:absolute;pointer-events:none;z-index:125;width:var(--cell-size);height:var(--cell-size);transform:translate(-50%,-50%)}
+.king-impact::before,.king-impact::after{content:'';position:absolute;inset:0;border-radius:50%;box-sizing:border-box}
+.king-impact.impact-hold::before{background:radial-gradient(circle,#fff6da,#ffda7666 35%,transparent 70%)}
+.king-impact.impact-burst::before{border:3px solid #fff1af;box-shadow:0 0 16px #ffc14b;animation:king-wave .42s ease-out both}
+.king-impact.impact-burst::after{border:1px solid #a9ecff;animation:king-wave .42s .06s ease-out both}
+@keyframes king-wave{from{opacity:1;transform:scale(.3)}to{opacity:0;transform:scale(3.2)}}
+.dev-capture-hand button{font:inherit;color:inherit;background:#fff1;border:1px solid #b6cbbb66;border-radius:5px;padding:4px 7px}
+.dev-capture-hand button[aria-pressed=true]{outline:2px solid #ffc767;background:#b9923e44}
+.dev-capture-hand button:disabled{opacity:.5;cursor:default}
+.tutorial-mode.tutorial-drop #devHand0{display:flex;justify-content:center}
+.tutorial-mode.tutorial-drop #devHand0 button{min-width:90px}
