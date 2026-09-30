@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {lessons,lessonState} from '../dist/tutorial-lessons.js';
+import {lessons,lessonState,collapseReply} from '../dist/tutorial-lessons.js';
 import {play,moves,collapseAfterMove} from '../dist/engine.js';
 globalThis.window={addEventListener(){}};
 globalThis.matchMedia=()=>({matches:false});
@@ -20,18 +20,21 @@ test('崩壊レッスンは穴熊を段階的に壊し、相手の応手後も�
  const index=lessons.findIndex(lesson=>lesson.collapse),lesson=lessons[index];let s=lessonState(index);
  assert.equal(s.board[lesson.enemyKing].type,'K');assert.equal(s.board[lesson.enemyKing].side,1);
  const collapse=step=>{const choices=s.board.flatMap((p,i)=>p?[i]:[]),pick=choices.indexOf(lesson.collapseSequence[step]);s=collapseAfterMove(s,()=>pick);return s.destroyed;};
- s=play(s,lesson.move);assert.equal(collapse(0).piece.type,'P');assert.equal(s.result,'');
- const sources=[...s.board.flatMap((p,i)=>p?.side===s.turn?[i]:[]),...Object.keys(s.hands[s.turn])],reply=sources.flatMap(src=>moves(s,src)).find(move=>!play(s,move).result);
- assert.ok(reply,'相手が応手できる');s=play(s,reply);assert.equal(collapse(1).piece.type,'G');assert.equal(s.result,'');
- assert.ok(moves(s,49).some(move=>move.to===40&&!move.prom));s=play(s,{from:49,to:40,prom:false});assert.equal(collapse(2).piece.type,'K');assert.match(s.result,/先手の勝ち.*王が崩壊/);
+ for(let step=0;step<6;step++){
+  const move=step%2===0?{from:58-(step/2)*9,to:49-(step/2)*9,prom:false}:collapseReply(s,lesson.collapseSequence.slice(step));
+  assert.ok(move,'応手が存在する');assert.ok(moves(s,move.from).some(m=>m.to===move.to));s=play(s,move);
+  const destroyed=collapse(step);assert.equal(destroyed.square,lesson.collapseSequence[step]);
+  if(step<5)assert.equal(s.result,'');else assert.match(s.result,/先手の勝ち.*王が崩壊/);
+ }
 });
 test('直接の王取りだけ検出し、王反転・再受信・投了では発動しない',()=>{
- const s=lessonState(5),n=play(s,lessons[5].move);
+ const captureIndex=lessons.findIndex(l=>l.enemyKing===31),flipIndex=lessons.findIndex(l=>l.enemyKing===38);
+ const s=lessonState(captureIndex),n=play(s,lessons[captureIndex].move);
  assert.equal(kingCaptureSquare(s,n),31);assert.equal(kingCaptureSquare(n,n),null);
- const flip=lessonState(6);assert.equal(kingCaptureSquare(flip,play(flip,lessons[6].move)),null);
+ const flip=lessonState(flipIndex);assert.equal(kingCaptureSquare(flip,play(flip,lessons[flipIndex].move)),null);
  assert.equal(kingCaptureSquare(s,{...s,result:'後手の勝ち（投了）'}),null);
- const reversed=lessonState(5);for(const p of reversed.board)if(p)p.side=1-p.side;reversed.turn=1;
- assert.equal(kingCaptureSquare(reversed,play(reversed,lessons[5].move)),31);
+ const reversed=lessonState(captureIndex);for(const p of reversed.board)if(p)p.side=1-p.side;reversed.turn=1;
+ assert.equal(kingCaptureSquare(reversed,play(reversed,lessons[captureIndex].move)),31);
 });
 function view(){
  const events=[],rect={left:0,top:0,width:50,height:50};

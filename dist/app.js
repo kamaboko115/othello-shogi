@@ -287,7 +287,14 @@ setInterval(()=>{for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.
 const advancedOpen={ai:false,friend:false};
 function selectKind(kind){advancedOpen[selectedKind]=$('advancedSettings').open;selectedKind=kind;$('advancedSettings').open=advancedOpen[kind];render();}
 $('chooseAI').onclick=()=>selectKind('ai');$('chooseFriend').onclick=()=>selectKind('friend');$('moveLimit').onchange=render;$('allowDrops').onchange=render;$('aiLevel').onchange=render;$('thinkTime').onchange=render;
-$('challengeOsesho').onclick=()=>{$('aiLevel').querySelector('option[value="osesho"]').hidden=false;$('aiLevel').value='osesho';$('thinkTime').value='5000';$('settingsDialog').close();selectKind('ai');message='開発者向けの対オセショ様を選びました。人間が勝てる保証はありません。';render();$('matchTitle').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};
+function syncOseshoChallenge(){
+ const enabled=$('challengeOsesho').checked,option=$('aiLevel').querySelector('option[value="osesho"]');
+ option.hidden=option.disabled=!enabled;
+ if(!enabled&&$('aiLevel').value==='osesho')$('aiLevel').value='expert';
+}
+$('challengeOsesho').checked=storage.get('hanten-osesho-challenge')===true;
+syncOseshoChallenge();
+$('challengeOsesho').onchange=()=>{try{storage.set('hanten-osesho-challenge',$('challengeOsesho').checked);}catch{}syncOseshoChallenge();render();};
 $('createRoom').onclick=async()=>{
  if(!$('paradoxAt').reportValidity())return;
  if(state.ply&&!window.confirm('現在の盤面から離れ、新しいオンライン対局を作成しますか？'))return;

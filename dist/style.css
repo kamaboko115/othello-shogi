@@ -260,3 +260,5 @@ header .brand span{color:#254b40}
 #board button,#devBoard button,#board .piece,#devBoard .piece{caret-color:transparent;user-select:none;-webkit-user-select:none}
 .osesho-challenge-note{margin:10px 0;color:#8f1f1f;font-weight:700}.osesho-challenge-note[hidden]{display:none}
 .status.home-message #count,.status.home-message #turn,.status.home-message #scores{display:none}
+
+#devBoardFrame{display:grid;grid-template-columns:minmax(0,490px) 20px;grid-template-rows:20px auto;max-width:510px;margin:12px auto}#devBoardFrame #devBoard{grid-column:1;grid-row:2;width:100%;margin:0;box-sizing:border-box}.dev-files{grid-column:1;display:grid;grid-template-columns:repeat(9,1fr);padding:0 8px;text-align:center}.dev-ranks{grid-column:2;grid-row:2;display:grid;grid-template-rows:repeat(9,1fr);padding:8px 0;text-align:center;align-items:center}.dev-files,.dev-ranks{font-size:13px;font-weight:bold}#lessonAdvice{padding:12px;border:2px solid #9a6500;background:#fff2c9;color:#593700;border-radius:8px}#lessonComplete{max-width:360px}#lessonComplete button{margin:6px}
