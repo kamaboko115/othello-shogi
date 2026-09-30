@@ -17,9 +17,11 @@ export function slidingMove(before,after){
  const [from,to]=after.last,p=before.board[from];
  return p?{from,to,major:['R','B'].includes(p.type),rainbow:['R','B'].includes(p.type)&&!!p.prom,promoting:!p.prom&&!!after.board[to]?.prom,beforeLabel:label(p)}:null;
 }
-export async function runSlide(move,board,signal){
- if(!move||signal?.aborted||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+export async function runSlide(move,board,signal,onLand=()=>{}){
+ if(!move||signal?.aborted)return;
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches){onLand();return;}
  if(move.drop){
+  onLand();
   if(move.major){await runMajorDrop(board,move.to,signal);return;}
   const cell=board.querySelector(`[data-square="${move.to}"]`);if(!cell)return;
   const b=cell.getBoundingClientRect(),r=board.getBoundingClientRect(),ring=document.createElement('span');
@@ -28,7 +30,7 @@ export async function runSlide(move,board,signal){
   try{await anim.finished.catch(()=>{});}finally{signal?.removeEventListener('abort',abort);anim.cancel();ring.remove();}return;
  }
  const from=board.querySelector(`[data-square="${move.from}"]`),to=board.querySelector(`[data-square="${move.to}"]`),piece=to?.querySelector('.piece');
- if(!from||!piece)return;
+ if(!from||!piece){onLand();return;}
  const a=from.getBoundingClientRect(),b=to.getBoundingClientRect(),r=board.getBoundingClientRect(),dx=a.left-b.left,dy=a.top-b.top,duration= Math.min(480,260+Math.hypot(dx,dy)*.4),rotation=piece.classList.contains('enemy')?' rotate(180deg)':'',animations=[],nodes=[],oldZ=to.style.zIndex;
  to.style.zIndex='8';
  const finalLabel=piece.textContent,wasProm=piece.classList.contains('prom');if(move.promoting){piece.textContent=move.beforeLabel;piece.classList.remove('prom');}
@@ -52,6 +54,8 @@ export async function runSlide(move,board,signal){
   animations.push(glide);
   const abort=()=>animations.forEach(a=>a.cancel());signal?.addEventListener('abort',abort,{once:true});
   try{
+   await glide.finished.catch(()=>{});
+   if(!signal?.aborted)onLand();
    await Promise.all(animations.map(a=>a.finished.catch(()=>{})));
    if(move.promoting&&!signal?.aborted){
     // Cancelling a finished Web Animation creates a new pending finished promise.
@@ -106,7 +110,7 @@ export function capturedPiece(before,after){
 }
 export async function runCapture(capture,signal,view={}){
  if(signal?.aborted)return;
- playMoveSound();
+ if(view.moveSound!==false)playMoveSound();
  const source=(view.board||document.querySelector('#board')).querySelector('[data-square="'+capture.square+'"]'),target=(view.hand||document.querySelector('#hand'+capture.side)).querySelector('[data-type="'+capture.type+'"]');
  if(!source||!target)return;
  const major=['R','B'].includes(capture.type),a=source.getBoundingClientRect(),b=target.getBoundingClientRect(),dot=document.createElement('span'),animations=[];

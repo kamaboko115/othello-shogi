@@ -231,7 +231,7 @@ function adopt(data){
    if(state.flipped.length>=1||capture||slide){
     comboPreparing=true;render();comboActive=true;comboPreparing=false;
     const controller=new AbortController();comboController=controller;
-    (async()=>{if(slide)await runSlide(slide,$('board'),controller.signal);if(controller.signal.aborted)return;if(!capture&&!state.flipped.length&&!state.result)playMoveSound();if(capture)await runCapture(capture,controller.signal,{shake:!flipNeedsShake(state)});if(controller.signal.aborted)return;if(state.flipped.length)await runCombo(state,document.querySelector('.board-area'),online.side,controller.signal);})().finally(()=>{if(controller.signal.aborted)return;comboActive=false;comboController=null;animationKey='';finish();render();});
+    (async()=>{if(slide)await runSlide(slide,$('board'),controller.signal,playMoveSound);if(controller.signal.aborted)return;if(!slide&&!capture&&!state.flipped.length&&!state.result)playMoveSound();if(capture)await runCapture(capture,controller.signal,{moveSound:!slide,shake:!flipNeedsShake(state)});if(controller.signal.aborted)return;if(state.flipped.length)await runCombo(state,document.querySelector('.board-area'),online.side,controller.signal);})().finally(()=>{if(controller.signal.aborted)return;comboActive=false;comboController=null;animationKey='';finish();render();});
    }else{if(!state.destroyed&&!state.result){if(state.flipped.length)playMultiFlipSound();else playMoveSound();}finish();}
   }
  }
