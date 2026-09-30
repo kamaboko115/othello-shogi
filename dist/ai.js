@@ -1,4 +1,4 @@
-import {moves,raw,reaches,points,inCheck,flip} from './engine.js';
+import {moves,raw,reaches,points,inCheck} from './engine.js';
 export const AI_LEVELS=['weak','normal','strong','expert'];
 const WIN=1000000,VALUE={K:20000,R:950,B:850,G:480,S:400,N:280,L:240,P:100};
 const value=p=>VALUE[p.type]+(p.prom?({R:300,B:300,S:100,N:200,L:240,P:380}[p.type]||0):0);
@@ -70,37 +70,13 @@ export function evaluateAI(s,side){
  }
  return score[side]-score[1-side]+flipScore[side]-flipScore[1-side];
 }
-// Search positions own their pieces/hands, but do not copy unused game history.
-export function searchPosition(s,m){
- const n={...s,board:s.board.map(p=>p?{...p}:null),hands:s.hands.map(h=>({...h})),flipped:[],destroyed:null,paradoxStarted:false};
- if(m.drop){n.board[m.to]={type:m.drop,side:s.turn,prom:false};n.hands[s.turn][m.drop]--;}
- else{const p=n.board[m.from],q=n.board[m.to];if(q&&q.type!=='K')n.hands[s.turn][q.type]=(n.hands[s.turn][q.type]||0)+1;n.board[m.to]=p;n.board[m.from]=null;if(m.prom)p.prom=true;}
- if(s.mode)n.flipped=flip(n,m.to);
- n.last=m.drop?[m.to]:[m.from,m.to];n.turn=1-s.turn;n.ply++;return n;
-}
-// Only a capture on the king or an aligned sandwich can win immediately.
-// Verify the resulting board: moving the sandwich's anchor can invalidate it.
-export function winningMove(s,checkBudget=()=>{}){
- const king=s.board.findIndex(p=>p?.type==='K'&&p.side!==s.turn);
- if(king<0||s.result)return null;
- for(const src of [...s.board.flatMap((p,i)=>p?.side===s.turn?[i]:[]),...Object.keys(s.hands[s.turn])]){
-  checkBudget();
-  for(const m of moves(s,src)){
-   const dr=Math.abs(Math.floor(m.to/9)-Math.floor(king/9)),dc=Math.abs(m.to%9-king%9);
-   if(m.to!==king&&(!s.mode||(dr!==0&&dc!==0&&dr!==dc)))continue;
-   checkBudget();const n=searchPosition(s,m);
-   if(!n.board.some(p=>p?.type==='K'&&p.side===n.turn))return m;
-  }
- }
- return null;
-}
-function candidates(s,checkBudget,nextPosition=raw){
+function candidates(s,checkBudget){
  const list=[];
  const sources=[...s.board.flatMap((p,i)=>p?.side===s.turn?[i]:[]),...Object.keys(s.hands[s.turn])];
  for(const src of sources){
   checkBudget();
   for(const move of moves(s,src)){
-   checkBudget();const next=nextPosition(s,move),end=terminal(next,s.turn);
+   checkBudget();const next=raw(s,move),end=terminal(next,s.turn);
    const captured=s.board[move.to];
    let order=end===WIN?WIN:0;
    if(captured)order+=value(captured)*(s.noDrops?1:1.8);
@@ -151,8 +127,7 @@ function evaluateLegacy(s,side){
 }
 
 export function chooseAI(s,level='normal',thinkMs=1000,onBest=()=>{},onStats=()=>{}){
- const helper=level==='helper',nextPosition=helper?searchPosition:raw;
- const evaluate=helper||['strong','expert'].includes(level)?evaluateAI:evaluateLegacy;
+ const evaluate=['strong','expert'].includes(level)?evaluateAI:evaluateLegacy;
  const started=performance.now(),budget=[500,1000,3000,5000].includes(thinkMs)?thinkMs:level==='normal'?200:1000;
  const deadline=started+budget;
  let nodes=0,completedDepth=0,best=null,root;
@@ -162,12 +137,10 @@ export function chooseAI(s,level='normal',thinkMs=1000,onBest=()=>{},onStats=()=
  if(!best)return null;
  const table=new Map();
  function stateKey(p){return p.turn+'|'+p.ply+'|'+p.board.map(x=>x?x.side+x.type+(x.prom?'+':''):'_').join(',')+'|'+JSON.stringify(p.hands);}
- function ordered(p,hint){const list=candidates(p,checkBudget,nextPosition);if(hint)list.sort((a,b)=>(moveKey(b.move)===hint?2*WIN:0)+b.order-((moveKey(a.move)===hint?2*WIN:0)+a.order));return list;}
+ function ordered(p,hint){const list=candidates(p,checkBudget);if(hint)list.sort((a,b)=>(moveKey(b.move)===hint?2*WIN:0)+b.order-((moveKey(a.move)===hint?2*WIN:0)+a.order));return list;}
  function quiet(p,alpha,beta,left){
-  checkBudget();nodes++;const stand=evaluate(p,p.turn);if(Math.abs(stand)>=900000)return stand;
-  if(helper&&winningMove(p,checkBudget))return WIN;
-  if(left===0)return stand;
-  const threatened=helper?!!winningMove({...p,turn:1-p.turn},checkBudget):inCheck(p,p.turn);
+  checkBudget();nodes++;const stand=evaluate(p,p.turn);if(Math.abs(stand)>=900000||left===0)return stand;
+  const threatened=inCheck(p,p.turn);
   if(!threatened){if(stand>=beta)return stand;alpha=Math.max(alpha,stand);}
   const choices=ordered(p);
   for(const c of choices){if(!threatened&&!c.tactical)continue;const score=-quiet(c.next,-beta,-alpha,left-1);if(score>=beta)return score;alpha=Math.max(alpha,score);}
@@ -186,8 +159,7 @@ export function chooseAI(s,level='normal',thinkMs=1000,onBest=()=>{},onStats=()=
   return score;
  }
  try{
-  if(helper){const win=winningMove(s,checkBudget);if(win){best=win;onBest(best);return best;}}
-  root=candidates(s,checkBudget,nextPosition);
+  root=candidates(s,checkBudget);
   if(level==='weak'){
    // Prefer quiet random moves, so the beginner level rarely finds a combo.
    const quiet=root.filter(c=>!c.tactical),pool=[...root,...quiet,...quiet];
@@ -197,20 +169,13 @@ export function chooseAI(s,level='normal',thinkMs=1000,onBest=()=>{},onStats=()=
   // Evaluate every root candidate before choosing a positional fallback.
   for(const c of root){checkBudget();c.score=evaluate(c.next,s.turn);}
   root.sort((a,b)=>b.score-a.score);best=root[0].move;onBest(best);
-  if(helper){
-   // Publish a verified safe fallback as soon as one is available, even if
-   // the budget expires before all root candidates have been inspected.
-   const safe=[];
-   for(const c of root){checkBudget();if(terminal(c.next,s.turn)!==null||!winningMove(c.next,checkBudget)){safe.push(c);if(safe.length===1){best=c.move;onBest(best);}}}
-   if(safe.length)root=safe;
-  }
   if(level==='normal'){
    // One-move judgement only: similar choices add variety without deep tactics.
    const close=root.slice(0,3).filter(c=>c.score>=root[0].score-60);
    const pool=close.flatMap((c,i)=>Array(3-i).fill(c));
    best=pool[crypto.getRandomValues(new Uint32Array(1))[0]%pool.length].move;onBest(best);return best;
   }
-  const maxDepth=helper||level==='expert'?12:level==='strong'?8:2;
+  const maxDepth=level==='expert'?12:level==='strong'?8:2;
   for(let depth=1;depth<=maxDepth;depth++){
    let alpha=-Infinity,nextBest=best;const scored=[];
    for(const c of root){const score=-search(c.next,depth-1,-Infinity,-alpha);scored.push({...c,score});if(score>alpha){alpha=score;nextBest=c.move;}}

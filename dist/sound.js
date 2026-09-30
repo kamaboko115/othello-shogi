@@ -1,17 +1,33 @@
 // Load Shogi3 from its creator at runtime; do not redistribute the audio file.
 let context,flipBufferPromise=Promise.resolve(null);
 const shogiUrl='https://taira-komori.net/sound/playing01/Shogi3.mp3';
+// Skip the measured quiet lead-in; keep a short margin before the impact.
+const shogiStart=.55;
 let shogiSample;
-function prepareShogi(){try{if(shogiSample)return;shogiSample=new Audio(shogiUrl);shogiSample.preload='auto';shogiSample.load();}catch{}}
+function prepareShogi(){try{if(shogiSample)return;shogiSample=new Audio(shogiUrl);shogiSample.preload='auto';shogiSample.addEventListener('loadedmetadata',()=>{shogiSample.currentTime=shogiStart;},{once:true});shogiSample.load();}catch{}}
 window.addEventListener('pointerdown',prepareShogi,{once:true,passive:true});
 window.addEventListener('keydown',prepareShogi,{once:true});
 function playShogi(rate=1,volume=.7){
- try{if(!shogiSample)prepareShogi();const sound=rate===1?shogiSample:shogiSample.cloneNode();if(sound===shogiSample)sound.currentTime=0;sound.playbackRate=rate;sound.volume=volume;sound.play().catch(()=>tone(700,.06));}
+ try{if(!shogiSample)prepareShogi();const sound=rate===1?shogiSample:shogiSample.cloneNode();sound.currentTime=shogiStart;sound.playbackRate=rate;sound.volume=volume;sound.play().catch(()=>tone(700,.06));}
  catch{tone(700,.06);}
 }
 function prepare(){try{context ||= new (window.AudioContext||window.webkitAudioContext)();if(context.state==='suspended')context.resume().catch(()=>{});}catch{}}
 function tone(freq,duration){prepare();if(!context||context.state!=='running')return;const o=context.createOscillator(),g=context.createGain(),at=context.currentTime;o.type='triangle';o.frequency.setValueAtTime(freq,at);o.frequency.exponentialRampToValueAtTime(freq*.45,at+duration);g.gain.setValueAtTime(.12,at);g.gain.exponentialRampToValueAtTime(.001,at+duration);o.connect(g);g.connect(context.destination);o.start(at);o.stop(at+duration);}
 export function playMoveSound(){playShogi();}
+export function playSwordSound(signal){
+ prepare();if(!context||context.state!=='running'||signal?.aborted)return ()=>{};
+ const output=context.createGain();output.gain.value=.65;output.connect(context.destination);
+ const nodes=[],at=context.currentTime;
+ // Inharmonic partials give the clash a metallic edge; the bass lands with the blade.
+ for(const [delay,freq,duration,volume] of [[.08,1650,.22,.07],[.12,2473,.28,.045],[.38,115,.18,.2],[.38,1831,.5,.1],[.38,2917,.43,.065],[.39,4271,.32,.025]]){
+  const osc=context.createOscillator(),gain=context.createGain(),start=at+delay;
+  osc.frequency.setValueAtTime(freq,start);osc.frequency.exponentialRampToValueAtTime(freq<200?45:freq*.96,start+duration);
+  gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(volume,start+.004);gain.gain.exponentialRampToValueAtTime(.001,start+duration);
+  osc.connect(gain);gain.connect(output);osc.start(start);osc.stop(start+duration+.01);nodes.push(osc);
+ }
+ let timer;const stop=()=>{clearTimeout(timer);for(const node of nodes){try{node.stop();}catch{}}output.disconnect();signal?.removeEventListener('abort',stop);};
+ signal?.addEventListener('abort',stop,{once:true});timer=setTimeout(stop,1100);return stop;
+}
 export function playMultiFlipSound(){for(let i=0;i<3;i++)setTimeout(()=>playShogi(1+i*.14,.42),i*85);}
 export function playVictorySound(){
  prepare();if(!context||context.state!=='running')return;

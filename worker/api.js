@@ -34,7 +34,7 @@ export async function api(request,env){
    if(row)return json({...view(row,0),invite:body.invite});
    if(body.settings?.paradoxAt!==undefined&&body.settings.paradoxAt!==false&&(!Number.isInteger(body.settings.paradoxAt)||body.settings.paradoxAt<1||body.settings.paradoxAt>1000))fail('崩壊開始は1〜1000手で指定してください。');
    let timeControl;try{timeControl=normalizeTime(body.settings?.timeControl);}catch{fail('時間設定が不正です。');}
-   const settings={timeControl:body.kind!=='ai'?timeControl:'none',handicap:Object.hasOwn(handicapOptions,body.settings?.handicap)?body.settings.handicap:'none',paradoxAt:body.settings?.paradoxAt??150,moveLimit:body.settings?.moveLimit===true,noDrops:body.settings?.noDrops===true};if(body.kind==='ai'){settings.helperUnlimited=body.settings?.helperUnlimited===true;settings.handicapSide=body.settings?.handicapSide==='human'?'human':'ai';settings.aiLevel=['weak','normal','strong','expert'].includes(body.settings?.aiLevel)?body.settings.aiLevel:'normal';settings.thinkMs=[500,1000,3000,5000].includes(body.settings?.thinkMs)?body.settings.thinkMs:1000;}
+   const settings={timeControl:body.kind!=='ai'?timeControl:'none',handicap:Object.hasOwn(handicapOptions,body.settings?.handicap)?body.settings.handicap:'none',paradoxAt:body.settings?.paradoxAt??150,moveLimit:body.settings?.moveLimit===true,noDrops:body.settings?.noDrops===true};if(body.kind==='ai'){settings.helperUnlimited=body.settings?.helperUnlimited===true;settings.handicapSide=body.settings?.handicapSide==='human'?'human':'ai';settings.aiLevel=['weak','normal','strong','expert','osesho'].includes(body.settings?.aiLevel)?body.settings.aiLevel:'normal';settings.thinkMs=[500,1000,3000,5000].includes(body.settings?.thinkMs)?body.settings.thinkMs:1000;}
    const id=random().slice(0,32),data={state:setupState(settings),settings,kind:body.kind==='ai'?'ai':'friend',logs:[],offer:null};
    if(data.kind==='ai'){data.toss=furigoma();data.round=1;data.rematch=null;applyHandicap(data.state,settings.handicapSide==='human'?data.toss.hostSide:1-data.toss.hostSide,settings.handicap);}
    await env.DB.prepare('DELETE FROM rooms WHERE expires < ?').bind(now).run();
@@ -86,7 +86,7 @@ export async function api(request,env){
    if(data.kind!=='ai'||side!==0||s.turn===playingSide)fail('AIの手番ではありません。',403);
    const sources=[...s.board.flatMap((p,i)=>p?.side===s.turn?[i]:[]),...Object.keys(s.hands[s.turn])];
    if(sources.some(src=>moves(s,src).length))fail('指せる手があります。');
-   s.result=sideName(1-s.turn)+'の勝ち（指せる手なし）';
+   chargeClock(data,now);s.result=sideName(1-s.turn)+'の勝ち（指せる手なし）';
   }else if(body.action==='move'||body.action==='ai-move'||body.action==='helper-move'){
 
    if(body.action==='ai-move'){if(data.kind!=='ai'||side!==0||s.turn===playingSide)fail('AIの手番ではありません。',403);}
@@ -97,9 +97,9 @@ export async function api(request,env){
    if(m.drop){if(!['R','B','G','S','N','L','P'].includes(m.drop))fail('指せない手です。');normalized={drop:m.drop,to:m.to};}
    else{if(!Number.isInteger(m.from)||m.from<0||m.from>80||typeof m.prom!=='boolean')fail('指せない手です。');normalized={from:m.from,to:m.to,prom:m.prom};}
    try{const next=collapseAfterMove(play(s,normalized));remember(data);chargeClock(data,now);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:''));data.state=next;if(body.action==='helper-move')data.helperUsedRound=data.round||1;finishClockMove(data,s.turn,now);data.offer=null;}catch{fail('指せない手です。');}
-  }else if(body.action==='resign'){s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
-  else if(body.action==='offer-draw'){if(data.kind==='ai')s.result='合意による引き分け';else data.offer=side;}
-  else if(body.action==='accept-draw'){if(data.offer!==1-side)fail('相手からの引き分け提案はありません。');s.result='合意による引き分け';data.offer=null;}
+  }else if(body.action==='resign'){chargeClock(data,now);s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
+  else if(body.action==='offer-draw'){if(data.kind==='ai'){chargeClock(data,now);s.result='合意による引き分け';}else data.offer=side;}
+  else if(body.action==='accept-draw'){if(data.offer!==1-side)fail('相手からの引き分け提案はありません。');chargeClock(data,now);s.result='合意による引き分け';data.offer=null;}
   else if(body.action==='decline-draw'){data.offer=null;}
   else fail('操作が正しくありません。');
   }

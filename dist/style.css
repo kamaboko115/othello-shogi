@@ -93,7 +93,7 @@ header .brand span{color:#254b40}
 @media(max-width:600px){header{gap:10px;flex-wrap:wrap;height:auto;min-height:78px;padding:12px 14px}.theme-switch{margin-left:auto;font-size:12px}.theme-switch select{padding:6px}.local{display:none}}
 @media(prefers-reduced-motion:reduce){.cell.flipped{animation:none}.flip-light{display:none}}
 
-.paradox-banner{position:fixed;z-index:10000;inset:35% 5% auto;text-align:center;font-size:clamp(24px,4vw,54px);font-weight:900;padding:24px;background:#112c2bf2;border:2px solid #f0d69c;border-radius:16px;color:#fff;text-shadow:2px 2px #000;animation:paradox-rainbow .9s linear infinite;pointer-events:none}.paradox-ghost{position:absolute!important;inset:8%;display:grid;place-items:center;z-index:5;pointer-events:none}.paradox-breaking{animation:paradox-break .55s ease-in forwards}@keyframes paradox-rainbow{0%,100%{color:#ff9b9b}25%{color:#ffe795}50%{color:#a5ffc2}75%{color:#a4caff}}@keyframes paradox-break{to{opacity:0;transform:translateY(20px) rotate(25deg) scale(.25)}}@media(prefers-reduced-motion:reduce){.paradox-banner{animation:none;color:#ffe795}.paradox-breaking{animation:none;opacity:0}}
+.paradox-banner{position:fixed;z-index:10000;inset:35% 5% auto;text-align:center;font-size:clamp(24px,4vw,54px);font-weight:900;padding:24px;background:#112c2bf2;border:2px solid #f0d69c;border-radius:16px;color:#fff;text-shadow:2px 2px #000;animation:paradox-rainbow .9s linear infinite;pointer-events:none}.paradox-ghost{position:absolute!important;inset:8%;display:grid;place-items:center;z-index:5;pointer-events:none}.paradox-breaking{animation:paradox-break .55s ease-in forwards}.paradox-breaking.enemy{animation-name:paradox-break-enemy}@keyframes paradox-rainbow{0%,100%{color:#ff9b9b}25%{color:#ffe795}50%{color:#a5ffc2}75%{color:#a4caff}}@keyframes paradox-break{to{opacity:0;transform:translateY(20px) rotate(25deg) scale(.25)}}@keyframes paradox-break-enemy{from{transform:rotate(180deg)}to{opacity:0;transform:translateY(20px) rotate(205deg) scale(.25)}}@media(prefers-reduced-motion:reduce){.paradox-banner{animation:none;color:#ffe795}.paradox-breaking{animation:none;opacity:0}}
 
 .rule-help{position:relative;display:inline-block;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:5px;cursor:help}.rule-help ruby{ruby-align:center}.rule-help rt{font-size:10px;letter-spacing:0;font-weight:400}.rule-tooltip{display:none;position:absolute;left:0;top:calc(100% + 10px);z-index:30;width:min(280px,70vw);padding:12px 14px;background:#0c211e;color:#fff3d8;border:1px solid #b99d65;border-radius:8px;font-size:14px;line-height:1.65;font-weight:400;text-decoration:none;box-shadow:0 5px 18px #0006}.rule-help:hover .rule-tooltip,.rule-help:focus .rule-tooltip,.rule-help:focus-within .rule-tooltip{display:block}.rule-help:focus-visible{outline:2px solid #e9ce92;outline-offset:5px}.setting-row:has(.rule-help){min-height:52px;gap:18px}
 
@@ -218,3 +218,45 @@ header .brand span{color:#254b40}
 @keyframes sword-shock{0%,40%{opacity:0;transform:scale(.1)}44%{opacity:1}100%{opacity:0;transform:scale(2.1)}}
 
 #devBoard .tutorial-hint{box-shadow:inset 0 0 0 3px #ffe879,inset 0 0 24px #ffe87990;z-index:3}#devBoard .tutorial-hint .piece{animation:tutorial-glow 1.2s ease-in-out infinite}@keyframes tutorial-glow{50%{filter:brightness(1.6) drop-shadow(0 0 9px #ffe879)}}.tutorial-collapse-note{position:absolute;left:5%;right:5%;top:38%;z-index:130;padding:16px;background:#112c2bef;color:#ffe879;font-weight:bold;text-align:center;pointer-events:none}#lessonProgress{color:#b37e13;font-weight:bold}@media(prefers-reduced-motion:reduce){#devBoard .tutorial-hint .piece{animation:none}}
+.drop-ring{position:absolute;pointer-events:none;z-index:110;border:2px solid #b7fff0;border-radius:50%;box-shadow:0 0 12px #5fffd5,inset 0 0 10px #fff8}
+.royal-sword{position:absolute;width:clamp(70px,17vw,120px);height:200px;left:-60px;top:-190px;transform-origin:50% 95%;filter:drop-shadow(0 0 8px #ffef96);animation:royal-sword-fall .95s both}
+.royal-sword svg{width:100%;height:100%}.sword--1{--sword-x:-48px;--sword-angle:-22deg;animation-delay:65ms}.sword-0{--sword-x:0px;--sword-angle:0deg;z-index:2}.sword-1{--sword-x:48px;--sword-angle:22deg;animation-delay:35ms}
+.sword-impact .sword-halo{background:radial-gradient(circle,#fffbd9ee,#ffcf46aa 30%,#ffa52744 55%,transparent 70%)}
+.sword-impact .sword-shock{border-color:#fff2ab;box-shadow:0 0 20px #ffd84f,inset 0 0 14px #fff}.sword-shock.echo{animation-delay:90ms;border-width:2px}
+.sword-rays{position:absolute;left:-100px;top:-100px;width:200px;height:200px;background:repeating-conic-gradient(from 10deg,transparent 0deg 24deg,#fff4acbb 25deg 27deg,transparent 28deg 45deg);border-radius:50%;mask-image:radial-gradient(circle,transparent 15%,#000 22%,transparent 68%);animation:sword-halo .95s both}
+@keyframes royal-sword-fall{0%{opacity:0;transform:translate(var(--sword-x),-150px) rotate(var(--sword-angle)) scale(1.15)}18%{opacity:1;transform:translate(var(--sword-x),-135px) rotate(var(--sword-angle)) scale(1.1)}43%{opacity:1;transform:translate(var(--sword-x),5px) rotate(var(--sword-angle))}52%{transform:translate(var(--sword-x),-3px) rotate(var(--sword-angle))}68%{opacity:1;transform:translate(var(--sword-x),0) rotate(var(--sword-angle))}100%{opacity:0;transform:translate(var(--sword-x),0) rotate(var(--sword-angle))}}
+
+/* A single steel blade: brief anticipation, fast impact, restrained afterglow. */
+.hero-blade{position:absolute;width:100px;height:260px;left:-50px;top:-251px;filter:drop-shadow(0 0 5px #a9ecff);animation:hero-blade .95s both}.hero-blade svg{width:100%;height:100%}
+.blade-column{position:absolute;width:12px;height:260px;left:-6px;top:-260px;background:linear-gradient(0deg,#e7ffff,transparent);filter:blur(4px);animation:blade-column .95s both}
+.blade-flash{position:absolute;left:-90px;top:-2px;width:180px;height:4px;background:#fff8ce;box-shadow:0 0 14px 4px #80dfff;animation:blade-flash .95s both}
+.blade-wave{position:absolute;left:-45px;top:-22px;width:90px;height:44px;border:2px solid #b8eeff;border-radius:50%;box-shadow:0 0 7px #85caff;animation:blade-wave .95s both}.blade-wave.second{animation-delay:65ms;border-color:#ecc784;border-width:1px}
+.blade-spark{position:absolute;width:3px;height:14px;left:-1px;top:-7px;background:#fff0bb;box-shadow:0 0 5px #ffc766;animation:blade-spark .95s both}
+@keyframes hero-blade{0%{opacity:0;transform:translateY(-135px) scaleY(1.2)}15%{opacity:1;transform:translateY(-125px)}30%{transform:translateY(-122px)}40%{opacity:1;transform:translateY(3px)}46%{transform:translateY(-2px)}60%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(0)}}
+@keyframes blade-column{0%,28%{opacity:0;transform:scaleX(.3)}37%{opacity:1;transform:scaleX(1)}52%,100%{opacity:0}}
+@keyframes blade-flash{0%,38%{opacity:0;transform:scaleX(.1)}41%{opacity:1;transform:scaleX(1)}65%,100%{opacity:0;transform:scaleX(1.3)}}
+@keyframes blade-wave{0%,38%{opacity:0;transform:scale(.15)}43%{opacity:.95}100%{opacity:0;transform:scale(2.3)}}
+@keyframes blade-spark{0%,39%{opacity:0;transform:rotate(var(--angle)) translateY(0) scale(.2)}44%{opacity:1}100%{opacity:0;transform:rotate(var(--angle)) translateY(calc(-1 * var(--reach))) scale(.1)}}
+
+.major-drop-wave{border-color:#d4f7ff;box-shadow:0 0 10px #68dfff,inset 0 0 7px #fff9}.major-drop-spark{position:absolute;pointer-events:none;z-index:111;border-radius:50%;background:#fffbe5;box-shadow:0 0 5px 2px #fff4b5,0 0 13px 4px #ffbf38}
+.promotion-blade{position:absolute;width:64px;height:212px;left:-32px;top:-210px;filter:drop-shadow(0 0 3px #b4eaff);animation:promotion-blade 950ms linear both}.promotion-blade svg{width:100%;height:100%}.promotion-flash{position:absolute;left:-90px;top:-2px;width:180px;height:4px;background:#fff1af;box-shadow:0 0 6px 2px #ffd85c,0 0 16px #ffb21d;animation:promotion-flash 330ms 380ms both}.promotion-glow{position:absolute;left:-85px;top:-8px;width:170px;height:15px;background:linear-gradient(90deg,transparent,#ffbd32 25%,#ffe389 50%,#ffbd32 75%,transparent);filter:blur(3px);animation:promotion-glow 500ms 400ms both}.promotion-ring{position:absolute;left:-48px;top:-20px;width:96px;height:40px;border:1px solid #ffe4a0;border-radius:50%;animation:promotion-ring 420ms 400ms both}
+@keyframes promotion-blade{0%{opacity:0;transform:translateY(-150px)}20%{opacity:1;transform:translateY(-110px)}40%,49%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(0)}}
+@keyframes promotion-flash{0%{opacity:0;transform:rotate(-25deg) scaleX(.1)}12%{opacity:1}100%{opacity:0;transform:rotate(-25deg) scaleX(1.1)}}
+@keyframes promotion-glow{0%{opacity:0;transform:rotate(-25deg) scaleX(.15)}18%{opacity:.9;transform:rotate(-25deg) scaleX(1)}60%{opacity:.65}100%{opacity:0;transform:rotate(-25deg) scaleX(1.2)}}
+@keyframes promotion-ring{0%{opacity:0;transform:scale(.25)}20%{opacity:.8}100%{opacity:0;transform:scale(1.5)}}
+
+/* Direct king capture holds briefly, then waves before the existing victory. */
+.king-impact{position:absolute;pointer-events:none;z-index:125;width:var(--cell-size);height:var(--cell-size);transform:translate(-50%,-50%)}
+.king-impact::before,.king-impact::after{content:'';position:absolute;inset:0;border-radius:50%;box-sizing:border-box}
+.king-impact.impact-hold::before{background:radial-gradient(circle,#fff6da,#ffda7666 35%,transparent 70%)}
+.king-impact.impact-burst::before{border:3px solid #fff1af;box-shadow:0 0 16px #ffc14b;animation:king-wave .42s ease-out both}
+.king-impact.impact-burst::after{border:1px solid #a9ecff;animation:king-wave .42s .06s ease-out both}
+@keyframes king-wave{from{opacity:1;transform:scale(.3)}to{opacity:0;transform:scale(3.2)}}
+.dev-capture-hand button{font:inherit;color:inherit;background:#fff1;border:1px solid #b6cbbb66;border-radius:5px;padding:4px 7px}
+.dev-capture-hand button[aria-pressed=true]{outline:2px solid #ffc767;background:#b9923e44}
+.dev-capture-hand button:disabled{opacity:.5;cursor:default}
+.tutorial-mode.tutorial-drop #devHand0{display:flex;justify-content:center}
+.tutorial-mode.tutorial-drop #devHand0 button{min-width:90px}
+#board button,#devBoard button,#board .piece,#devBoard .piece{caret-color:transparent;user-select:none;-webkit-user-select:none}
+.osesho-challenge-note{margin:10px 0;color:#8f1f1f;font-weight:700}.osesho-challenge-note[hidden]{display:none}
+.status.home-message #count,.status.home-message #turn,.status.home-message #scores{display:none}
