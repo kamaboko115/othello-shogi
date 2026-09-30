@@ -1,3 +1,4 @@
+import {normalizeMoveLimit} from '../dist/judge-options.js';
 import {normalizeTime,timeOptions,handicapOptions,applyHandicap,startClock,clockBudget,chargeClock,finishClockMove} from '../dist/match-options.js';
 import {initial,play,collapseAfterMove,label,names,moves} from '../dist/engine.js';
 
@@ -10,7 +11,7 @@ const sideName=n=>n===0?'先手':'後手';
 const notation=(s,m)=>`${s.ply+1}. ${s.turn===0?'▲':'▽'}${9-m.to%9}${'一二三四五六七八九'[Math.floor(m.to/9)]} ${m.drop?names[m.drop]:label(s.board[m.from])}${m.drop?'打':m.prom?'成':''}`;
 export function furigoma(){const coins=Array.from(crypto.getRandomValues(new Uint8Array(5)),n=>n%2);return {coins,hostSide:coins.reduce((a,b)=>a+b,0)>=3?0:1};}
 function matchToss(settings){const toss=furigoma();if(settings?.aiLevel!=='osesho'||toss.hostSide===1)return toss;return {coins:[0,0,0,0,0],originalCoins:toss.coins,hostSide:1,intervened:true};}
-function setupState(settings){const state=initial(true);state.noDrops=!!settings?.noDrops;state.moveLimit=settings?.moveLimit!==false;state.paradoxAt=settings?.paradoxAt??150;return state;}
+function setupState(settings){const state=initial(true);state.noDrops=!!settings?.noDrops;state.moveLimit=normalizeMoveLimit(settings?.moveLimit,60);state.paradoxAt=settings?.paradoxAt??150;return state;}
 function remember(data){data.takebacks||=[];data.takebacks.push({state:structuredClone(data.state),logs:[...data.logs]});if(data.takebacks.length>128)data.takebacks.shift();data.undoOffer=null;}
 function undoIndex(data,side){return (data.takebacks||[]).findLastIndex(x=>x.state.turn===side);}
 function rewind(data,index){const snapshot=data.takebacks?.[index];if(!snapshot)fail('戻せる手がありません。',409);data.state=snapshot.state;data.logs=snapshot.logs;data.takebacks=data.takebacks.slice(0,index);data.undoOffer=null;data.offer=null;data.rematch=null;}
@@ -35,7 +36,7 @@ export async function api(request,env){
    if(row)return json({...view(row,0),invite:body.invite});
    if(body.settings?.paradoxAt!==undefined&&body.settings.paradoxAt!==false&&(!Number.isInteger(body.settings.paradoxAt)||body.settings.paradoxAt<1||body.settings.paradoxAt>1000))fail('崩壊開始は1〜1000手で指定してください。');
    let timeControl;try{timeControl=normalizeTime(body.settings?.timeControl);}catch{fail('時間設定が不正です。');}
-   const settings={timeControl:body.kind!=='ai'?timeControl:'none',handicap:Object.hasOwn(handicapOptions,body.settings?.handicap)?body.settings.handicap:'none',paradoxAt:body.settings?.paradoxAt??150,moveLimit:body.settings?.moveLimit===true,noDrops:body.settings?.noDrops===true};if(body.kind==='ai'){settings.helperUnlimited=body.settings?.helperUnlimited===true;settings.handicapSide=body.settings?.handicapSide==='human'?'human':'ai';settings.aiLevel=['weak','normal','strong','expert','osesho'].includes(body.settings?.aiLevel)?body.settings.aiLevel:'normal';settings.thinkMs=[500,1000,3000,5000].includes(body.settings?.thinkMs)?body.settings.thinkMs:1000;}
+   const settings={timeControl:body.kind!=='ai'?timeControl:'none',handicap:Object.hasOwn(handicapOptions,body.settings?.handicap)?body.settings.handicap:'none',paradoxAt:body.settings?.paradoxAt??150,moveLimit:normalizeMoveLimit(body.settings?.moveLimit),noDrops:body.settings?.noDrops===true};if(body.kind==='ai'){settings.helperUnlimited=body.settings?.helperUnlimited===true;settings.handicapSide=body.settings?.handicapSide==='human'?'human':'ai';settings.aiLevel=['weak','normal','strong','expert','osesho'].includes(body.settings?.aiLevel)?body.settings.aiLevel:'normal';settings.thinkMs=[500,1000,3000,5000].includes(body.settings?.thinkMs)?body.settings.thinkMs:1000;}
    const id=random().slice(0,32),data={state:setupState(settings),settings,kind:body.kind==='ai'?'ai':'friend',logs:[],offer:null};
    if(data.kind==='ai'){data.toss=matchToss(settings);data.round=1;data.rematch=null;applyHandicap(data.state,settings.handicapSide==='human'?data.toss.hostSide:1-data.toss.hostSide,settings.handicap);}
    await env.DB.prepare('DELETE FROM rooms WHERE expires < ?').bind(now).run();

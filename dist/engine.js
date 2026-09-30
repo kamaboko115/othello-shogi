@@ -1,3 +1,4 @@
+import {adjudicationLimit} from './judge-options.js';
 export const names={K:'玉',R:'飛',B:'角',G:'金',S:'銀',N:'桂',L:'香',P:'歩'};
 export const promoted={R:'龍',B:'馬',S:'成銀',N:'成桂',L:'成香',P:'と'};
 export const label=p=>p.prom?promoted[p.type]:names[p.type];
@@ -36,7 +37,7 @@ export function play(s,m){
  if(s.mode){
   const enemyKing=n.board.some(p=>p?.type==='K'&&p.side===n.turn);
   if(!enemyKing)n.result=`${winner}の勝ち（${n.flipped.some(i=>n.board[i].type==='K')?'王を反転':'王を取った'}）`;
-  else if(n.moveLimit!==false&&n.ply>=60){const [a,b]=points(n);n.result=`${a===b?'引き分け':a>b?'先手の勝ち':'後手の勝ち'}（60手・先手${a}枚／後手${b}枚）`;}
+  else if(adjudicationLimit(n)!==false&&n.ply>=adjudicationLimit(n)){const [a,b]=points(n);n.result=`${a===b?'引き分け':a>b?'先手の勝ち':'後手の勝ち'}（${adjudicationLimit(n)}手・先手${a}枚／後手${b}枚）`;}
   return n;
  }
  n.history=[...s.history,{key:key(s),side:s.turn,check:inCheck(n,n.turn)}];

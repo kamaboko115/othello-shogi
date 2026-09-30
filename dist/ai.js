@@ -1,3 +1,4 @@
+import {adjudicationLimit} from './judge-options.js';
 import {moves,raw,reaches,points,inCheck} from './engine.js';
 export const AI_LEVELS=['weak','normal','strong','expert'];
 const WIN=1000000,VALUE={K:20000,R:950,B:850,G:480,S:400,N:280,L:240,P:100};
@@ -8,7 +9,7 @@ const budgetError=new Error('AI budget');
 function terminal(s,side){
  if(!s.board.some(p=>p?.type==='K'&&p.side===side))return -WIN;
  if(!s.board.some(p=>p?.type==='K'&&p.side!==side))return WIN;
- if(s.moveLimit!==false&&s.ply>=60){const count=points(s);return Math.sign(count[side]-count[1-side])*900000;}
+ if(adjudicationLimit(s)!==false&&s.ply>=adjudicationLimit(s)){const count=points(s);return Math.sign(count[side]-count[1-side])*900000;}
  return null;
 }
 function attacks(s){
@@ -56,7 +57,7 @@ export function evaluateAI(s,side){
  }
  if(!s.noDrops)for(const n of [0,1])for(const [type,amount] of Object.entries(s.hands[n]))score[n]+=amount*VALUE[type]*.8;
  // Near the limit the actual board-only count matters more than piece value.
- if(s.moveLimit!==false){const weight=Math.max(0,s.ply-30)*16;score[0]+=count[0]*weight;score[1]+=count[1]*weight;}
+ if(adjudicationLimit(s)!==false){const weight=Math.max(0,s.ply-(adjudicationLimit(s)-30))*16;score[0]+=count[0]*weight;score[1]+=count[1]*weight;}
  const flipScore=[0,0];
  if(s.mode)for(let anchor=0;anchor<81;anchor++){
  const p=s.board[anchor];if(!p)continue;const n=p.side;
@@ -122,7 +123,7 @@ function evaluateLegacy(s,side){
  }
  if(!s.noDrops)for(const n of [0,1])for(const [type,amount] of Object.entries(s.hands[n]))score[n]+=amount*VALUE[type]*.8;
  // Near the limit the actual board-only count matters more than piece value.
- if(s.moveLimit!==false){const weight=Math.max(0,s.ply-30)*16;score[0]+=count[0]*weight;score[1]+=count[1]*weight;}
+ if(adjudicationLimit(s)!==false){const weight=Math.max(0,s.ply-(adjudicationLimit(s)-30))*16;score[0]+=count[0]*weight;score[1]+=count[1]*weight;}
  return score[side]-score[1-side];
 }
 
