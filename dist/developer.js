@@ -7,7 +7,7 @@ import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShak
 import {moveEffects,runEffects,showVictory} from './move-effect.js';
 import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue} from './sound.js';
 export function initDeveloper(getCurrent){
- const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0;
+ const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0,collapseTrial=0;
  for(const side of [1,0]){const tray=document.createElement('div');tray.id='devHand'+side;tray.className='dev-capture-hand';tray.setAttribute('aria-label',side?'相手の駒台':'自分の駒台');$('devBoard').insertAdjacentElement(side?'beforebegin':'afterend',tray);}
  const six=document.createElement('option');six.value='6';six.textContent='6枚';$('devDemoCount').append(six);
  const swordPreview=document.createElement('button');swordPreview.textContent='剣の演出を試す';$('devDemo').after(swordPreview);
@@ -24,7 +24,7 @@ export function initDeveloper(getCurrent){
    if(tutorial&&type===lessons[lesson].move.drop&&side===0&&state.ply===0)slot.classList.add('tutorial-hint');
    slot.onclick=()=>{selected=type;draw();};tray.append(slot);
   }}
-  $('lessonProgress').hidden=!tutorial||!lessons[lesson].collapse;$('lessonProgress').textContent='終末まで '+state.ply+'/150';
+  $('lessonProgress').hidden=!tutorial||!lessons[lesson].collapse;$('lessonProgress').textContent='崩壊 '+collapseTrial+' / '+(lessons[lesson].collapseSequence?.length||0);
   const board=$('devBoard');board.replaceChildren();const legal=selected===null?[]:moves(state,selected);
   for(let i=0;i<81;i++){const b=document.createElement('button'),p=state.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(tutorial&&!working&&i===(lessons[lesson].move.from??lessons[lesson].move.to)&&state.ply===(lessons[lesson].collapse?149:0))b.classList.add('tutorial-hint');b.dataset.square=i;b.disabled=working;b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き'));if(p){const el=document.createElement('span');el.className='piece'+((working&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'');el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
  }
@@ -34,7 +34,7 @@ export function initDeveloper(getCurrent){
   if(state.result){$('devStatus').textContent=tutorial?'「もう一度」で練習できます。':'手番を選び直すと続けられます。';return;}
   const options=selected===null?[]:moves(state,selected).filter(m=>m.to===i);
   if(!options.length){selected=state.board[i]?.side===state.turn?i:null;draw();return;}
-  history.push(structuredClone(state));const before=state,mover=state.turn;state=play(state,options.find(m=>!m.prom)||options[0]);const slide=slidingMove(before,state),capture=capturedPiece(before,state),kingImpact=kingCaptureSquare(before,state),effects=moveEffects(state).filter(e=>!(tutorial&&e.kind==='check'&&before.board[state.last.at(-1)]?.type==='K'&&before.board[state.last.at(-1)]?.side!==mover));state.turn=mover;selected=null;working=true;draw();controller=new AbortController();const current=controller;
+  history.push(structuredClone(state));const before=state,mover=state.turn;state=play(state,options.find(m=>!m.prom)||options[0]);const slide=slidingMove(before,state),capture=capturedPiece(before,state),kingImpact=kingCaptureSquare(before,state),effects=moveEffects(state).filter(e=>!(tutorial&&e.kind==='check'&&before.board[state.last.at(-1)]?.type==='K'&&before.board[state.last.at(-1)]?.side!==mover));if(!(tutorial&&lessons[lesson].collapse))state.turn=mover;selected=null;working=true;draw();controller=new AbortController();const current=controller;
   if(!before.board[state.last[0]]?.prom&&state.board[state.last[1]]?.prom&&!state.result)playArcadeCue('promote');
   if(slide)await runSlide(slide,$('devBoard'),current.signal,playMoveSound);
   if(current.signal.aborted)return;
@@ -46,19 +46,27 @@ export function initDeveloper(getCurrent){
   else if(!slide&&!capture&&!state.result)playMoveSound();
   if(current.signal.aborted)return;
   if(tutorial&&lessons[lesson].collapse){
-   state.turn=1-mover;collapseAfterMove(state);state.turn=mover;
-   if(state.destroyed){
-    const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);current.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);current.signal.addEventListener('abort',done,{once:true});if(current.signal.aborted)done();});
-    const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':'両陣営からランダムに1枚壊れます';$('devBoard').append(note);
+   const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);current.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);current.signal.addEventListener('abort',done,{once:true});if(current.signal.aborted)done();});
+   const collapse=async()=>{
+    const choices=state.board.flatMap((p,i)=>p?[i]:[]),preferred=lessons[lesson].collapseSequence?.[collapseTrial],picked=choices.indexOf(preferred);
+    collapseAfterMove(state,()=>picked>=0?picked:0);collapseTrial++;
+    if(!state.destroyed)return;
+    const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':'穴熊の守りから1枚壊れます';$('devBoard').append(note);
     try{
      if(state.paradoxStarted){paradoxSound(true);await wait(3000);}
      if(current.signal.aborted)return;
-     const cell=$('devBoard').querySelector('[data-square="'+state.destroyed.square+'"] .piece');paradoxSound(false);
-     const animation=cell?.animate([{opacity:1,transform:'scale(1)'},{opacity:.7,transform:'scale(1.25) rotate(12deg)'},{opacity:0,transform:'scale(.1) rotate(-20deg)'}],{duration:600,fill:'forwards'});
+     const cell=$('devBoard').querySelector('[data-square="'+state.destroyed.square+'"] .piece'),base=state.destroyed.piece.side?180:0;paradoxSound(false);
+     const animation=cell?.animate([{opacity:1,transform:'scale(1) rotate('+base+'deg)'},{opacity:.7,transform:'scale(1.25) rotate('+(base+12)+'deg)'},{opacity:0,transform:'scale(.1) rotate('+(base-20)+'deg)'}],{duration:600,fill:'forwards'});
      try{await wait(600);}finally{animation?.cancel();}
-     effects.splice(0,effects.length,...moveEffects(state));
     }finally{note.remove();}
+    draw();
+   };
+   await collapse();
+   if(!state.result&&!current.signal.aborted){
+    await wait(450);const sources=[...state.board.flatMap((p,i)=>p?.side===state.turn?[i]:[]),...Object.keys(state.hands[state.turn])],reply=sources.flatMap(src=>moves(state,src)).find(m=>{try{return !play(state,m).result;}catch{return false;}})||sources.flatMap(src=>moves(state,src))[0];
+    if(reply){state=play(state,reply);$('devStatus').textContent='相手が穴熊を守る手を指しました。';draw();playMoveSound();await wait(500);if(!current.signal.aborted)await collapse();}
    }
+   effects.splice(0,effects.length,...moveEffects(state));
   }
   if(current.signal.aborted)return;
   let banner=null,clearFinish=null;
@@ -80,7 +88,7 @@ export function initDeveloper(getCurrent){
  $('devDemo').onclick=()=>{const s=empty(),count=Number($('devDemoCount').value),to=37+count,from=to+9;for(const [i,type,side] of [[76,'K',0],[4,'K',1],[36,'P',0],[from,'P',0]])s.board[i]={type,side,prom:false};const types=['P','N','S','G','B','R'].slice(-count);types.forEach((type,j)=>s.board[37+j]={type,side:1,prom:false});reset(s);$('devMode').value='play';$('devStatus').textContent=(9-from%9)+'列6段の歩を1マス上へ動かすと'+count+'枚反転します。';};
  function loadLesson(){
   $('developerDialog').classList.toggle('tutorial-drop',!!lessons[lesson].move.drop);
-  history=[];$('devMode').value='play';reset(lessonState(lesson),false);
+  history=[];collapseTrial=0;$('devMode').value='play';reset(lessonState(lesson),false);
   $('lessonTitle').textContent=(lesson+1)+' / '+lessons.length+'　'+lessons[lesson].title;
   $('lessonText').textContent=lessons[lesson].text;$('lessonNext').textContent=lesson===lessons.length-1?'チュートリアルを終える':'次へ';
   $('devStatus').textContent=lessons[lesson].move.drop?'駒台の金を選び、光る空きマスに打ってください。':'光る駒を選んで、説明にある移動先を押してください。';

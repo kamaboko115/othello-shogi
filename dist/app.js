@@ -196,10 +196,12 @@ function render(){
  $('matchTitle').innerHTML=online?(online.kind==='ai'?'AI対局':'友人対局'):'<ruby>対局<rt>たいきょく</rt></ruby>を<ruby>選<rt>えら</rt></ruby>ぶ';
  $('chooseAI').setAttribute('aria-pressed',selectedKind==='ai');$('chooseFriend').setAttribute('aria-pressed',selectedKind==='friend');
  $('helperUnlimitedRow').hidden=selectedKind!=='ai';$('aiHandicapRow').hidden=selectedKind!=='ai';$('friendSettings').hidden=selectedKind!=='friend';$('aiLevelRow').hidden=selectedKind!=='ai';$('thinkTimeRow').hidden=selectedKind!=='ai';$('aiSettingsRow').hidden=selectedKind!=='ai';
- $('createRoom').textContent=selectedKind==='ai'?'AIと対局を始める':'対局を作って招待する';
+ const oseshoChallenge=selectedKind==='ai'&&$('aiLevel').value==='osesho';
+ $('oseshoChallengeWarning').hidden=!oseshoChallenge;
+ $('createRoom').textContent=oseshoChallenge?'オセショ様に挑戦する':selectedKind==='ai'?'AIと対局を始める':'対局を作って招待する';
  const settings=online?.settings||inviteRoom?.settings||selectedSettings();
  $('matchSettings').hidden=!online&&!inviteRoom;
- $('matchSettings').textContent='オセロジャッジ：'+(settings.moveLimit===false?'なし':'あり')+' ／ チェスモード：'+(settings.noDrops?'あり':'なし')+(online?.kind==='ai'?' ／ AI：'+({weak:'弱い',normal:'普通',strong:'強い',expert:'最強'}[settings.aiLevel]||'普通')+('（最大'+((settings.thinkMs||1000)/1000)+'秒）'):'');
+ $('matchSettings').textContent='オセロジャッジ：'+(settings.moveLimit===false?'なし':'あり')+' ／ チェスモード：'+(settings.noDrops?'あり':'なし')+(online?.kind==='ai'?' ／ AI：'+({weak:'弱い',normal:'普通',strong:'強い',expert:'最強',osesho:'オセショ様（人間が勝てる保証なし）'}[settings.aiLevel]||'普通')+('（最大'+((settings.thinkMs||1000)/1000)+'秒）'):'');
  $('matchSettings').textContent+=' ／ 盤面崩壊：'+(settings.paradoxAt===false?'無制限':(settings.paradoxAt??150)+'手から');
  if(online?.kind==='ai')$('matchSettings').textContent+=' ／ '+(settings.handicapSide==='human'?'人間側':'AI側')+'：'+(handicapOptions[settings.handicap]||'平手');
  if(online?.kind!=='ai')$('matchSettings').textContent+=' ／ 時間：'+(clockRule(settings.timeControl).label)+' ／ 作成者：'+(handicapOptions[settings.handicap]||'平手');
@@ -285,6 +287,7 @@ setInterval(()=>{for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.
 const advancedOpen={ai:false,friend:false};
 function selectKind(kind){advancedOpen[selectedKind]=$('advancedSettings').open;selectedKind=kind;$('advancedSettings').open=advancedOpen[kind];render();}
 $('chooseAI').onclick=()=>selectKind('ai');$('chooseFriend').onclick=()=>selectKind('friend');$('moveLimit').onchange=render;$('allowDrops').onchange=render;$('aiLevel').onchange=render;$('thinkTime').onchange=render;
+$('challengeOsesho').onclick=()=>{$('aiLevel').querySelector('option[value="osesho"]').hidden=false;$('aiLevel').value='osesho';$('thinkTime').value='5000';$('settingsDialog').close();selectKind('ai');message='開発者向けの対オセショ様を選びました。人間が勝てる保証はありません。';render();$('matchTitle').scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});};
 $('createRoom').onclick=async()=>{
  if(!$('paradoxAt').reportValidity())return;
  if(state.ply&&!window.confirm('現在の盤面から離れ、新しいオンライン対局を作成しますか？'))return;
