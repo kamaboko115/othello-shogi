@@ -86,7 +86,7 @@ export async function api(request,env){
    if(data.kind!=='ai'||side!==0||s.turn===playingSide)fail('AIの手番ではありません。',403);
    const sources=[...s.board.flatMap((p,i)=>p?.side===s.turn?[i]:[]),...Object.keys(s.hands[s.turn])];
    if(sources.some(src=>moves(s,src).length))fail('指せる手があります。');
-   s.result=sideName(1-s.turn)+'の勝ち（指せる手なし）';
+   chargeClock(data,now);s.result=sideName(1-s.turn)+'の勝ち（指せる手なし）';
   }else if(body.action==='move'||body.action==='ai-move'||body.action==='helper-move'){
 
    if(body.action==='ai-move'){if(data.kind!=='ai'||side!==0||s.turn===playingSide)fail('AIの手番ではありません。',403);}
@@ -97,9 +97,9 @@ export async function api(request,env){
    if(m.drop){if(!['R','B','G','S','N','L','P'].includes(m.drop))fail('指せない手です。');normalized={drop:m.drop,to:m.to};}
    else{if(!Number.isInteger(m.from)||m.from<0||m.from>80||typeof m.prom!=='boolean')fail('指せない手です。');normalized={from:m.from,to:m.to,prom:m.prom};}
    try{const next=collapseAfterMove(play(s,normalized));remember(data);chargeClock(data,now);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:''));data.state=next;if(body.action==='helper-move')data.helperUsedRound=data.round||1;finishClockMove(data,s.turn,now);data.offer=null;}catch{fail('指せない手です。');}
-  }else if(body.action==='resign'){s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
-  else if(body.action==='offer-draw'){if(data.kind==='ai')s.result='合意による引き分け';else data.offer=side;}
-  else if(body.action==='accept-draw'){if(data.offer!==1-side)fail('相手からの引き分け提案はありません。');s.result='合意による引き分け';data.offer=null;}
+  }else if(body.action==='resign'){chargeClock(data,now);s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
+  else if(body.action==='offer-draw'){if(data.kind==='ai'){chargeClock(data,now);s.result='合意による引き分け';}else data.offer=side;}
+  else if(body.action==='accept-draw'){if(data.offer!==1-side)fail('相手からの引き分け提案はありません。');chargeClock(data,now);s.result='合意による引き分け';data.offer=null;}
   else if(body.action==='decline-draw'){data.offer=null;}
   else fail('操作が正しくありません。');
   }

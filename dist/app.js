@@ -10,6 +10,7 @@ import {startAI} from './ai-client.js';
 import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue,playHelperDeparture} from './sound.js';
 import {initial,moves,label,names,points} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
+const statusPanel=document.querySelector('.status'),statusParent=statusPanel.parentElement,statusNext=statusPanel.nextSibling;
 let comboActive=false,comboPreparing=false,comboController=null;
 function cancelCombo(){comboController?.abort();comboController=null;comboActive=false;comboPreparing=false;cancelEffects();}
 let effectsActive=false,effectsController=null,victoryNode=null,clearFinish=null;
@@ -20,7 +21,8 @@ function presentEffects(next){
  const controller=new AbortController();effectsController=controller;effectsActive=true;
  runEffects(effects,{signal:controller.signal,show:effect=>{if(effect.kind==='check')playArcadeCue('check');if(effect.kind==='victory')victoryNode=showVictory(effect,online?.side??0);else showFlipBurst(0,effect.text);},hide:()=>{if(effectsController===controller)hideBurst();},applause:playApplauseSound,victory:()=>{if(effects[0]?.text.startsWith(side(online?.side??0)))playVictorySound();}}).finally(()=>{if(controller.signal.aborted)return;effectsActive=false;render();});
 }
-let state=initial(),selected=null,legal=[],stack=[],logs=[],pending=[],message='対局を作成するか、招待リンクから参加してください。';
+const homeMessage='対局を作成するか、招待リンクから参加してください。';
+let state=initial(),selected=null,legal=[],stack=[],logs=[],pending=[],message=homeMessage;
 let online=null,busy=false,connected=true,pollTimer=null,inviteRoom=null;
 let selectedKind='friend',clockOffset=0;
 let autoHelperAttempt=null;
@@ -120,9 +122,14 @@ function render(){
  $('oseshoStatus').textContent=helperIdea?'ひらめいた！':helperLingering?(helperFarewell?'じゃあの':''):helperJob?'オセショ様が考えています…':state.turn!==online?.side?'あなたの手番で頼めます':online?.settings?.helperUnlimited?'無限オセショ様':'オセショ様 · 1局1回';
  if(comboActive)return;
  const showTutorial=!online;
+ const homeNotice=showTutorial&&message!==homeMessage;
  $('tutorial').hidden=!showTutorial;
  document.querySelector('.play').hidden=showTutorial;
- for(const selector of ['.status','.actions','.end-actions','.record'])document.querySelector(selector).hidden=showTutorial;
+ document.querySelector('.status').hidden=showTutorial&&!homeNotice;
+ document.querySelector('.status').classList.toggle('home-message',homeNotice);
+ if(homeNotice)$('matchTitle').after(statusPanel);
+ else if(statusPanel.parentElement!==statusParent)statusParent.insertBefore(statusPanel,statusNext);
+ for(const selector of ['.actions','.end-actions','.record'])document.querySelector(selector).hidden=showTutorial;
  const video=$('tutorialVideo');
  if(!showTutorial)video.pause();
  else if(video.dataset.active==='false'&&!matchMedia('(prefers-reduced-motion: reduce)').matches)video.play().catch(()=>{});
@@ -216,7 +223,8 @@ function start(s,msg){state=s;stack=[];logs=[];selected=null;legal=[];message=ms
 let confirmAction=null;function confirm(title,fn){$('confirmTitle').textContent=title;confirmAction=fn;$('confirm').showModal();}
 $('confirmYes').onclick=()=>{$('confirm').close();confirmAction?.();};$('confirmNo').onclick=()=>$('confirm').close();
 $('promote').onclick=()=>{$('promotion').close();commit(pending.find(m=>m.prom));};$('stay').onclick=()=>{$('promotion').close();commit(pending.find(m=>!m.prom));};
-function leaveGame(){clearTimeout(helperIdeaTimer);helperJob?.cancel();helperJob=null;helperDeparting=false;helperLingering=false;helperIdea=false;cancelCombo();cancelCollapse();stopAI();aiTiming=null;clearTimeout(pollTimer);online=null;inviteRoom=null;connected=true;busy=false;animationKey='';history.replaceState(null,'',location.pathname);start(initial(),'対局を作成するか、招待リンクから参加してください。');}
+function clearSession(){clearTimeout(helperIdeaTimer);helperJob?.cancel();helperJob=null;helperDeparting=false;helperLingering=false;helperIdea=false;cancelCombo();cancelCollapse();stopAI();aiTiming=null;clearTimeout(pollTimer);online=null;inviteRoom=null;connected=true;busy=false;animationKey='';}
+function leaveGame(){routeVersion++;clearSession();history.replaceState(null,'',location.pathname);start(initial(),homeMessage);}
 $('closeResult').onclick=()=>leaveGame();
 $('reset').onclick=()=>{if(state.result)leaveGame();else confirm('対局を離れますか？',leaveGame);};
 $('requestUndo').onclick=()=>sendAction('offer-undo');$('acceptUndo').onclick=()=>sendAction('accept-undo');$('declineUndo').onclick=()=>sendAction('decline-undo');
@@ -292,16 +300,19 @@ $('joinRoom').onclick=async()=>{if(!inviteRoom)return;busy=true;render();try{con
 $('copyInvite').onclick=async()=>{try{await navigator.clipboard.writeText($('inviteLink').value);$('copyInvite').textContent='コピーしました';}catch{$('inviteLink').select();message='招待リンクを選択しました。コピーして相手に送ってください。';render();}};
 $('offerRematch').onclick=()=>sendAction('offer-rematch');$('acceptRematch').onclick=()=>sendAction('accept-rematch');$('declineRematch').onclick=()=>sendAction('decline-rematch');$('closeToss').onclick=()=>{playArcadeCue('start');$('furigoma').hidden=true;syncAI();};
 $('acceptDraw').onclick=()=>sendAction('accept-draw');$('declineDraw').onclick=()=>sendAction('decline-draw');
+let routeVersion=0;
 async function restore(){
+ const version=++routeVersion;clearSession();start(initial(),homeMessage);
  const params=new URLSearchParams(location.hash.slice(1)),room=params.get('room'),invite=params.get('invite');if(!room)return;
  if(!/^[a-f0-9]{32}$/.test(room)){message='招待リンクが正しくありません。';render();return;}
  const saved=storage.get('hanten-room-'+room);
- if(saved?.token){busy=true;render();try{const data=await request('/'+room,saved.token);enter(data,saved.token,saved.invite);return;}catch(e){message=e.message;}finally{busy=false;render();}}
- if(invite&&/^[a-f0-9]{64}$/.test(invite)){try{const preview=await request('/'+room+'/preview',freshToken(),{invite});inviteRoom={room,invite,settings:preview.settings};}catch(e){message=e.message;render();return;}message='「この対局に参加」を押すと、振り駒で先手・後手を決めます。';}
+ if(saved?.token){busy=true;render();try{const data=await request('/'+room,saved.token);if(version===routeVersion)enter(data,saved.token,saved.invite);return;}catch(e){if(version===routeVersion)message=e.message;return;}finally{if(version===routeVersion){busy=false;render();}}}
+ if(invite&&/^[a-f0-9]{64}$/.test(invite)){try{const preview=await request('/'+room+'/preview',freshToken(),{invite});if(version!==routeVersion)return;inviteRoom={room,invite,settings:preview.settings};}catch(e){if(version===routeVersion){message=e.message;render();}return;}message='「この対局に参加」を押すと、振り駒で先手・後手を決めます。';}
  else message='参加情報がありません。元の招待リンクを開くか、参加したブラウザで開いてください。';render();
 }
 if(matchMedia('(prefers-reduced-motion: reduce)').matches){$('tutorialVideo').autoplay=false;$('tutorialVideo').pause();}
 document.addEventListener('click',event=>{if(event.target.closest?.('#chooseAI,#chooseFriend,#chooseRules,#openRulesAlways,#openSettings,#closeSettings,#closeRules,#copyInvite'))playArcadeCue('tap');});
+window.addEventListener('hashchange',restore);
 render();restore();
 
 

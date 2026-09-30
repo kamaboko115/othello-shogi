@@ -259,3 +259,4 @@ header .brand span{color:#254b40}
 .tutorial-mode.tutorial-drop #devHand0 button{min-width:90px}
 #board button,#devBoard button,#board .piece,#devBoard .piece{caret-color:transparent;user-select:none;-webkit-user-select:none}
 .osesho-challenge-note{margin:10px 0;color:#8f1f1f;font-weight:700}.osesho-challenge-note[hidden]{display:none}
+.status.home-message #count,.status.home-message #turn,.status.home-message #scores{display:none}
