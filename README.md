@@ -11,13 +11,44 @@
 - 60手判定の有無と持ち駒使用の可否を開始前に選べます。
 
 - 盤面崩壊は指定手数から、着手ごとに敵味方の盤上の駒からランダムに1枚を破壊。王が壊れた側は負けます。
-- 遊べるチュートリアルは各陣営の王が1枚。王取り・王の反転で勝利演出を表示します。崩壊の練習は149手から穴熊を相手に始まり、相手の応手を挟む3回の崩壊で王まで壊れる流れを体験できます。
+- 遊べるチュートリアルは各陣営の王が1枚。王取り・王の反転で勝利演出を表示します。崩壊の練習は149手から穴熊を相手に始まり、相手の応手を挟む6回の崩壊で王まで壊れる流れを体験できます。
 
 ## 機能
 AI対局（4段階）、友人との招待リンク対局、振り駒、合意による待った・再試合、木目／深緑の盤テーマ。
 全難易度で0.5／1／3／5秒の思考時間に対応し、Web Workerで探索します。
 
+オセショ様はAI対局で使える代打機能です。`dist/osesho-ai.js` の専用AIで最大5秒考えます。通常は1局1回、開始前の設定で無限にもできます。開発者ツールには自動代打と対オセショ様の設定があります。比較条件と評価結果は [benchmarks/results/summary.md](benchmarks/results/summary.md) を参照してください。
+
 ## 開発環境
+
+### Dockerで開発する（推奨）
+
+Docker Desktop（Linuxコンテナ）とDocker Composeがあれば、PCへのNode.jsインストールは不要です。リポジトリのルートで実行してください。
+
+```sh
+docker compose up -d --wait
+```
+
+初回はNode.js 24のイメージを取得します。起動後は http://127.0.0.1:4173 を開いてください。このPCからアクセスできます。
+ソースはPC上のファイルを共有します。画面のHTML・CSS・JavaScriptの変更はブラウザの再読み込みで反映し、サーバーが読み込むコードの変更はNode.jsのwatch機能で自動再起動します。変更が反映されない場合は `docker compose restart app` を実行してください。
+
+```sh
+# 起動中のコンテナでテスト・ビルド
+docker compose exec app npm test
+docker compose exec app npm run build
+
+# ログの確認
+docker compose logs -f app
+
+# 停止・コンテナの削除（対局データは保持）
+docker compose down
+```
+
+対局データはDockerの名前付きボリューム `runtime` 内の `/app/.sites-runtime/rooms.sqlite` に保存します。PC側の `.sites-runtime/rooms.sqlite` とは別のデータです。`docker compose down -v` は対局データも削除するため、初期化したい場合だけ使用してください。
+ビルド結果はコンテナ内の `.sites-runtime/release/dist` と、PC側にも共有される `dist/server/index.js` に生成されます。
+
+### Node.jsを直接使う
+
 Node.js 24以降。外部npmパッケージは不要です。
 
 ```sh

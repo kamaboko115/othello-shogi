@@ -5,3 +5,5 @@ node_modules/
 previews/
 dist/server/
 experiments/
+# 作業用の一時ファイル・比較スクリプト・スクリーンショットはここにまとめる
+/work-files/
