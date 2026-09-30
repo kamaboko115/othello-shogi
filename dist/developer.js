@@ -15,7 +15,7 @@ export function initDeveloper(getCurrent){
  swordPreview.onclick=async()=>{if(working)return;controller?.abort();controller=new AbortController();const current=controller;working=true;draw();try{await runSword($('devBoard'),40,current.signal);}finally{if(controller===current){working=false;draw();}}};
  state.moveLimit=false;state.paradoxAt=false;
  const copyCurrent=()=>{const current=getCurrent(),s=structuredClone(current.state);if(current.side===1){s.board.reverse();s.board.forEach(p=>{if(p)p.side=1-p.side;});s.hands.reverse();s.turn=1-s.turn;}return s;};
- const reset=(s,remember=true)=>{if(remember)history.push(structuredClone(state));controller?.abort();working=false;state=structuredClone(s);state.result='';state.flipped=[];state.last=[];state.moveLimit=false;state.paradoxAt=tutorial&&lessons[lesson].collapse?150:false;collapsePhase='ash';selected=null;$('devTurn').value=String(state.turn);draw();};
+ const reset=(s,remember=true,preserveDebug=false)=>{if(remember)history.push(structuredClone(state));controller?.abort();working=false;state=structuredClone(s);state.result='';state.flipped=[];state.last=[];state.moveLimit=false;if(!tutorial){if(preserveDebug)$('devCollapseEarly').checked=state.paradoxAt===2;else{state.ply=0;state.destroyed=null;state.spawned=null;state.paradoxStarted=false;}}state.paradoxAt=tutorial&&lessons[lesson].collapse?150:!tutorial&&$('devCollapseEarly').checked?2:false;collapsePhase='ash';selected=null;$('devTurn').value=String(state.turn);draw();};
  function draw(){
   document.querySelectorAll('#developerDialog select,#developerDialog input,.dev-buttons button').forEach(el=>el.disabled=working);
   $('devUndo').disabled=working||!history.length;
@@ -29,6 +29,8 @@ export function initDeveloper(getCurrent){
   const board=$('devBoard');board.replaceChildren();const legal=selected===null?[]:moves(state,selected);
   for(let i=0;i<81;i++){const b=document.createElement('button'),p=state.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(tutorial&&!working&&i===(lessons[lesson].move.from??lessons[lesson].move.to)&&state.ply===(lessons[lesson].collapse?149:0))b.classList.add('tutorial-hint');b.dataset.square=i;b.disabled=working;b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き'));if(p){const el=document.createElement('span');el.className='piece'+((working&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'');el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
   paintCollapse(board,state.destroyed,{phase:collapsePhase,eventKey:state.ply});
+  if(state.spawned&&working){const cell=board.querySelector('[data-square="'+state.spawned.square+'"]');if(cell){const glow=document.createElement('span');glow.className='paradox-spawn-glow'+(collapsePhase==='breaking'?' arriving':'');glow.setAttribute('aria-label',label(state.spawned.piece)+'が降臨');cell.append(glow);}}
+  if(!tutorial&&$('devCollapseEarly').checked)$('devStatus').textContent=(state.result||'デバッグ：'+state.ply+'手目 ／ 2手目から盤面崩壊')+(state.destroyed?' ／ '+label(state.destroyed.piece)+'が崩壊':state.spawned?' ／ '+label(state.spawned.piece)+'が降臨':'');
  }
  async function click(i){
   if(working)return;
@@ -47,24 +49,23 @@ export function initDeveloper(getCurrent){
   if(state.flipped.length>=1)await runCombo(state,$('devBoard'),0,current.signal);
   else if(!slide&&!capture&&!state.result)playMoveSound();
   if(current.signal.aborted)return;
-  if(tutorial&&lessons[lesson].collapse){
+  if(tutorial&&lessons[lesson].collapse||!tutorial&&$('devCollapseEarly').checked){
    const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);current.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);current.signal.addEventListener('abort',done,{once:true});if(current.signal.aborted)done();});
    const collapse=async()=>{
-    const choices=state.board.flatMap((p,i)=>p?[i]:[]),preferred=lessons[lesson].collapseSequence?.[collapseTrial],picked=choices.indexOf(preferred);
-    collapseAfterMove(state,()=>picked>=0?picked:0);collapseTrial++;
-    if(!state.destroyed)return;
+    if(tutorial){const choices=state.board.flatMap((p,i)=>p?[i]:[]),preferred=lessons[lesson].collapseSequence?.[collapseTrial],picked=choices.indexOf(preferred);collapseAfterMove(state,()=>picked>=0?picked:0);collapseTrial++;}else collapseAfterMove(state);
+    if(!state.destroyed&&!state.spawned)return;
     collapsePhase='waiting';draw();
-    const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':'穴熊の守りから1枚壊れます';$('devBoard').append(note);
+    const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':state.spawned?label(state.spawned.piece)+'が降臨！':tutorial?'穴熊の守りから1枚壊れます':'盤上の駒が1枚壊れます';$('devBoard').append(note);
     try{
      if(state.paradoxStarted){paradoxSound(true);await wait(3000);}
      if(current.signal.aborted)return;
-     paradoxSound(false);collapsePhase='breaking';paintCollapse($('devBoard'),state.destroyed,{phase:collapsePhase,eventKey:state.ply});
+     paradoxSound(false);collapsePhase='breaking';draw();
      await wait(600);collapsePhase='ash';
     }finally{note.remove();}
     draw();
    };
    await collapse();
-   if(!state.result&&!current.signal.aborted){
+   if(tutorial&&!state.result&&!current.signal.aborted){
     await wait(450);if(current.signal.aborted)return;const reply=collapseReply(state,lessons[lesson].collapseSequence.slice(collapseTrial));
     if(reply){state=play(state,reply);$('devStatus').textContent='相手が穴熊を守る手を指しました。';draw();playMoveSound();await wait(500);if(!current.signal.aborted)await collapse();}
    }
@@ -78,12 +79,13 @@ export function initDeveloper(getCurrent){
   working=false;$('devTurn').value=String(state.turn);draw();
   if(tutorial&&(completed||(lessons[lesson].collapse&&state.result))){$('lessonCompleteNext').textContent=lesson===lessons.length-1?'チュートリアルを終える':'次へ';$('lessonComplete').showModal();}
  }
- $('openDeveloper').onclick=()=>{tutorial=false;$('developerDialog').classList.remove('tutorial-mode');$('tutorialLesson').hidden=true;$('settingsDialog').close();history=[];reset(copyCurrent(),false);$('devTransfer').hidden=true;$('devStatus').textContent='練習専用の盤面です。配置・陣営・成りを自由に変更できます。';$('developerDialog').showModal();};
+ $('openDeveloper').onclick=()=>{tutorial=false;$('devCollapseEarly').checked=false;$('developerDialog').classList.remove('tutorial-mode');$('tutorialLesson').hidden=true;$('settingsDialog').close();history=[];reset(copyCurrent(),false);$('devTransfer').hidden=true;$('devStatus').textContent='練習専用の盤面です。配置・陣営・成りを自由に変更できます。';$('developerDialog').showModal();};
  $('closeDeveloper').onclick=()=>$('developerDialog').close();
  $('developerDialog').addEventListener('close',()=>{controller?.abort();working=false;$('lessonComplete').close();});
  $('devCopy').onclick=()=>reset(copyCurrent());$('devInitial').onclick=()=>reset(initial());$('devClear').onclick=()=>reset(empty());
  $('devTurn').onchange=()=>{if(working)return;history.push(structuredClone(state));state.turn=Number($('devTurn').value);state.result='';selected=null;draw();};
- $('devUndo').onclick=()=>{if(working||!history.length)return;const previous=history.pop();reset(previous,false);$('devStatus').textContent='1手戻しました。';};
+ $('devUndo').onclick=()=>{if(working||!history.length)return;const previous=history.pop();reset(previous,false,true);$('devStatus').textContent='1手戻しました。';};
+ $('devCollapseEarly').onchange=()=>{if(working||tutorial)return;history.push(structuredClone(state));state.paradoxAt=$('devCollapseEarly').checked?2:false;state.ply=0;state.destroyed=null;state.spawned=null;state.paradoxStarted=false;selected=null;draw();if(!state.paradoxAt)$('devStatus').textContent='デバッグの盤面崩壊をオフにしました。';};
  $('devExport').onclick=async()=>{const code=encodeBoard(state);$('devTransfer').hidden=false;$('devCode').value=code;try{await navigator.clipboard.writeText(code);$('devStatus').textContent='盤面をコピーしました。ペーストで復元できます。';}catch{$('devCode').focus();$('devCode').select();$('devStatus').textContent='盤面データを選択しました。コピーして保存できます。';}};
  $('devPaste').onclick=async()=>{$('devTransfer').hidden=false;try{$('devCode').value=await navigator.clipboard.readText();}catch{$('devCode').value='';}$('devCode').focus();$('devStatus').textContent='貼り付けた内容を「この盤面を読み込む」で反映します。';};
  $('devImport').onclick=()=>{if(working)return;try{const next=decodeBoard($('devCode').value);reset(next);$('devStatus').textContent='盤面を読み込みました。';}catch(e){$('devStatus').textContent=e.message;}};
@@ -101,6 +103,7 @@ export function initDeveloper(getCurrent){
  $('lessonReset').onclick=()=>{if(!working)loadLesson();};
  const nextLesson=()=>{if(working)return;if(lesson===lessons.length-1){$('developerDialog').close();return;}lesson++;loadLesson();};
  $('lessonNext').onclick=nextLesson;$('lessonCompleteNext').onclick=()=>{$('lessonComplete').close();nextLesson();};$('lessonCompleteRepeat').onclick=()=>{if(!working)loadLesson();};
+ const exitTutorial=()=>{$('lessonComplete').close();$('developerDialog').close();};$('lessonExit').onclick=exitTutorial;$('lessonCompleteExit').onclick=exitTutorial;
 
 }
 
