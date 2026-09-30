@@ -6,6 +6,7 @@ async function call(db,path,token=host,body,origin='http://test.local'){
  const response=await api(req,{DB:db});return {status:response.status,data:await response.json()};
 }
 async function room(db){const created=await call(db,'',host,{invite,mode:true});assert.equal(created.status,201);return created.data.room;}
+async function timedRoom(db){const created=await call(db,'',host,{invite,mode:true,settings:{timeControl:{minutes:1,increment:0,byoyomi:0}}});assert.equal(created.status,201);return created.data.room;}
 test('部屋作成・2人参加・手番同期・再接続・第三者の拒否',async()=>{
  const db=localDB();try{
  const id=await room(db),path='/'+id;
@@ -40,6 +41,18 @@ test('引き分けは相手の承諾が必要・投了は手番に関係なく�
  const accepted=await call(db,path+'/action',guest,{action:'accept-draw',version:2});assert.equal(accepted.data.state.result,'合意による引き分け');
  assert.equal((await call(db,path+'/action',host,{action:'resign',version:3})).status,409);
  }finally{db.close();}
+});
+test('投了・合意引き分けでは終局時点の消費時間を確定する',async()=>{
+ for(const ending of ['resign','draw']){const db=localDB();try{
+  const id=await timedRoom(db),path='/'+id;await call(db,path+'/join',guest,{invite});
+  let version=1;
+  if(ending==='draw'){const offered=await call(db,path+'/action',host,{action:'offer-draw',version});assert.equal(offered.status,200);version=offered.data.version;}
+  const row=await db.prepare('SELECT data FROM rooms WHERE id = ?').bind(id).first(),raw=JSON.parse(row.data);raw.clock.since=Date.now()-10000;
+  await db.prepare('UPDATE rooms SET data = ? WHERE id = ?').bind(JSON.stringify(raw),id).run();
+  const token=ending==='draw'?guest:host,action=ending==='draw'?'accept-draw':'resign',ended=await call(db,path+'/action',token,{action,version});
+  assert.equal(ended.status,200);assert.ok(ended.data.state.result);assert.ok(ended.data.clock.remaining[0]<=50050&&ended.data.clock.remaining[0]>=49500,`${ending}: ${ended.data.clock.remaining[0]}`);
+  const fetched=await call(db,path,host);assert.equal(fetched.data.clock.remaining[0],ended.data.clock.remaining[0]);
+ }finally{db.close();}}
 });
 test('別サイトからの操作・認証なし・期限切れの対局を拒否',async()=>{
  const db=localDB();try{
