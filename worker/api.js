@@ -9,6 +9,7 @@ const random=()=>Array.from(crypto.getRandomValues(new Uint8Array(32))).map(x=>x
 const sideName=n=>n===0?'先手':'後手';
 const notation=(s,m)=>`${s.ply+1}. ${s.turn===0?'▲':'▽'}${9-m.to%9}${'一二三四五六七八九'[Math.floor(m.to/9)]} ${m.drop?names[m.drop]:label(s.board[m.from])}${m.drop?'打':m.prom?'成':''}`;
 export function furigoma(){const coins=Array.from(crypto.getRandomValues(new Uint8Array(5)),n=>n%2);return {coins,hostSide:coins.reduce((a,b)=>a+b,0)>=3?0:1};}
+function matchToss(settings){const toss=furigoma();if(settings?.aiLevel!=='osesho'||toss.hostSide===1)return toss;return {coins:[0,0,0,0,0],originalCoins:toss.coins,hostSide:1,intervened:true};}
 function setupState(settings){const state=initial(true);state.noDrops=!!settings?.noDrops;state.moveLimit=settings?.moveLimit!==false;state.paradoxAt=settings?.paradoxAt??150;return state;}
 function remember(data){data.takebacks||=[];data.takebacks.push({state:structuredClone(data.state),logs:[...data.logs]});if(data.takebacks.length>128)data.takebacks.shift();data.undoOffer=null;}
 function undoIndex(data,side){return (data.takebacks||[]).findLastIndex(x=>x.state.turn===side);}
@@ -36,7 +37,7 @@ export async function api(request,env){
    let timeControl;try{timeControl=normalizeTime(body.settings?.timeControl);}catch{fail('時間設定が不正です。');}
    const settings={timeControl:body.kind!=='ai'?timeControl:'none',handicap:Object.hasOwn(handicapOptions,body.settings?.handicap)?body.settings.handicap:'none',paradoxAt:body.settings?.paradoxAt??150,moveLimit:body.settings?.moveLimit===true,noDrops:body.settings?.noDrops===true};if(body.kind==='ai'){settings.helperUnlimited=body.settings?.helperUnlimited===true;settings.handicapSide=body.settings?.handicapSide==='human'?'human':'ai';settings.aiLevel=['weak','normal','strong','expert','osesho'].includes(body.settings?.aiLevel)?body.settings.aiLevel:'normal';settings.thinkMs=[500,1000,3000,5000].includes(body.settings?.thinkMs)?body.settings.thinkMs:1000;}
    const id=random().slice(0,32),data={state:setupState(settings),settings,kind:body.kind==='ai'?'ai':'friend',logs:[],offer:null};
-   if(data.kind==='ai'){data.toss=furigoma();data.round=1;data.rematch=null;applyHandicap(data.state,settings.handicapSide==='human'?data.toss.hostSide:1-data.toss.hostSide,settings.handicap);}
+   if(data.kind==='ai'){data.toss=matchToss(settings);data.round=1;data.rematch=null;applyHandicap(data.state,settings.handicapSide==='human'?data.toss.hostSide:1-data.toss.hostSide,settings.handicap);}
    await env.DB.prepare('DELETE FROM rooms WHERE expires < ?').bind(now).run();
    await env.DB.prepare('INSERT INTO rooms (id,host_hash,invite_hash,data,expires) VALUES (?,?,?,?,?)').bind(id,tokenHash,await hash(body.invite),JSON.stringify(data),now+7*86400000).run();
    if(data.kind==='ai')await env.DB.prepare('UPDATE rooms SET guest_hash = ? WHERE id = ?').bind('ai',id).run();
@@ -52,7 +53,7 @@ export async function api(request,env){
    if(side!==null)return json(view(row,side));
    if(!validToken(body.invite)||await hash(body.invite)!==row.invite_hash)fail('招待リンクが正しくありません。',403);
    if(row.guest_hash)fail('この対局にはすでに2人が参加しています。',409);
-   const fresh=JSON.parse(row.data);fresh.toss=furigoma();fresh.round=1;fresh.rematch=null;applyHandicap(fresh.state,fresh.toss.hostSide,fresh.settings?.handicap);startClock(fresh,now);
+   const fresh=JSON.parse(row.data);fresh.toss=fresh.kind==='ai'?matchToss(fresh.settings):furigoma();fresh.round=1;fresh.rematch=null;applyHandicap(fresh.state,fresh.toss.hostSide,fresh.settings?.handicap);startClock(fresh,now);
    const updated=await env.DB.prepare('UPDATE rooms SET guest_hash = ?, data = ?, version = version + 1 WHERE id = ? AND guest_hash IS NULL').bind(tokenHash,JSON.stringify(fresh),id).run();
    if(!updated.meta.changes)fail('この対局にはすでに2人が参加しています。',409);
    row=await env.DB.prepare('SELECT * FROM rooms WHERE id = ?').bind(id).first();return json(view(row,1));
@@ -76,9 +77,9 @@ export async function api(request,env){
   }else if(['offer-rematch','accept-rematch','decline-rematch'].includes(body.action)){
 
    if(!s.result)fail('再試合は対局終了後に申し込めます。',409);
-   if(body.action==='offer-rematch'&&data.kind==='ai'){data.state=setupState(data.settings);data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=furigoma();data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
+   if(body.action==='offer-rematch'&&data.kind==='ai'){data.state=setupState(data.settings);data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=matchToss(data.settings);data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
    else if(body.action==='offer-rematch'){if(data.rematch===1-side)fail('相手の再試合希望を承諾してください。',409);data.rematch=side;}
-   else if(body.action==='accept-rematch'){if(data.rematch!==1-side)fail('相手からの再試合希望はありません。',409);data.state=setupState(data.settings);data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=furigoma();data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
+   else if(body.action==='accept-rematch'){if(data.rematch!==1-side)fail('相手からの再試合希望はありません。',409);data.state=setupState(data.settings);data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=data.kind==='ai'?matchToss(data.settings):furigoma();data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
    else data.rematch=null;
   }else{
   if(s.result)fail('この対局は終了しています。',409);
@@ -96,7 +97,7 @@ export async function api(request,env){
    let normalized;
    if(m.drop){if(!['R','B','G','S','N','L','P'].includes(m.drop))fail('指せない手です。');normalized={drop:m.drop,to:m.to};}
    else{if(!Number.isInteger(m.from)||m.from<0||m.from>80||typeof m.prom!=='boolean')fail('指せない手です。');normalized={from:m.from,to:m.to,prom:m.prom};}
-   try{const next=collapseAfterMove(play(s,normalized));remember(data);chargeClock(data,now);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:''));data.state=next;if(body.action==='helper-move')data.helperUsedRound=data.round||1;finishClockMove(data,s.turn,now);data.offer=null;}catch{fail('指せない手です。');}
+   try{const next=collapseAfterMove(play(s,normalized));remember(data);chargeClock(data,now);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?` ／ ${sideName(next.spawned.piece.side)}の${label(next.spawned.piece)}が降臨`:''));data.state=next;if(body.action==='helper-move')data.helperUsedRound=data.round||1;finishClockMove(data,s.turn,now);data.offer=null;}catch{fail('指せない手です。');}
   }else if(body.action==='resign'){chargeClock(data,now);s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
   else if(body.action==='offer-draw'){if(data.kind==='ai'){chargeClock(data,now);s.result='合意による引き分け';}else data.offer=side;}
   else if(body.action==='accept-draw'){if(data.offer!==1-side)fail('相手からの引き分け提案はありません。');chargeClock(data,now);s.result='合意による引き分け';data.offer=null;}
