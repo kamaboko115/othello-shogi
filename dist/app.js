@@ -1,3 +1,4 @@
+import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
 import {paintCollapse} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget} from './match-options.js';
@@ -95,7 +96,7 @@ $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
 initDeveloper(()=>({state,side:online?.side??0}));
 function stone(side){const el=document.createElement('span');el.className='stone '+(side===0?'black':'white');el.setAttribute('aria-hidden','true');return el;}
 function recordLine(text){const el=document.createElement('div');for(const part of text.split(/([▲▽])/)){if(part==='▲'||part==='▽'){const mark=stone(part==='▲'?0:1);mark.removeAttribute('aria-hidden');mark.setAttribute('aria-label',part==='▲'?'先手':'後手');el.append(mark);}else el.append(document.createTextNode(part));}return el;}
-const selectedSettings=()=>({timeControl:selectedKind==='friend'&&Number($('mainTime').value)<minuteSteps.length?{minutes:minuteSteps[Number($('mainTime').value)],increment:Number($('incrementTime').value),byoyomi:byoyomiSteps[Number($('byoyomiTime').value)]}:'none',handicap:selectedKind==='friend'?$('handicap').value:$('aiHandicap').value,paradoxAt:$('paradoxAt').value==='none'?false:Number($('paradoxAt').value),moveLimit:$('moveLimit').value==='yes',noDrops:$('allowDrops').value==='no',...(selectedKind==='ai'?{helperUnlimited:$('helperUnlimited').checked,handicapSide:$('aiHandicapSide').value,aiLevel:$('aiLevel').value,thinkMs:Number($('thinkTime').value)}:{})});
+const selectedSettings=()=>({timeControl:selectedKind==='friend'&&Number($('mainTime').value)<minuteSteps.length?{minutes:minuteSteps[Number($('mainTime').value)],increment:Number($('incrementTime').value),byoyomi:byoyomiSteps[Number($('byoyomiTime').value)]}:'none',handicap:selectedKind==='friend'?$('handicap').value:$('aiHandicap').value,paradoxAt:$('paradoxAt').value==='none'?false:Number($('paradoxAt').value),moveLimit:judgeSteps[Number($('moveLimit').value)],noDrops:$('allowDrops').value==='no',...(selectedKind==='ai'?{helperUnlimited:$('helperUnlimited').checked,handicapSide:$('aiHandicapSide').value,aiLevel:$('aiLevel').value,thinkMs:Number($('thinkTime').value)}:{})});
 const canAct=()=>!comboActive&&!comboPreparing&&!effectsActive&&!collapseEffect&&!state.result&&!busy&&!!online&&connected&&online.joined&&online.side===state.turn;
 function renderHand(n){
  let clock=$('clock'+n);if(!clock){clock=document.createElement('div');clock.id='clock'+n;clock.className='player-clock';$('hand'+n).before(clock);}
@@ -165,7 +166,7 @@ function render(){
  const turnName=oseshoMatch&&state.turn!==online.side?'オセショ様':side(state.turn);$('turn').textContent=state.result||` ${turnName}の番`;if(!state.result)$('turn').prepend(stone(state.turn));
  $('boardProgress').hidden=!state.mode;
  const collapseAt=state.paradoxAt===false?null:(state.paradoxAt??150);
- $('boardProgress').innerHTML=collapseAt?`終末まで ${state.ply}/${collapseAt}${state.ply>=collapseAt?' · <span class="paradox-active-label">盤面崩壊中</span>':''}${state.moveLimit===false?'':` ／ 決着まで ${Math.min(state.ply,60)}/60`}`:state.moveLimit===false?`${state.ply}手目`:`決着まで ${Math.min(state.ply,60)}/60`;
+ $('boardProgress').innerHTML=collapseAt?`終末まで ${state.ply}/${collapseAt}${state.ply>=collapseAt?' · <span class="paradox-active-label">盤面崩壊中</span>':''}${adjudicationLimit(state)===false?'':` ／ 決着まで ${Math.min(state.ply,adjudicationLimit(state))}/${adjudicationLimit(state)}`}`:adjudicationLimit(state)===false?`${state.ply}手目`:`決着まで ${Math.min(state.ply,adjudicationLimit(state))}/${adjudicationLimit(state)}`;
  $('boardProgress').title=collapseAt?`盤面崩壊までの手数（${collapseAt}手から開始）`:'';
  $('count').textContent='オセロ将棋';
  const scores=points(state);$('scores').hidden=!state.mode;$('scores').textContent=`盤上：先手 ${scores[0]}枚　／　後手 ${scores[1]}枚`;
@@ -191,7 +192,7 @@ function render(){
   $('connection').dataset.aiTiming=aiTiming?JSON.stringify(aiTiming):'';
  }
  $('inviteTools').hidden=!online||(online.seat??0)!==0||online.joined;
- if(online?.invite)$('inviteLink').value=location.origin+location.pathname+'#room='+online.room+'&invite='+online.invite+'&limit='+(online.settings?.moveLimit===false?'no':'yes')+'&drops='+(online.settings?.noDrops?'no':'yes');
+ if(online?.invite)$('inviteLink').value=location.origin+location.pathname+'#room='+online.room+'&invite='+online.invite+'&limit='+(adjudicationLimit(online.settings||{})===false?'no':adjudicationLimit(online.settings||{}))+'&drops='+(online.settings?.noDrops?'no':'yes');
  $('drawOffer').hidden=!online||online.offer===null||!!state.result;
  if(online&&online.offer!==null){$('drawText').textContent=online.offer===(online.seat??online.side)?'相手に引き分けを提案しています。':'相手から引き分けの提案があります。';$('acceptDraw').hidden=online.offer===(online.seat??online.side);}
  document.querySelector('.local').textContent=oseshoMatch?'オセショ様対局':online?.kind==='ai'?'AI対局':'オセロ将棋';
@@ -204,7 +205,7 @@ function render(){
  $('createRoom').textContent=oseshoChallenge?'オセショ様に挑戦する':selectedKind==='ai'?'AIと対局を始める':'対局を作って招待する';
  const settings=online?.settings||inviteRoom?.settings||selectedSettings();
  $('matchSettings').hidden=!online&&!inviteRoom;
- $('matchSettings').textContent='オセロジャッジ：'+(settings.moveLimit===false?'なし':'あり')+' ／ チェスモード：'+(settings.noDrops?'あり':'なし')+(online?.kind==='ai'?' ／ AI：'+({weak:'弱い',normal:'普通',strong:'強い',expert:'最強',osesho:'オセショ様（人間が勝てる保証なし）'}[settings.aiLevel]||'普通')+('（最大'+((settings.thinkMs||1000)/1000)+'秒）'):'');
+ $('matchSettings').textContent='オセロジャッジ：'+judgeLabel(adjudicationLimit(settings))+' ／ チェスモード：'+(settings.noDrops?'あり':'なし')+(online?.kind==='ai'?' ／ AI：'+({weak:'弱い',normal:'普通',strong:'強い',expert:'最強',osesho:'オセショ様（人間が勝てる保証なし）'}[settings.aiLevel]||'普通')+('（最大'+((settings.thinkMs||1000)/1000)+'秒）'):'');
  $('matchSettings').textContent+=' ／ 盤面崩壊：'+(settings.paradoxAt===false?'無制限':(settings.paradoxAt??150)+'手から');
  if(online?.kind==='ai')$('matchSettings').textContent+=' ／ '+(settings.handicapSide==='human'?'人間側':'AI側')+'：'+(handicapOptions[settings.handicap]||'平手');
  if(online?.kind!=='ai')$('matchSettings').textContent+=' ／ 時間：'+(clockRule(settings.timeControl).label)+' ／ 作成者：'+(handicapOptions[settings.handicap]||'平手');
@@ -289,7 +290,7 @@ for(const id of ['chooseRules','openRulesAlways','openRulesSettings'])$(id).oncl
 setInterval(()=>{for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock;if(el.hidden)continue;const now=Date.now()+clockOffset,ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}},100);
 const advancedOpen={ai:false,friend:false};
 function selectKind(kind){advancedOpen[selectedKind]=$('advancedSettings').open;selectedKind=kind;$('advancedSettings').open=advancedOpen[kind];render();}
-$('chooseAI').onclick=()=>selectKind('ai');$('chooseFriend').onclick=()=>selectKind('friend');$('moveLimit').onchange=render;$('allowDrops').onchange=render;$('aiLevel').onchange=render;$('thinkTime').onchange=render;
+$('chooseAI').onclick=()=>selectKind('ai');$('chooseFriend').onclick=()=>selectKind('friend');initJudgeSlider($('moveLimit'),$('moveLimitValue'));$('moveLimit').onchange=render;$('allowDrops').onchange=render;$('aiLevel').onchange=render;$('thinkTime').onchange=render;
 function syncOseshoChallenge(){
  const enabled=$('challengeOsesho').checked,option=$('aiLevel').querySelector('option[value="osesho"]');
  option.hidden=option.disabled=!enabled;
@@ -353,3 +354,5 @@ async function useHelper(){
 };
 
 $('helperAd').onclick=()=>{$('helperUnlimited').checked=true;$('helperAdNote').textContent='無限を有効にしました。現在は広告なしで利用できます。';};
+
+$('rulesTutorial').onclick=()=>{$('rulesDialog').close();$('openTutorial').click();};

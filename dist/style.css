@@ -275,4 +275,6 @@ header .brand span{color:#254b40}
 .paradox-spawn-glow{position:absolute;inset:0;pointer-events:none;z-index:8;border-radius:50%;background:radial-gradient(circle,#fff9 0,#f6d55d66 45%,transparent 72%);box-shadow:0 0 20px #f6d55d}.paradox-spawn-glow.arriving{animation:spawn-arrival .6s ease-out both}@keyframes spawn-arrival{0%{opacity:0;transform:scale(.2)}40%{opacity:1;transform:scale(1.4)}100%{opacity:0;transform:scale(1)}}
 @media(prefers-reduced-motion:reduce){.paradox-spawn-glow.arriving,#furigoma.osesho-intervention #tossResult,#furigoma.osesho-intervention .toss-piece{animation:none}}
 
+.rules-tagline{line-height:1.9}.rules-tutorial-call{padding:16px;border-radius:12px;background:#153e39;color:#f7eddc;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}.rules-card{margin-top:18px;padding:16px;border:1px solid #173d3938;border-radius:12px}.rules-card h3{margin-top:0}.rules-card li{margin-bottom:12px}.rules-warning{color:#b32626}.judge-slider output{font-weight:700}
+
 .lesson-complete-actions{display:flex;justify-content:space-between;gap:12px;margin-top:12px}.lesson-complete-actions button{flex:1}.tutorial-exit{display:block;margin:12px 0}.tutorial-mode .dev-collapse-setting{display:none}.dev-collapse-setting{display:block;margin:12px 0}

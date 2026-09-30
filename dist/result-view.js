@@ -9,7 +9,7 @@ export function resultView(state,side=0){
  if(result.includes('王を反転')){reason='王を挟んで決着';square=state.flipped.find(i=>state.board[i]?.type==='K')??null;}
  else if(result.includes('王を取った')){reason='王を取って決着';square=state.last.at(-1)??null;}
  else if(result.includes('王が崩壊')){reason='盤面崩壊で王が消滅';square=state.destroyed?.square??null;}
- else if(result.includes('60手')){reason='オセロジャッジで'+(winner===null?'引き分け':'決着');const scores=points(state);detail='60手 · 盤上の駒 あなた '+scores[side]+'枚 ／ 相手 '+scores[1-side]+'枚';}
+ else if(/（\d+手・先手\d+枚／後手\d+枚）/.test(result)){reason='オセロジャッジで'+(winner===null?'引き分け':'決着');const scores=points(state);detail=result.match(/（(\d+)手/)[1]+'手 · 盤上の駒 あなた '+scores[side]+'枚 ／ 相手 '+scores[1-side]+'枚';}
  else if(result.includes('投了'))reason=winner===side?'相手の投了で決着':'あなたの投了で決着';
  else if(result.includes('合意'))reason='両者の合意で引き分け';
  else if(result.includes('指せる手なし'))reason='指せる手がなくなり決着';

@@ -1,3 +1,4 @@
+import {adjudicationLimit} from './judge-options.js';
 // Othello-shogi search uses the same rules as engine.js, with reversible moves.
 // Piece codes: type (1..8), promoted (16), side (32). Zero is an empty square.
 const TYPES=['','P','L','N','S','G','B','R','K'];
@@ -42,7 +43,7 @@ const encode=m=>m.to|((m.drop?80+TYPES.indexOf(m.drop):m.from)<<7)|(m.prom?16384
 export class SearchPosition {
  constructor(s){
   this.board=new Uint8Array(81);this.hands=new Uint8Array(16);this.kings=new Int16Array([-1,-1]);
-  this.turn=s.turn;this.ply=s.ply;this.limit=s.moveLimit!==false;this.mode=s.mode;
+  this.turn=s.turn;this.ply=s.ply;this.limit=adjudicationLimit(s);this.mode=s.mode;
   this.hash=0;this.lock=0;this.stack=[];this.count=new Int16Array(2);this.material=new Int32Array(2);
   s.board.forEach((p,i)=>{if(p)this.set(i,TYPES.indexOf(p.type)|(p.prom?16:0)|(p.side<<5));});
   for(let n=0;n<2;n++)for(let t=1;t<=7;t++)this.hand(n,t,s.hands[n][TYPES[t]]||0);
@@ -87,7 +88,7 @@ export class SearchPosition {
  terminal(height=0){
   if(this.kings[this.turn]<0)return -WIN+height;
   if(this.kings[1-this.turn]<0)return WIN-height;
-  if(this.limit&&this.ply>=60)return Math.sign(this.count[this.turn]-this.count[1-this.turn])*(WIN-1000);
+  if(this.limit&&this.ply>=this.limit)return Math.sign(this.count[this.turn]-this.count[1-this.turn])*(WIN-1000);
   return null;
  }
  generate(){
@@ -156,7 +157,7 @@ function evaluate(p){
   }
  }
  if(!p.noDrops)for(let n=0;n<2;n++)for(let t=1;t<=7;t++)scores[n]+=p.hands[n*8+t]*VALUES[t]*.85;
- if(p.limit){const weight=Math.max(0,p.ply-30)*22;scores[0]+=p.count[0]*weight;scores[1]+=p.count[1]*weight;}
+ if(p.limit){const weight=Math.max(0,p.ply-(p.limit-30))*22;scores[0]+=p.count[0]*weight;scores[1]+=p.count[1]*weight;}
  return Math.round(scores[p.turn]-scores[1-p.turn])+10;
 }
 
