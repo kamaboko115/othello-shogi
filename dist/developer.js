@@ -28,7 +28,7 @@ export function initDeveloper(getCurrent){
   $('lessonProgress').hidden=!tutorial||!lessons[lesson].collapse;$('lessonProgress').textContent='崩壊 '+collapseTrial+' / '+(lessons[lesson].collapseSequence?.length||0);
   const board=$('devBoard');board.replaceChildren();const legal=selected===null?[]:moves(state,selected);
   for(let i=0;i<81;i++){const b=document.createElement('button'),p=state.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(tutorial&&!working&&i===(lessons[lesson].move.from??lessons[lesson].move.to)&&state.ply===(lessons[lesson].collapse?149:0))b.classList.add('tutorial-hint');b.dataset.square=i;b.disabled=working;b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き'));if(p){const el=document.createElement('span');el.className='piece'+((working&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'');el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
-  paintCollapse(board,state.destroyed,{phase:collapsePhase});
+  paintCollapse(board,state.destroyed,{phase:collapsePhase,eventKey:state.ply});
  }
  async function click(i){
   if(working)return;
@@ -58,7 +58,7 @@ export function initDeveloper(getCurrent){
     try{
      if(state.paradoxStarted){paradoxSound(true);await wait(3000);}
      if(current.signal.aborted)return;
-     paradoxSound(false);collapsePhase='breaking';paintCollapse($('devBoard'),state.destroyed,{phase:collapsePhase});
+     paradoxSound(false);collapsePhase='breaking';paintCollapse($('devBoard'),state.destroyed,{phase:collapsePhase,eventKey:state.ply});
      await wait(600);collapsePhase='ash';
     }finally{note.remove();}
     draw();

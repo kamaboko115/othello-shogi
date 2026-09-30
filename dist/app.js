@@ -31,7 +31,7 @@ let aiJob=null,aiTiming=null,helperJob=null,helperDeparting=false,helperLingerin
 let collapseEffect=null,collapseTimer=null,removeParadoxBanner=null;
 function cancelCollapse(){clearTimeout(collapseTimer);removeParadoxBanner?.();removeParadoxBanner=null;collapseEffect=null;}
 function paintLastCollapse(){
- paintCollapse($('board'),collapseEffect?.destroyed||state.destroyed,{perspective:online?.side??0,phase:collapseEffect?(collapseEffect.breaking?'breaking':'waiting'):'ash'});
+ paintCollapse($('board'),collapseEffect?.destroyed||state.destroyed,{perspective:online?.side??0,phase:collapseEffect?(collapseEffect.breaking?'breaking':'waiting'):comboPreparing||comboActive?'waiting':'ash',eventKey:(online?.room||'')+':'+(online?.round||1)+':'+state.ply});
 }
 function beginCollapse(next){
  cancelCollapse();collapseEffect={destroyed:next.destroyed,breaking:false};

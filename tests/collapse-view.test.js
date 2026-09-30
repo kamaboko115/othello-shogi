@@ -29,3 +29,23 @@ test('直前の破壊を灰・駒名で表示し、再描画・次の着手・�
  assert.equal(cells.get(76).children[1].textContent,'歩の灰');
  paintCollapse(board,null);assert.equal(cells.get(76).children.length,0);assert.equal(cells.get(76).getAttribute('aria-label'),'76 空き');
 });
+
+test('灰は破壊から1.7秒で消え、定期更新・再描画で復活しない',t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});
+ const {board,cells}=boardView(),destroyed={square:4,piece:{type:'G',side:1}};
+ const paint=phase=>paintCollapse(board,structuredClone(destroyed),{phase,eventKey:150});
+ paint('waiting');t.mock.timers.tick(3000);
+ assert.equal(cells.get(4).children.length,1,'開始前の警告中は消さない');
+ paint('breaking');t.mock.timers.tick(600);paint('ash');
+ t.mock.timers.tick(1099);paint('ash');
+ assert.equal(cells.get(4).children.length,2,'破壊から1699msでは灰が残る');
+ t.mock.timers.tick(1);
+ assert.equal(cells.get(4).children.length,0,'破壊から1700msで自動消去');
+ assert.equal(cells.get(4).getAttribute('aria-label'),'4 空き');
+ assert.ok(!cells.get(4).classes.has('collapse-square'),'枠も消去');
+ paint('ash');t.mock.timers.tick(500);paint('ash');
+ assert.equal(cells.get(4).children.length,0,'同じ着手の再受信では復活しない');
+ paintCollapse(board,destroyed,{phase:'breaking',eventKey:151});
+ assert.ok(cells.get(4).children.length>0,'次の破壊は新しく表示する');
+ t.mock.timers.tick(1700);assert.equal(cells.get(4).children.length,0);
+});
