@@ -1,6 +1,7 @@
 import {inCheck} from './engine.js';
+export const isVictoryFor=(effect,perspective=0)=>effect.text.startsWith(perspective===0?'先手':'後手');
 export function showVictory(effect,perspective=0,parent=document.body){
- const won=effect.text.startsWith(perspective===0?'先手':'後手');
+ const won=isVictoryFor(effect,perspective);
  const el=document.createElement('div');el.className='victory-flare'+(won?'':' defeat');el.setAttribute('role','status');
  const words=document.createElement('strong');words.textContent=won?'YOU WIN':'YOU LOSE';el.append(words);parent.append(el);return el;
 }
@@ -24,7 +25,7 @@ export async function runEffects(effects,{show,hide,applause,victory,signal}){
  try{for(let i=0;i<effects.length;i++){const effect=effects[i];
   if(signal?.aborted)return;
   if(effect.kind==='applause'){applause(signal);continue;}
-  if(effect.kind==='victory')victory();
+  if(effect.kind==='victory')victory(effect);
   show(effect);
   if(effect.kind==='flip'&&effects[i+1]?.kind==='applause'){
    await wait(1900);if(signal?.aborted)return;applause(signal);i++;await wait(500);

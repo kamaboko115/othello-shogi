@@ -82,6 +82,24 @@ export function playVictorySound(){
  const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();source.buffer=buffer;filter.type='bandpass';filter.Q.value=.7;filter.frequency.setValueAtTime(1000,start);filter.frequency.exponentialRampToValueAtTime(6500,start+.55);gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.11,start+.18);gain.gain.exponentialRampToValueAtTime(.001,start+.65);source.connect(filter);filter.connect(gain);gain.connect(context.destination);source.start(start);
 }
 
+// The win shimmer's counterpart: a short, falling silver chord, synthesized
+// locally. No extra audio asset or request is needed.
+export function playDefeatSound(signal){
+ prepare();if(!context||context.state!=='running'||signal?.aborted)return;
+ const output=context.createGain();output.gain.value=.65;output.connect(context.destination);
+ const nodes=[],voices=[],start=context.currentTime;
+ for(const [i,freq]of [1568,1174.7,932.3,622.3].entries()){
+  const osc=context.createOscillator(),gain=context.createGain(),at=start+i*.045;
+  osc.type='sine';osc.frequency.setValueAtTime(freq,at);osc.frequency.exponentialRampToValueAtTime(freq*.5,at+.42);
+  gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.055,at+.015);gain.gain.exponentialRampToValueAtTime(.0001,at+1.25);
+  osc.connect(gain);gain.connect(output);osc.start(at);osc.stop(at+1.3);nodes.push(osc,gain);voices.push(osc);
+ }
+ let ended=false;
+ const stop=()=>{if(ended)return;ended=true;for(const osc of voices){try{osc.stop();}catch{}}for(const node of nodes)node.disconnect();output.disconnect();signal?.removeEventListener('abort',stop);};
+ voices.at(-1).onended=stop;signal?.addEventListener('abort',stop,{once:true});
+}
+export function playResultSound(won,signal){if(won)playVictorySound();else playDefeatSound(signal);}
+
 // A short crowd applause made from overlapping, filtered hand-clap bursts.
 export function playApplauseSound(signal){
  prepare();if(!context||context.state!=='running'||signal?.aborted)return;
