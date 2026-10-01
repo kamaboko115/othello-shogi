@@ -2,7 +2,7 @@ import {presentToss} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
 import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
-import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget} from './match-options.js';
+import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget,clockSecondsLabel,timeHelp} from './match-options.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide} from './combo.js';
 import {initDeveloper} from './developer.js';
 import {resultView} from './result-view.js';
@@ -294,7 +294,7 @@ function enter(data,token,invite){
  message=state.result|| (data.joined?(data.kind==='ai'?'AIと対局を開始しました。':'対戦相手と接続しました。自分の手番で指してください。'):'招待リンクを相手に送ってください。');render();poll();
 }
 for(const [value,name] of Object.entries(handicapOptions)){const option=document.createElement('option');option.value=value;option.textContent=name;$('handicap').append(option);$('aiHandicap').append(option.cloneNode(true));}
-const explainTime=()=>{const unlimited=Number($('mainTime').value)===minuteSteps.length;$('incrementTime').disabled=$('byoyomiTime').disabled=unlimited;const minutes=minuteSteps[Number($('mainTime').value)],increment=Number($('incrementTime').value),byoyomi=byoyomiSteps[Number($('byoyomiTime').value)];for(const [id,out,value,unit] of [['mainTime','mainTimeValue',minutes,'分'],['incrementTime','incrementValue',increment,'秒'],['byoyomiTime','byoyomiValue',byoyomi,'秒']]){const text=id==='mainTime'&&unlimited?'無限':value+unit;$(out).textContent=text;$(id).setAttribute('aria-valuetext',text);}$('timeHelp').textContent=unlimited?'時間無制限':!minutes&&!increment&&!byoyomi?'時間制限なし（持ち時間の右端で「無限」を選べます）':(!increment&&!byoyomi?'持ち時間が切れたら負け。':`毎手＋${increment}秒 ／ 持ち時間の後は秒読み${byoyomi}秒。`)+(minutes===0&&increment>0&&byoyomi===0?' 初手も加算秒数から開始。':'');};
+const explainTime=()=>{const unlimited=Number($('mainTime').value)===minuteSteps.length;$('incrementTime').disabled=$('byoyomiTime').disabled=unlimited;const minutes=minuteSteps[Number($('mainTime').value)],increment=Number($('incrementTime').value),byoyomi=byoyomiSteps[Number($('byoyomiTime').value)];for(const [id,out,value,unit] of [['mainTime','mainTimeValue',minutes,'分'],['incrementTime','incrementValue',increment,'秒'],['byoyomiTime','byoyomiValue',byoyomi,'秒']]){const text=id==='mainTime'?(unlimited?'無限':value+unit):(unlimited?'なし':clockSecondsLabel(value));$(out).textContent=text;$(id).setAttribute('aria-valuetext',text);}$('timeHelp').textContent=unlimited?'時間無制限':timeHelp({minutes,increment,byoyomi});};
 for(const id of ['mainTime','incrementTime','byoyomiTime'])$(id).oninput=explainTime;explainTime();
 for(const id of ['chooseRules','openRulesAlways','openRulesSettings'])$(id).onclick=()=>$('rulesDialog').showModal();$('closeRules').onclick=()=>$('rulesDialog').close();
 setInterval(()=>{for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock;if(el.hidden)continue;const now=Date.now()+clockOffset,ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}},100);
