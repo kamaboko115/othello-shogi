@@ -282,3 +282,5 @@ header .brand span{color:#254b40}
 #tutorialLesson #lessonAdvice{margin:18px 0;padding:16px;border:3px solid #d69d36;background:#102e29;border-radius:8px;box-shadow:0 0 16px #e4b84b66;font-size:clamp(19px,3vw,25px);line-height:1.55}#lessonAdvice strong{display:block;color:#ffe785;background:linear-gradient(100deg,#ffabac,#ffe591,#adffb5,#9ee9ff,#cdb0ff,#ffabac);background-size:200% 100%;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:tutorial-advice-rainbow 3s linear infinite;font-weight:900}@keyframes tutorial-advice-rainbow{to{background-position:200% 0}}@media(prefers-reduced-motion:reduce){#lessonAdvice strong{animation:none}}
 .tutorial-arrow,.tutorial-arrow svg{overflow:visible}.tutorial-mode #devHand0 .tutorial-hint{box-shadow:0 0 0 3px #fff19b,0 0 16px #fff19b99}
 .collapse-lightning{background:#eaff00;filter:drop-shadow(0 0 5px #f3ff00) drop-shadow(0 0 12px #79ff00);animation-duration:1.2s}.paradox-breaking,.paradox-breaking.enemy{animation-duration:1.2s}
+
+#furigoma.toss-settled .toss-piece{animation:none}#closeToss:disabled{opacity:.45;cursor:wait}

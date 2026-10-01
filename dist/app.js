@@ -1,3 +1,4 @@
+import {presentToss} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
 import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
@@ -224,7 +225,7 @@ function render(){
  $('offerRematch').hidden=requested;$('acceptRematch').hidden=!requested||mine;$('declineRematch').hidden=!requested;
  for(const id of ['offerRematch','acceptRematch','declineRematch'])$(id).disabled=busy||!connected;
  if(!online)$('furigoma').hidden=true;
- if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;const toss=online.toss,playerSide=online.side,showCoins=coins=>$('tossCoins').replaceChildren(...coins.map((face,i)=>{const el=document.createElement('span');el.className='toss-piece';el.textContent=face?'歩':'と';el.style.animationDelay=(i*.1)+'s';return el;})),finish=()=>{$('furigoma').classList.remove('osesho-intervention');showCoins(toss.coins);$('tossResult').textContent='歩 '+toss.coins.filter(Boolean).length+'枚・と '+toss.coins.filter(v=>!v).length+'枚。あなたは'+side(playerSide)+'です。';};showCoins(toss.intervened?toss.originalCoins:toss.coins);$('furigoma').hidden=false;if(toss.intervened){$('furigoma').classList.add('osesho-intervention');$('tossResult').textContent='謎の力が駒に働きかける！！';setTimeout(()=>{if(lastTossKey===key)finish();},1400);}else finish();}}
+ if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;presentToss({toss:online.toss,playerSide:online.side,dialog:$('furigoma'),coins:$('tossCoins'),result:$('tossResult'),close:$('closeToss'),isCurrent:()=>lastTossKey===key&&online?.room+':'+online?.round===key});}}
 
  paintLastCollapse();syncAI();
 }
