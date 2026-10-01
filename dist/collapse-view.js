@@ -1,7 +1,10 @@
 import {label} from './engine.js';
 
 const displays=new WeakMap();
-const ashDuration=1700;
+export const collapseStrikeDuration=1200;
+export const collapseStrikeDelay=500;
+export const collapseAshDuration=500;
+const ashDuration=collapseStrikeDuration+collapseAshDuration;
 function clearMarkers(board){
  board.querySelectorAll('.collapse-marker').forEach(el=>el.remove());
  board.querySelectorAll('.collapse-square').forEach(cell=>{
@@ -33,7 +36,7 @@ export function paintCollapse(board,destroyed,{perspective=0,phase='ash',eventKe
   const ghost=add('piece paradox-ghost'+(destroyed.piece.side!==perspective?' enemy':'')+(phase==='breaking'?' paradox-breaking':''));ghost.textContent=name;
  }
  if(phase==='breaking')add('collapse-lightning');
- if(phase!=='waiting'){
+ if(phase==='ash'){
   add('collapse-ash');
   const caption=add('collapse-caption');caption.textContent=name+'の灰';
  }
