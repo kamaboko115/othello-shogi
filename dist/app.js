@@ -170,7 +170,7 @@ function render(){
   el.disabled=!canAct();el.onclick=()=>click(i);board.append(el);
  }
  for(let n=0;n<2;n++)renderHand(n);
- const oseshoTarget=(helperJob||helperLingering||helperIdea)?document.querySelector('.player.self'):oseshoMatch?document.querySelector('.player.opponent'):null;if(oseshoTarget){if($('osesho').parentElement!==oseshoTarget)oseshoTarget.prepend($('osesho'));}else if($('osesho').previousElementSibling!==$('oseshoHome'))$('oseshoHome').after($('osesho'));
+ const oseshoTarget=oseshoMatch?document.querySelector('.player.opponent'):null;if(oseshoTarget){if($('osesho').parentElement!==oseshoTarget)oseshoTarget.prepend($('osesho'));}else if($('osesho').previousElementSibling!==$('oseshoHome'))$('oseshoHome').after($('osesho'));
  const turnName=oseshoMatch&&state.turn!==online.side?'オセショ様':side(state.turn);$('turn').textContent=state.result||` ${turnName}の番`;if(!state.result)$('turn').prepend(stone(state.turn));
  $('boardProgress').hidden=!state.mode;
  const collapseAt=state.paradoxAt===false?null:(state.paradoxAt??150);
@@ -347,7 +347,7 @@ async function useHelper(){
  $('oseshoDialog').close();if(!helperAvailable())return;
  clearTimeout(helperIdeaTimer);helperIdea=false;
  interruptMoveEffects();
- message=online.settings?.aiLevel==='osesho'?'仕方ないなぁ… オセショ様がこちらへ移動しました。':'オセショ様が代わりに指します。';
+ message=online.settings?.aiLevel==='osesho'?'仕方ないなぁ… オセショ様が代わりに指します。':'オセショ様が代わりに指します。';
  const room=online.room,version=online.version,token=online.token,task=startAI(state,'osesho',5000);helperJob=task;busy=true;selected=null;legal=[];render();
  try{
   const result=await task.promise;

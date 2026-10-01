@@ -193,7 +193,7 @@ header .brand span{color:#254b40}
 
 .slide-rainbow-ray{position:absolute;z-index:7;pointer-events:none;height:4px;margin-top:-2px;border-radius:50%;transform-origin:0 50%;background:linear-gradient(90deg,#fff9,#ff657f,#ffd55f,#7cff9e,#67e8ff,#9983ff,#ff76dd,transparent);filter:drop-shadow(0 0 4px #b0eaff);}
 
-#osesho{display:block;width:210px;max-width:100%;border:0;padding:0;background:transparent;color:inherit;margin:0 auto 20px;transition:opacity .35s,transform .35s}
+#osesho{display:block;width:210px;max-width:100%;border:0;padding:0;background:transparent;color:inherit;margin:0 0 20px;transition:opacity .35s,transform .35s}
 #osesho[hidden]{display:none}#osesho:disabled{cursor:default}#oseshoStatus{display:block;font-size:13px;margin-top:8px}
 .osesho-art{position:relative;display:block;overflow:hidden;aspect-ratio:466/407;background:#000;border-radius:8px;isolation:isolate}
 .osesho-art img{display:block;width:103.87%;max-width:none;height:100%;object-fit:fill}
