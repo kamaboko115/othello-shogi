@@ -230,7 +230,7 @@ function render(){
  paintLastCollapse();syncAI();
 }
 function interruptMoveEffects(){if(!comboActive&&!comboPreparing&&!effectsActive&&!collapseEffect)return;cancelCombo();cancelCollapse();animationKey='';render();}
-function select(src){if(!canAct())return;interruptMoveEffects();selected=selected===src?null:src;legal=selected===null?[]:moves(state,selected);message=selected===null?'駒を選んで、移動先をクリック。':legal.length?'緑の印のマスへ移動できます。':'この駒は今、動かせません。';render();}
+function select(src){if(!canAct())return;interruptMoveEffects();selected=selected===src?null:src;legal=selected===null?[]:moves(state,selected);message=selected===null?'駒を選んで、移動先をクリック。':legal.length?'白い印のマスへ移動できます。':'この駒は今、動かせません。';render();}
 function click(i){if(!canAct())return;interruptMoveEffects();const choices=legal.filter(m=>m.to===i);if(choices.length>1){pending=choices;$('promotion').showModal();return;}if(choices.length){commit(choices[0]);return;}if(state.board[i]?.side===state.turn)select(i);else{selected=null;legal=[];message='自分の駒、または駒台の駒を選んでください。';render();}}
 function commit(m){if(canAct())sendAction('move',m);}
 function start(s,msg){state=s;stack=[];logs=[];selected=null;legal=[];message=msg||'駒を選んで、移動先をクリック。';render();}
