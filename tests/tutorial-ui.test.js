@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {initial} from '../dist/engine.js';
+import {lessons,lessonState,tutorialMoves} from '../dist/tutorial-lessons.js';
 globalThis.Audio=class {addEventListener(){} load(){} play(){return Promise.resolve();} pause(){}};
 globalThis.window={addEventListener(){}};
 globalThis.matchMedia=()=>({matches:true});
@@ -28,6 +29,39 @@ function view(){
  const get=id=>ids.get(id),clickSquare=i=>get('devBoard').querySelector(`[data-square="${i}"]`).onclick();
  return {get,clickSquare};
 }
+
+test('練習1〜8は指定の1手だけを許可し、完了後は次の手を許可しない',()=>{
+ for(let index=0;index<8;index++){
+  const state=lessonState(index),expected=lessons[index].move;
+  const all=[...Array(81).keys(),'R','B','G','S','N','L','P'].flatMap(source=>tutorialMoves(state,index,source));
+  assert.equal(all.length,1,'lesson '+(index+1));
+  assert.equal(all[0].from,expected.from);assert.equal(all[0].to,expected.to);assert.equal(all[0].drop,expected.drop);
+  state.ply=1;assert.deepEqual(tutorialMoves(state,index,expected.from??expected.drop),[]);
+ }
+ assert.ok(tutorialMoves(lessonState(8),8,58).length>1,'崩壊の練習は自由に動かせる');
+});
+
+test('練習1〜8で他の駒・移動先を押しても進まず、指定の駒と移動先を案内する',async()=>{
+ const {get,clickSquare}=view();get('openTutorial').onclick();
+ for(let index=0;index<8;index++){
+  const move=lessons[index].move,cell=i=>get('devBoard').querySelector(`[data-square="${i}"]`);
+  assert.equal(cell(76).disabled,true,'自分の王は操作不可');
+  assert.ok(get('devBoard').children.some(el=>el.className==='tutorial-arrow'));
+  await clickSquare(76);await clickSquare(67);
+  assert.equal(cell(76).children[0].textContent,'玉');
+  if(move.drop)get('devHand0').children.find(el=>el.dataset.type===move.drop).onclick();
+  else await clickSquare(move.from);
+  assert.equal(cell(move.to).disabled,false,'指定の移動先は操作可能');
+  await clickSquare(0);assert.equal(cell(move.to).disabled,false,'無関係なマスで選択を失わない');
+  assert.equal(get('lessonComplete').open,false);
+  get('lessonNext').onclick();
+ }
+ assert.match(get('lessonText').textContent,/たまにいいコト/);
+ assert.equal(get('lessonAdvice').hidden,false);
+ assert.ok(!get('devBoard').children.some(el=>el.className==='tutorial-arrow'));
+ assert.equal(get('devBoard').querySelector('[data-square="58"]').disabled,false);
+ get('lessonExit').onclick();
+});
 test('練習の演出完了後に次へ・再練習を選べ、閉じた場合は案内を残さない',async()=>{
  const {get,clickSquare}=view();get('openTutorial').onclick();
  await clickSquare(49);const playing=clickSquare(40);
