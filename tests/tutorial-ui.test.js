@@ -56,7 +56,7 @@ test('練習1〜8で他の駒・移動先を押しても進まず、指定の駒
   assert.equal(get('lessonComplete').open,false);
   get('lessonNext').onclick();
  }
- assert.match(get('lessonText').textContent,/たまにいいコト/);
+ assert.match(get('lessonText').textContent,/破壊の代わりに龍か馬が降臨/);
  assert.equal(get('lessonAdvice').hidden,false);
  assert.ok(!get('devBoard').children.some(el=>el.className==='tutorial-arrow'));
  assert.equal(get('devBoard').querySelector('[data-square="58"]').disabled,false);
@@ -86,7 +86,8 @@ test('開発者の早期崩壊は2手目から発動し、待った・オフ・�
  get('devCollapseEarly').checked=true;get('devCollapseEarly').onchange();
  const count=()=>get('devBoard').children.filter(cell=>cell.children.some(el=>el.className.startsWith('piece'))).length;
  await clickSquare(54);await clickSquare(45);assert.equal(count(),40,'1手目は破壊しない');
- await clickSquare(55);await clickSquare(46);assert.equal(count(),39,'2手目で1枚破壊');assert.match(get('devStatus').textContent,/2手目.*崩壊/);
+ await clickSquare(55);await clickSquare(46);assert.equal(count(),40,'2手目は開始の予告のみ');assert.match(get('devStatus').textContent,/2手目.*崩壊/);
+ await clickSquare(56);await clickSquare(47);assert.equal(count(),39,'3手目から1枚破壊');
  get('devUndo').onclick();assert.equal(count(),40,'待ったで破壊前の盤面に戻る');assert.equal(get('devCollapseEarly').checked,true);
  get('devCollapseEarly').checked=false;get('devCollapseEarly').onchange();
  await clickSquare(55);await clickSquare(46);assert.equal(count(),40,'オフにすると破壊しない');

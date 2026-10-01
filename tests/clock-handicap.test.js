@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {initial} from '../dist/engine.js';
-import {startClock,clockBudget,chargeClock,finishClockMove,applyHandicap,normalizeTime} from '../dist/match-options.js';
+import {startClock,clockBudget,chargeClock,finishClockMove,applyHandicap,normalizeTime,clockRule,clockSecondsLabel,timeHelp} from '../dist/match-options.js';
 test('自由設定の加算と秒読みを併用、全0は無制限、加算のみ0分でも初手を確保',()=>{
  const d={kind:'friend',settings:{timeControl:normalizeTime({minutes:1,increment:5,byoyomi:10})},state:initial()};startClock(d,0);
  assert.equal(clockBudget(d,0,74000),1000);chargeClock(d,74000);d.state.turn=1;finishClockMove(d,0,74000);assert.equal(d.clock.remaining[0],5000);assert.equal(clockBudget(d,0,74000),15000);
@@ -32,3 +32,26 @@ test('時間切れはGETでも確定・遅い着手拒否・再試合で時計�
  d=(await call(db,path+'/action',h,{action:'offer-rematch',version:d.version})).data;d=(await call(db,path+'/action',g,{action:'accept-rematch',version:d.version})).data;
  assert.equal(d.state.result,'');assert.equal(d.clock.remaining[0],30000);assert.ok(d.clock.since>Date.now());assert.equal(d.state.board.filter(p=>p?.side===d.toss.hostSide).length,14);
  }finally{db.close();}});
+
+test('開始の予告・落雷・降臨中は持ち時間を消費しない',()=>{
+ const allowance=event=>{const d={kind:'friend',settings:{timeControl:'turn30'},state:{...initial(),...event}};startClock(d,0);finishClockMove(d,0,1000);return d.clock.since;};
+ const normal=allowance({});
+ assert.equal(allowance({paradoxStarted:true})-normal,3000);
+ assert.equal(allowance({destroyed:{square:0}})-normal,1700);
+ assert.equal(allowance({spawned:{square:40}})-normal,1320);
+});
+
+test('無効な加算・秒読みはなしと示し、使う方式だけ秒数を案内する',()=>{
+ for(const setting of [{minutes:5,increment:3,byoyomi:0},{minutes:5,increment:0,byoyomi:30},{minutes:5,increment:0,byoyomi:0},{minutes:0,increment:3,byoyomi:0},{minutes:0,increment:3,byoyomi:30}]){
+  const help=timeHelp(setting),rule=clockRule(setting);
+  assert.equal(help.includes('秒読みなし'),!setting.byoyomi);
+  assert.equal(help.includes('加算なし'),!setting.increment);
+  assert.equal(help.includes('持ち時間が切れたら負け'),!setting.byoyomi);
+  assert.equal(help.includes('初手も'),setting.minutes===0&&setting.increment>0&&setting.byoyomi===0);
+  assert.doesNotMatch(help,/(?:秒読み|加算|＋)0秒/);assert.doesNotMatch(rule.label,/(?:秒読み|加算)0秒/);
+  assert.equal(rule.base,setting.minutes*60000||(!setting.byoyomi?setting.increment*1000:0));
+ }
+ assert.equal(clockSecondsLabel(0),'なし');assert.equal(clockSecondsLabel(3),'3秒');
+ assert.equal(clockRule({minutes:0,increment:0,byoyomi:0}).mode,'none');
+ assert.match(timeHelp({minutes:0,increment:0,byoyomi:0}),/時間制限なし/);
+});

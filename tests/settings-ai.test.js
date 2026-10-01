@@ -43,7 +43,7 @@ test('崩壊設定の検証・双方同期・再取得で再抽選しない・�
  const d=(await call(db,'',{invite,settings:{paradoxAt:1,moveLimit:false}})).data,path='/'+d.room;
  const j=(await call(db,path+'/join',{invite},guest)).data;const first=j.side===0?guest:host,second=first===host?guest:host;
  const a=(await call(db,path+'/action',{action:'move',version:j.version,move:{from:54,to:45,prom:false}},first)).data;
- assert.equal(a.state.board.filter(Boolean).length,39);assert.ok([0,1].includes(a.state.destroyed.piece.side));assert.equal(a.state.paradoxStarted,true);
+ assert.equal(a.state.board.filter(Boolean).length,40);assert.equal(a.state.destroyed,null);assert.equal(a.state.spawned,null);assert.equal(a.state.paradoxStarted,true);
  const b=(await call(db,path,undefined,second)).data;assert.deepEqual(b.state,a.state);
  const repeat=await call(db,path+'/action',{action:'move',version:j.version,move:{from:54,to:45,prom:false}},first);assert.equal(repeat.status,409);
  const offer=(await call(db,path+'/action',{action:'offer-undo',version:a.version},first)).data;

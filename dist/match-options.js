@@ -5,11 +5,21 @@ export function normalizeTime(value){
  if(!value||!minuteSteps.includes(value.minutes)||!Number.isInteger(value.increment)||value.increment<0||value.increment>15||!byoyomiSteps.includes(value.byoyomi))throw new Error('時間設定が不正です。');
  return {minutes:value.minutes,increment:value.increment,byoyomi:value.byoyomi};
 }
+// Disabled add-ons use the same wording in sliders, lobby help and room summaries.
+export const clockSecondsLabel=seconds=>seconds?`${seconds}秒`:'なし';
+export function timeHelp({minutes,increment,byoyomi}){
+ if(!minutes&&!increment&&!byoyomi)return '時間制限なし（持ち時間の右端で「無限」を選べます）';
+ const parts=[increment?`毎手＋${increment}秒`:'加算なし',byoyomi?`持ち時間の後は秒読み${byoyomi}秒`:'秒読みなし'];
+ let text=parts.join(' ／ ')+'。';
+ if(!byoyomi)text+=' 持ち時間が切れたら負け。';
+ if(minutes===0&&increment>0&&byoyomi===0)text+=' 初手も加算秒数から開始。';
+ return text;
+}
 export function clockRule(value){
  if(!value||typeof value==='string')return timeOptions[value]||timeOptions.none;
  const {minutes,increment,byoyomi}=value;
  if(!minutes&&!increment&&!byoyomi)return timeOptions.none;
- return {mode:'custom',base:minutes*60000||(!byoyomi?increment*1000:0),increment:increment*1000,byoyomi:byoyomi*1000,label:`持ち時間${minutes}分 ／ 加算${increment}秒 ／ 秒読み${byoyomi}秒`};
+ return {mode:'custom',base:minutes*60000||(!byoyomi?increment*1000:0),increment:increment*1000,byoyomi:byoyomi*1000,label:`持ち時間${minutes}分 ／ 加算${clockSecondsLabel(increment)} ／ 秒読み${clockSecondsLabel(byoyomi)}`};
 }
 export const timeOptions={
  none:{label:'なし',mode:'none'},
@@ -44,7 +54,9 @@ export function finishClockMove(data,mover,now){
  // A shared animation allowance protects both players while controls are locked.
  const n=data.state.flipped.length;let delay=n?Array.from({length:n},(_,i)=>Math.max(140,360-i*32)+20).reduce((a,b)=>a+b,0)+225:330;
  if(n>=4)delay+=3400;else if(n>=2)delay+=1000;else delay+=1000;
- if(data.state.destroyed)delay+=data.state.paradoxStarted?3600:720;
+ if(data.state.paradoxStarted)delay+=3000;
+ else if(data.state.destroyed)delay+=1700; // 500ms wait + 1200ms lightning
+ else if(data.state.spawned)delay+=1320; // 120ms wait + 1200ms arrival
  const to=data.state.last?.[1],from=data.state.last?.[0],previous=data.takebacks?.at(-1)?.state;
  if(to!==undefined&&data.state.board[to]?.prom&&!previous?.board[from]?.prom&&['R','B'].includes(data.state.board[to]?.type))delay+=1500;
  data.clock.since=now+delay+500;

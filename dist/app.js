@@ -1,7 +1,8 @@
+import {presentToss} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
 import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
-import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget} from './match-options.js';
+import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget,clockSecondsLabel,timeHelp} from './match-options.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide} from './combo.js';
 import {initDeveloper} from './developer.js';
 import {resultView} from './result-view.js';
@@ -9,7 +10,7 @@ import {paradoxSound,paradoxBanner} from './paradox.js';
 import {animateFlipLight} from './flip-light.js';
 import {moveEffects,runEffects,showVictory} from './move-effect.js';
 import {startAI} from './ai-client.js';
-import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue,playHelperDeparture} from './sound.js';
+import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
 import {initial,moves,label,names,points} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const statusPanel=document.querySelector('.status'),statusParent=statusPanel.parentElement,statusNext=statusPanel.nextSibling;
@@ -32,13 +33,13 @@ let aiJob=null,aiTiming=null,helperJob=null,helperDeparting=false,helperLingerin
 let collapseEffect=null,collapseTimer=null,removeParadoxBanner=null;
 function cancelCollapse(){clearTimeout(collapseTimer);removeParadoxBanner?.();removeParadoxBanner=null;collapseEffect=null;}
 function paintLastCollapse(){
- if(collapseEffect?.spawned){paintCollapse($('board'),null);const d=collapseEffect.spawned,cell=$('board').querySelector('[data-square="'+d.square+'"]');if(cell){cell.querySelectorAll('.spawn-marker').forEach(el=>el.remove());const glow=document.createElement('span');glow.className='spawn-marker paradox-spawn-glow'+(collapseEffect.breaking?' arriving':'');glow.setAttribute('aria-label',label(d.piece)+'が降臨');cell.append(glow);}return;}
+ if(collapseEffect?.spawned){paintCollapse($('board'),null);const d=collapseEffect.spawned,cell=$('board').querySelector('[data-square="'+d.square+'"]');if(cell){cell.querySelectorAll('.spawn-marker').forEach(el=>el.remove());const glow=document.createElement('span');glow.className='spawn-marker paradox-spawn-glow'+(collapseEffect.breaking?' arriving':'');glow.setAttribute('aria-label',label(d.piece)+'が降臨');cell.append(glow);cell.classList.toggle('paradox-spawn-cell',collapseEffect.breaking);}return;}
  paintCollapse($('board'),collapseEffect?.destroyed||state.destroyed,{perspective:online?.side??0,phase:collapseEffect?(collapseEffect.breaking?'breaking':'waiting'):comboPreparing||comboActive?'waiting':'ash',eventKey:(online?.room||'')+':'+(online?.round||1)+':'+state.ply});
 }
 function beginCollapse(next){
  cancelCollapse();collapseEffect={destroyed:next.destroyed,spawned:next.spawned,breaking:false};
  if(next.paradoxStarted){removeParadoxBanner=paradoxBanner();paradoxSound(true);}
- const finish=()=>{removeParadoxBanner?.();removeParadoxBanner=null;paradoxSound(false);collapseEffect.breaking=true;render();collapseTimer=setTimeout(()=>{collapseEffect=null;presentEffects(state);render();},next.destroyed?collapseStrikeDuration:600);};
+ const finish=()=>{removeParadoxBanner?.();removeParadoxBanner=null;if(next.paradoxStarted){collapseEffect=null;presentEffects(state);render();return;}if(next.spawned)playParadoxArrival();else paradoxSound(false);collapseEffect.breaking=true;render();collapseTimer=setTimeout(()=>{collapseEffect=null;presentEffects(state);render();},next.destroyed?collapseStrikeDuration:1200);};
  collapseTimer=setTimeout(finish,next.paradoxStarted?3000:next.destroyed?collapseStrikeDelay:120);
 }
 function stopAI(){aiJob?.task.cancel();aiJob=null;}
@@ -224,12 +225,12 @@ function render(){
  $('offerRematch').hidden=requested;$('acceptRematch').hidden=!requested||mine;$('declineRematch').hidden=!requested;
  for(const id of ['offerRematch','acceptRematch','declineRematch'])$(id).disabled=busy||!connected;
  if(!online)$('furigoma').hidden=true;
- if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;const toss=online.toss,playerSide=online.side,showCoins=coins=>$('tossCoins').replaceChildren(...coins.map((face,i)=>{const el=document.createElement('span');el.className='toss-piece';el.textContent=face?'歩':'と';el.style.animationDelay=(i*.1)+'s';return el;})),finish=()=>{$('furigoma').classList.remove('osesho-intervention');showCoins(toss.coins);$('tossResult').textContent='歩 '+toss.coins.filter(Boolean).length+'枚・と '+toss.coins.filter(v=>!v).length+'枚。あなたは'+side(playerSide)+'です。';};showCoins(toss.intervened?toss.originalCoins:toss.coins);$('furigoma').hidden=false;if(toss.intervened){$('furigoma').classList.add('osesho-intervention');$('tossResult').textContent='謎の力が駒に働きかける！！';setTimeout(()=>{if(lastTossKey===key)finish();},1400);}else finish();}}
+ if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;presentToss({toss:online.toss,playerSide:online.side,dialog:$('furigoma'),coins:$('tossCoins'),result:$('tossResult'),close:$('closeToss'),isCurrent:()=>lastTossKey===key&&online?.room+':'+online?.round===key});}}
 
  paintLastCollapse();syncAI();
 }
 function interruptMoveEffects(){if(!comboActive&&!comboPreparing&&!effectsActive&&!collapseEffect)return;cancelCombo();cancelCollapse();animationKey='';render();}
-function select(src){if(!canAct())return;interruptMoveEffects();selected=selected===src?null:src;legal=selected===null?[]:moves(state,selected);message=selected===null?'駒を選んで、移動先をクリック。':legal.length?'緑の印のマスへ移動できます。':'この駒は今、動かせません。';render();}
+function select(src){if(!canAct())return;interruptMoveEffects();selected=selected===src?null:src;legal=selected===null?[]:moves(state,selected);message=selected===null?'駒を選んで、移動先をクリック。':legal.length?'白い印のマスへ移動できます。':'この駒は今、動かせません。';render();}
 function click(i){if(!canAct())return;interruptMoveEffects();const choices=legal.filter(m=>m.to===i);if(choices.length>1){pending=choices;$('promotion').showModal();return;}if(choices.length){commit(choices[0]);return;}if(state.board[i]?.side===state.turn)select(i);else{selected=null;legal=[];message='自分の駒、または駒台の駒を選んでください。';render();}}
 function commit(m){if(canAct())sendAction('move',m);}
 function start(s,msg){state=s;stack=[];logs=[];selected=null;legal=[];message=msg||'駒を選んで、移動先をクリック。';render();}
@@ -265,7 +266,7 @@ function adopt(data){
   if(moved){
    if(promotedNow&&!state.result)playArcadeCue('promote');
    animationStarted=performance.now();animationKey=data.room+':'+(data.round||1)+':'+state.ply;
-   const finish=()=>{if(state.destroyed||state.spawned)beginCollapse(state);else presentEffects(state);};
+   const finish=()=>{if(state.paradoxStarted||state.destroyed||state.spawned)beginCollapse(state);else presentEffects(state);};
    if(state.flipped.length>=1||capture||slide||kingImpact!==null){
     comboPreparing=true;render();comboActive=true;comboPreparing=false;
     const controller=new AbortController();comboController=controller;
@@ -293,7 +294,7 @@ function enter(data,token,invite){
  message=state.result|| (data.joined?(data.kind==='ai'?'AIと対局を開始しました。':'対戦相手と接続しました。自分の手番で指してください。'):'招待リンクを相手に送ってください。');render();poll();
 }
 for(const [value,name] of Object.entries(handicapOptions)){const option=document.createElement('option');option.value=value;option.textContent=name;$('handicap').append(option);$('aiHandicap').append(option.cloneNode(true));}
-const explainTime=()=>{const unlimited=Number($('mainTime').value)===minuteSteps.length;$('incrementTime').disabled=$('byoyomiTime').disabled=unlimited;const minutes=minuteSteps[Number($('mainTime').value)],increment=Number($('incrementTime').value),byoyomi=byoyomiSteps[Number($('byoyomiTime').value)];for(const [id,out,value,unit] of [['mainTime','mainTimeValue',minutes,'分'],['incrementTime','incrementValue',increment,'秒'],['byoyomiTime','byoyomiValue',byoyomi,'秒']]){const text=id==='mainTime'&&unlimited?'無限':value+unit;$(out).textContent=text;$(id).setAttribute('aria-valuetext',text);}$('timeHelp').textContent=unlimited?'時間無制限':!minutes&&!increment&&!byoyomi?'時間制限なし（持ち時間の右端で「無限」を選べます）':(!increment&&!byoyomi?'持ち時間が切れたら負け。':`毎手＋${increment}秒 ／ 持ち時間の後は秒読み${byoyomi}秒。`)+(minutes===0&&increment>0&&byoyomi===0?' 初手も加算秒数から開始。':'');};
+const explainTime=()=>{const unlimited=Number($('mainTime').value)===minuteSteps.length;$('incrementTime').disabled=$('byoyomiTime').disabled=unlimited;const minutes=minuteSteps[Number($('mainTime').value)],increment=Number($('incrementTime').value),byoyomi=byoyomiSteps[Number($('byoyomiTime').value)];for(const [id,out,value,unit] of [['mainTime','mainTimeValue',minutes,'分'],['incrementTime','incrementValue',increment,'秒'],['byoyomiTime','byoyomiValue',byoyomi,'秒']]){const text=id==='mainTime'?(unlimited?'無限':value+unit):(unlimited?'なし':clockSecondsLabel(value));$(out).textContent=text;$(id).setAttribute('aria-valuetext',text);}$('timeHelp').textContent=unlimited?'時間無制限':timeHelp({minutes,increment,byoyomi});};
 for(const id of ['mainTime','incrementTime','byoyomiTime'])$(id).oninput=explainTime;explainTime();
 for(const id of ['chooseRules','openRulesAlways','openRulesSettings'])$(id).onclick=()=>$('rulesDialog').showModal();$('closeRules').onclick=()=>$('rulesDialog').close();
 setInterval(()=>{for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock;if(el.hidden)continue;const now=Date.now()+clockOffset,ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}},100);

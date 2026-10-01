@@ -13,15 +13,16 @@ test('全レッスンの案内手が合法で、説明どおり反転・勝利�
   const n=play(s,lesson.move);assert.equal(n.flipped.length,lesson.flips,lesson.title);
   if(lesson.move.drop){assert.equal(n.hands[0].G,0);assert.equal(n.board[lesson.move.to].type,'G');}
   if(lesson.enemyKing!==undefined&&!lesson.collapse)assert.match(n.result,/先手の勝ち/);else assert.equal(n.result,'');
-  if(lesson.collapse){assert.equal(n.ply,150);assert.ok(collapseAfterMove(n,()=>0).destroyed);}
+  if(lesson.collapse){assert.equal(n.ply,150);assert.equal(collapseAfterMove(n,()=>0).destroyed,null);assert.equal(n.paradoxStarted,true);}
  }
 });
 test('崩壊レッスンは穴熊を段階的に壊し、相手の応手後も王を初回で壊さない',()=>{
  const index=lessons.findIndex(lesson=>lesson.collapse),lesson=lessons[index];let s=lessonState(index);
  assert.equal(s.board[lesson.enemyKing].type,'K');assert.equal(s.board[lesson.enemyKing].side,1);
  const collapse=step=>{const choices=s.board.flatMap((p,i)=>p?[i]:[]),pick=choices.indexOf(lesson.collapseSequence[step]);s=collapseAfterMove(s,()=>pick);return s.destroyed;};
+ s=collapseAfterMove(play(s,lesson.move),()=>{throw Error('activation must not select a victim');});assert.equal(s.paradoxStarted,true);
  for(let step=0;step<6;step++){
-  const move=step%2===0?{from:58-(step/2)*9,to:49-(step/2)*9,prom:false}:collapseReply(s,lesson.collapseSequence.slice(step));
+  const move=step%2===1?{from:49-Math.floor(step/2)*9,to:40-Math.floor(step/2)*9,prom:false}:collapseReply(s,lesson.collapseSequence.slice(step));
   assert.ok(move,'応手が存在する');assert.ok(moves(s,move.from).some(m=>m.to===move.to));s=play(s,move);
   const destroyed=collapse(step);assert.equal(destroyed.square,lesson.collapseSequence[step]);
   if(step<5)assert.equal(s.result,'');else assert.match(s.result,/先手の勝ち.*王が崩壊/);

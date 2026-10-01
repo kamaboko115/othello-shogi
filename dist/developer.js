@@ -6,7 +6,7 @@ import {encodeBoard,decodeBoard} from './board-code.js';
 import {initial,empty,moves,play,label,collapseAfterMove} from './engine.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide,runSword} from './combo.js';
 import {moveEffects,runEffects,showVictory} from './move-effect.js';
-import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue} from './sound.js';
+import {playParadoxArrival,playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue} from './sound.js';
 export function initDeveloper(getCurrent){
  const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0,collapseTrial=0,collapsePhase='ash';
  for(const side of [1,0]){const tray=document.createElement('div');tray.id='devHand'+side;tray.className='dev-capture-hand';tray.setAttribute('aria-label',side?'相手の駒台':'自分の駒台');$('devBoardFrame').insertAdjacentElement(side?'beforebegin':'afterend',tray);}
@@ -50,8 +50,8 @@ export function initDeveloper(getCurrent){
    updateTutorialArrow();if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>updateTutorialArrow());
   }
   paintCollapse(board,state.destroyed,{phase:collapsePhase,eventKey:state.ply});
-  if(state.spawned&&working){const cell=board.querySelector('[data-square="'+state.spawned.square+'"]');if(cell){const glow=document.createElement('span');glow.className='paradox-spawn-glow'+(collapsePhase==='breaking'?' arriving':'');glow.setAttribute('aria-label',label(state.spawned.piece)+'が降臨');cell.append(glow);}}
-  if(!tutorial&&$('devCollapseEarly').checked)$('devStatus').textContent=(state.result||'デバッグ：'+state.ply+'手目 ／ 2手目から盤面崩壊')+(state.destroyed?' ／ '+label(state.destroyed.piece)+'が崩壊':state.spawned?' ／ '+label(state.spawned.piece)+'が降臨':'');
+  if(state.spawned&&working){const cell=board.querySelector('[data-square="'+state.spawned.square+'"]');if(cell){const glow=document.createElement('span');glow.className='paradox-spawn-glow'+(collapsePhase==='breaking'?' arriving':'');glow.setAttribute('aria-label',label(state.spawned.piece)+'が降臨');cell.append(glow);cell.classList.toggle('paradox-spawn-cell',collapsePhase==='breaking');}}
+  if(!tutorial&&$('devCollapseEarly').checked)$('devStatus').textContent=(state.result||'デバッグ：'+state.ply+'手目 ／ 2手目に予告・3手目から盤面崩壊')+(state.destroyed?' ／ '+label(state.destroyed.piece)+'が崩壊':state.spawned?' ／ '+label(state.spawned.piece)+'が降臨':'');
  }
  async function click(i){
   if(working)return;
@@ -73,15 +73,15 @@ export function initDeveloper(getCurrent){
   if(tutorial&&lessons[lesson].collapse||!tutorial&&$('devCollapseEarly').checked){
    const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);current.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);current.signal.addEventListener('abort',done,{once:true});if(current.signal.aborted)done();});
    const collapse=async()=>{
-    if(tutorial){const choices=state.board.flatMap((p,i)=>p?[i]:[]),preferred=lessons[lesson].collapseSequence?.[collapseTrial],picked=choices.indexOf(preferred);collapseAfterMove(state,()=>picked>=0?picked:0);collapseTrial++;}else collapseAfterMove(state);
-    if(!state.destroyed&&!state.spawned)return;
+    if(tutorial){const choices=state.board.flatMap((p,i)=>p?[i]:[]),preferred=lessons[lesson].collapseSequence?.[collapseTrial],picked=choices.indexOf(preferred);collapseAfterMove(state,()=>picked>=0?picked:0);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state);
+    if(!state.paradoxStarted&&!state.destroyed&&!state.spawned)return;
     collapsePhase='waiting';draw();
     const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':state.spawned?label(state.spawned.piece)+'が降臨！':tutorial?'穴熊の守りから1枚壊れます':'盤上の駒が1枚壊れます';$('devBoard').append(note);
     try{
-     if(state.paradoxStarted){paradoxSound(true);await wait(3000);}else if(state.destroyed)await wait(collapseStrikeDelay);
+     if(state.paradoxStarted){paradoxSound(true);await wait(3000);return;}else if(state.destroyed)await wait(collapseStrikeDelay);
      if(current.signal.aborted)return;
-     paradoxSound(false);collapsePhase='breaking';draw();
-    await wait(state.destroyed?collapseStrikeDuration:600);collapsePhase='ash';
+     if(state.spawned)playParadoxArrival();else paradoxSound(false);collapsePhase='breaking';draw();
+    await wait(state.destroyed?collapseStrikeDuration:1200);collapsePhase='ash';
     }finally{note.remove();}
     draw();
    };

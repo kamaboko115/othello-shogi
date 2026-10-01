@@ -120,3 +120,17 @@ export function playHelperDeparture(){
  prepare();if(!context||context.state!=='running')return;
  const at=context.currentTime,osc=context.createOscillator(),gain=context.createGain();osc.type='triangle';osc.frequency.setValueAtTime(280,at);osc.frequency.exponentialRampToValueAtTime(1500,at+.12);osc.frequency.exponentialRampToValueAtTime(100,at+.45);gain.gain.setValueAtTime(.001,at);gain.gain.linearRampToValueAtTime(.16,at+.04);gain.gain.exponentialRampToValueAtTime(.001,at+.46);osc.connect(gain);gain.connect(context.destination);osc.start(at);osc.stop(at+.48);osc.onended=()=>{osc.disconnect();gain.disconnect();};
 }
+
+// A soft ascending major chord and bell harmonics for a fortunate arrival.
+export function playParadoxArrival(){
+ prepare();if(!context||context.state!=='running')return;
+ const at=context.currentTime;
+ [523.25,659.25,783.99,1046.5].forEach((frequency,i)=>{
+  for(const [ratio,volume]of [[1,.11],[2,.035],[3,.012]]){
+   const oscillator=context.createOscillator(),gain=context.createGain(),start=at+i*.085;
+   oscillator.type='sine';oscillator.frequency.setValueAtTime(frequency*ratio,start);
+   gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(volume,start+.035);gain.gain.exponentialRampToValueAtTime(.0001,start+1.2);
+   oscillator.connect(gain);gain.connect(context.destination);oscillator.start(start);oscillator.stop(start+1.25);
+  }
+ });
+}
