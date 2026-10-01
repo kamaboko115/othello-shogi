@@ -7,7 +7,7 @@ function view(){
  const dialog={style:{setProperty:(key,value)=>styles.set(key,value)},classList:{add(...names){names.forEach(n=>classes.add(n));},remove(...names){names.forEach(n=>classes.delete(n));}},hidden:true};
  const children=()=>({replaceChildren(...items){this.children=items;}}),coins=children(),banner={...children(),hidden:true},result={},close={};
  globalThis.document={createElement(){return {style:{setProperty(){}},setAttribute(){}};}};
- return {dialog,coins,banner,cutin:{hidden:true},result,close,classes,timers,styles,sounds,onShatter(){sounds.push('shatter');},schedule(fn,ms){timers.push({fn,ms});},isCurrent:()=>true};
+ return {dialog,coins,banner,cutin:{hidden:true},result,close,classes,timers,styles,sounds,onShatter(){sounds.push('shatter');},onCutIn(){sounds.push('cutin');},schedule(fn,ms){timers.push({fn,ms});},isCurrent:()=>true};
 }
 const toss={intervened:true,originalCoins:[1,1,1,1,1],coins:[0,0,0,1,1]};
 const side=v=>v.banner.children[0].textContent;
@@ -24,13 +24,14 @@ test('先手のはずが…の文字破壊後にカットインを挟み、終�
  assert.equal(v.classes.has('toss-shattering'),true);assert.equal(v.classes.has('osesho-intervention'),false);assert.equal(v.close.disabled,true);
  assert.deepEqual(v.sounds,['shatter']);
  next(v,tossShatterMs);assert.equal(v.cutin.hidden,false);assert.equal(v.classes.has('osesho-intervention'),false);assert.equal(v.banner.hidden,true);assert.match(v.result.textContent,/オセショ様/);
+ assert.deepEqual(v.sounds,['shatter','cutin']);
  assert.deepEqual(v.coins.children.map(c=>c.textContent),['歩','歩','歩','歩','歩']);assert.equal(v.close.disabled,true);
  next(v,tossCutInMs);assert.equal(v.cutin.hidden,true);assert.equal(v.classes.has('osesho-intervention'),true);assert.match(v.result.textContent,/謎の力/);
  next(v,tossInterventionMs);
  assert.deepEqual(v.coins.children.map(c=>c.textContent),['と','と','と','歩','歩']);
  assert.equal(v.classes.has('osesho-intervention'),false);assert.equal(v.classes.has('toss-settled'),true);
  assert.equal(v.banner.hidden,false);assert.equal(side(v),'後手');assert.equal(v.close.disabled,false);assert.match(v.result.textContent,/あなたは後手/);
- assert.deepEqual(v.sounds,['shatter']);
+ assert.deepEqual(v.sounds,['shatter','cutin']);
 });
 for(const playerSide of [0,1])test(`通常の${playerSide===0?'先手':'後手'}を着地後に大きく表示する`,()=>{
  const v=view();presentToss({...v,toss:{coins:toss.originalCoins},playerSide});

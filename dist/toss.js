@@ -2,7 +2,7 @@
 // stays visible for a second before Osesho shatters it, cuts in, and changes it.
 const interventionSpeed=3/5;
 export const tossLandingMs=1400, tossPauseMs=1000, tossShatterMs=Math.round(650/interventionSpeed), tossCutInMs=1000, tossInterventionMs=Math.round(1400/interventionSpeed);
-export function presentToss({toss,playerSide,dialog,coins,result,banner,cutin,close,isCurrent,onShatter=()=>{},schedule=setTimeout}){
+export function presentToss({toss,playerSide,dialog,coins,result,banner,cutin,close,isCurrent,onShatter=()=>{},onCutIn=()=>{},schedule=setTimeout}){
  const show=faces=>coins.replaceChildren(...faces.map((face,i)=>{
   const el=document.createElement('span');el.className='toss-piece';el.textContent=face?'歩':'と';el.style.animationDelay=(i*.1)+'s';return el;
  }));
@@ -35,6 +35,7 @@ export function presentToss({toss,playerSide,dialog,coins,result,banner,cutin,cl
     if(!isCurrent())return;
     banner.hidden=true;dialog.classList.remove('toss-shattering');
     if(cutin)cutin.hidden=false;result.textContent='オセショ様が振り駒に介入！';
+    onCutIn();
     schedule(()=>{
      if(!isCurrent())return;
      if(cutin)cutin.hidden=true;

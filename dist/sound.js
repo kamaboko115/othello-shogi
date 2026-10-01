@@ -31,6 +31,27 @@ export function playTossShatterSound(){
  }
  fragments.at(-1).osc.onended=()=>{crack.disconnect();filter.disconnect();crackGain.disconnect();for(const {osc,gain}of fragments){osc.disconnect();gain.disconnect();}output.disconnect();};
 }
+// A sharp rising blade sweep, followed by a bright metallic ring.
+export function playTossCutInSound(){
+ prepare();if(!context||context.state!=='running')return;
+ const at=context.currentTime,output=context.createGain();output.gain.value=.65;output.connect(context.destination);
+ const nodes=[],noise=context.createBuffer(1,Math.ceil(context.sampleRate*.18),context.sampleRate),samples=noise.getChannelData(0);
+ for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*Math.exp(-i/samples.length*5);
+ const swish=context.createBufferSource(),filter=context.createBiquadFilter(),swishGain=context.createGain();swish.buffer=noise;filter.type='highpass';filter.frequency.value=900;
+ swishGain.gain.setValueAtTime(0,at);swishGain.gain.linearRampToValueAtTime(.14,at+.009);swishGain.gain.exponentialRampToValueAtTime(.0001,at+.18);
+ swish.connect(filter);filter.connect(swishGain);swishGain.connect(output);swish.start(at);nodes.push(swish,filter,swishGain);
+ const sweep=context.createOscillator(),sweepGain=context.createGain();sweep.type='sine';sweep.frequency.setValueAtTime(1400,at);sweep.frequency.exponentialRampToValueAtTime(5600,at+.1);
+ sweepGain.gain.setValueAtTime(0,at);sweepGain.gain.linearRampToValueAtTime(.07,at+.006);sweepGain.gain.exponentialRampToValueAtTime(.0001,at+.14);
+ sweep.connect(sweepGain);sweepGain.connect(output);sweep.start(at);sweep.stop(at+.15);nodes.push(sweep,sweepGain);
+ let last;
+ for(const [delay,freq,duration,volume] of [[0,2100,.72,.12],[.01,4913,.55,.035],[.02,3157,.84,.05]]){
+  const osc=context.createOscillator(),gain=context.createGain(),start=at+delay;
+  osc.type='sine';osc.frequency.setValueAtTime(freq,start);osc.frequency.exponentialRampToValueAtTime(freq*.96,start+duration);
+  gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(volume,start+.004);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
+  osc.connect(gain);gain.connect(output);osc.start(start);osc.stop(start+duration+.01);nodes.push(osc,gain);last=osc;
+ }
+ last.onended=()=>{for(const node of nodes)node.disconnect();output.disconnect();};
+}
 export function playSwordSound(signal){
  prepare();if(!context||context.state!=='running'||signal?.aborted)return ()=>{};
  const output=context.createGain();output.gain.value=.65;output.connect(context.destination);
