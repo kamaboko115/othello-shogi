@@ -1,4 +1,4 @@
-import {paintCollapse} from './collapse-view.js';
+import {paintCollapse,collapseStrikeDuration} from './collapse-view.js';
 import {lessons,lessonState,collapseReply,tutorialMoves} from './tutorial-lessons.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {paradoxSound} from './paradox.js';
@@ -16,6 +16,8 @@ export function initDeveloper(getCurrent){
  state.moveLimit=false;state.paradoxAt=false;
  const guided=()=>tutorial&&!lessons[lesson].collapse;
  const availableMoves=source=>tutorial?tutorialMoves(state,lesson,source):moves(state,source);
+ let updateTutorialArrow=()=>{};
+ if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>updateTutorialArrow()).observe($('devBoardFrame'));
  const copyCurrent=()=>{const current=getCurrent(),s=structuredClone(current.state);if(current.side===1){s.board.reverse();s.board.forEach(p=>{if(p)p.side=1-p.side;});s.hands.reverse();s.turn=1-s.turn;}return s;};
  const reset=(s,remember=true,preserveDebug=false)=>{if(remember)history.push(structuredClone(state));controller?.abort();working=false;state=structuredClone(s);state.result='';state.flipped=[];state.last=[];state.moveLimit=false;if(!tutorial){if(preserveDebug)$('devCollapseEarly').checked=state.paradoxAt===2;else{state.ply=0;state.destroyed=null;state.spawned=null;state.paradoxStarted=false;}}state.paradoxAt=tutorial&&lessons[lesson].collapse?150:!tutorial&&$('devCollapseEarly').checked?2:false;collapsePhase='ash';selected=null;$('devTurn').value=String(state.turn);draw();};
  function draw(){
@@ -29,13 +31,23 @@ export function initDeveloper(getCurrent){
    slot.onclick=()=>{if(slot.disabled)return;selected=type;draw();};tray.append(slot);
   }}
   $('lessonProgress').hidden=!tutorial||!lessons[lesson].collapse;$('lessonProgress').textContent='崩壊 '+collapseTrial+' / '+(lessons[lesson].collapseSequence?.length||0);
-  const board=$('devBoard');board.replaceChildren();const legal=selected===null?[]:availableMoves(selected),guide=guided()&&!working&&state.ply===0?lessons[lesson].move:null;
+  const board=$('devBoard');board.replaceChildren();updateTutorialArrow=()=>{};const legal=selected===null?[]:availableMoves(selected),guide=guided()&&!working&&state.ply===0?lessons[lesson].move:null;
   for(let i=0;i<81;i++){const b=document.createElement('button'),p=state.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(guide&&i===(guide.from??guide.to))b.classList.add('tutorial-hint');if(guide&&i===guide.to)b.classList.add('tutorial-target');b.dataset.square=i;b.disabled=working||(guided()&&(state.ply!==0||(i!==lessons[lesson].move.from&&!legal.some(m=>m.to===i))));b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き')+(guide&&i===guide.to?' 移動先':guide&&i===guide.from?' この駒を動かす':''));if(p){const el=document.createElement('span');el.className='piece'+((working&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'');el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
   if(guide){
    const arrow=document.createElement('div');arrow.className='tutorial-arrow';arrow.setAttribute('aria-hidden','true');
-   const x=(guide.to%9+.5)*100/9,y=(Math.floor(guide.to/9)+.5)*100/9,fromY=guide.drop?y+20:(Math.floor(guide.from/9)+.5)*100/9;
-   arrow.innerHTML=`<svg viewBox="0 0 100 100"><defs><marker id="tutorialArrowhead" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5 Z" fill="#fff19b"/></marker></defs><path d="M${x} ${fromY-3} L${x} ${y+3}" stroke="#13382c" stroke-width="2.2"/><path d="M${x} ${fromY-3} L${x} ${y+3}" stroke="#fff19b" stroke-width="1.1" marker-end="url(#tutorialArrowhead)"/></svg>`;
    board.append(arrow);
+   updateTutorialArrow=()=>{
+    const x=(guide.to%9+.5)*100/9,y=(Math.floor(guide.to/9)+.5)*100/9;
+    let path=`M${x} ${(Math.floor((guide.from??guide.to)/9)+.5)*100/9-3} L${x} ${y+3}`;
+    if(guide.drop){
+     const tray=$('devHand0').querySelector('[data-type="'+guide.drop+'"]'),origin=tray?.getBoundingClientRect?.(),rect=arrow.getBoundingClientRect?.();
+     if(!origin||!rect?.width||!rect.height)return;
+     const sx=(origin.left+origin.width/2-rect.left)*100/rect.width,sy=(origin.top-rect.top)*100/rect.height;
+     path=`M${sx} ${sy} Q${sx} ${y+18} ${x} ${y+3}`;
+    }
+    arrow.innerHTML=`<svg viewBox="0 0 100 100"><defs><marker id="tutorialArrowhead" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5 Z" fill="#fff19b"/></marker></defs><path d="${path}" stroke="#13382c" stroke-width="2.2" fill="none"/><path d="${path}" stroke="#fff19b" stroke-width="1.1" fill="none" marker-end="url(#tutorialArrowhead)"/></svg>`;
+   };
+   updateTutorialArrow();if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>updateTutorialArrow());
   }
   paintCollapse(board,state.destroyed,{phase:collapsePhase,eventKey:state.ply});
   if(state.spawned&&working){const cell=board.querySelector('[data-square="'+state.spawned.square+'"]');if(cell){const glow=document.createElement('span');glow.className='paradox-spawn-glow'+(collapsePhase==='breaking'?' arriving':'');glow.setAttribute('aria-label',label(state.spawned.piece)+'が降臨');cell.append(glow);}}
@@ -69,7 +81,7 @@ export function initDeveloper(getCurrent){
      if(state.paradoxStarted){paradoxSound(true);await wait(3000);}
      if(current.signal.aborted)return;
      paradoxSound(false);collapsePhase='breaking';draw();
-     await wait(600);collapsePhase='ash';
+    await wait(state.destroyed?collapseStrikeDuration:600);collapsePhase='ash';
     }finally{note.remove();}
     draw();
    };

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {paintCollapse} from '../dist/collapse-view.js';
+import {paintCollapse,collapseStrikeDuration,collapseAshDuration} from '../dist/collapse-view.js';
 function boardView(){
  class Element{
   children=[];dataset={};attributes={};className='';
@@ -36,8 +36,10 @@ test('灰は破壊から1.7秒で消え、定期更新・再描画で復活し�
  const paint=phase=>paintCollapse(board,structuredClone(destroyed),{phase,eventKey:150});
  paint('waiting');t.mock.timers.tick(3000);
  assert.equal(cells.get(4).children.length,1,'開始前の警告中は消さない');
- paint('breaking');t.mock.timers.tick(600);paint('ash');
- t.mock.timers.tick(1099);paint('ash');
+ assert.equal(collapseStrikeDuration,1200);assert.equal(collapseAshDuration,500);
+ paint('breaking');assert.ok(!cells.get(4).children.some(el=>el.className.includes('collapse-ash')),'雷の途中には灰を重ねない');
+ t.mock.timers.tick(collapseStrikeDuration);paint('ash');
+ t.mock.timers.tick(collapseAshDuration-1);paint('ash');
  assert.equal(cells.get(4).children.length,2,'破壊から1699msでは灰が残る');
  t.mock.timers.tick(1);
  assert.equal(cells.get(4).children.length,0,'破壊から1700msで自動消去');
