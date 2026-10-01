@@ -1,4 +1,5 @@
 import {guideHTML,initBeginnerGuide} from './novice-guide.js';
+import {initCredits} from './credits.js';
 import {presentToss} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
 import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
@@ -99,6 +100,7 @@ setBoardTheme(storage.get('hanten-board-theme-v2')||'green');
 $('boardTheme').onchange=()=>setBoardTheme($('boardTheme').value);
 $('openSettings').onclick=()=>{paintNetworkUsage();$('settingsDialog').showModal();};
 $('closeSettings').onclick=()=>{$('settingsDialog').close();syncAI();};
+initCredits(document);
 $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
 function syncDebugCollapseOption(){
  const enabled=$('debugCollapseOption').checked,option=$('paradoxAt').querySelector('option[value="2"]');
