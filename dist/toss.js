@@ -1,7 +1,8 @@
 // Five coins land over 1 second with 100 ms stagger. The ordinary result
 // stays visible for a second before Osesho shatters it and changes the toss.
-export const tossLandingMs=1400, tossPauseMs=1000, tossShatterMs=650, tossInterventionMs=1400;
-export function presentToss({toss,playerSide,dialog,coins,result,banner,close,isCurrent,schedule=setTimeout}){
+const interventionSpeed=3/5;
+export const tossLandingMs=1400, tossPauseMs=1000, tossShatterMs=Math.round(650/interventionSpeed), tossInterventionMs=Math.round(1400/interventionSpeed);
+export function presentToss({toss,playerSide,dialog,coins,result,banner,close,isCurrent,onShatter=()=>{},schedule=setTimeout}){
  const show=faces=>coins.replaceChildren(...faces.map((face,i)=>{
   const el=document.createElement('span');el.className='toss-piece';el.textContent=face?'歩':'と';el.style.animationDelay=(i*.1)+'s';return el;
  }));
@@ -14,6 +15,9 @@ export function presentToss({toss,playerSide,dialog,coins,result,banner,close,is
   banner.replaceChildren(label,...shards);banner.hidden=false;
  };
  const original=toss.intervened?toss.originalCoins:toss.coins;
+ // Use the same durations for the CSS motion and its stage transitions.
+ dialog.style.setProperty('--toss-shatter-duration',tossShatterMs+'ms');
+ dialog.style.setProperty('--toss-intervention-duration',tossInterventionMs+'ms');
  dialog.classList.remove('osesho-intervention','toss-settled','toss-shattering');dialog.hidden=false;banner.hidden=true;
  show(original);close.disabled=true;result.textContent=counts(original);
  schedule(()=>{
@@ -24,6 +28,7 @@ export function presentToss({toss,playerSide,dialog,coins,result,banner,close,is
   schedule(()=>{
    if(!isCurrent())return;
    dialog.classList.add('toss-shattering');result.textContent='先手のはずが…！？';
+   onShatter();
    schedule(()=>{
     if(!isCurrent())return;
     banner.hidden=true;dialog.classList.remove('toss-shattering');

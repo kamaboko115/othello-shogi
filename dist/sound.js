@@ -14,6 +14,23 @@ function playShogi(rate=1,volume=.7){
 function prepare(){try{context ||= new (window.AudioContext||window.webkitAudioContext)();if(context.state==='suspended')context.resume().catch(()=>{});}catch{}}
 function tone(freq,duration){prepare();if(!context||context.state!=='running')return;const o=context.createOscillator(),g=context.createGain(),at=context.currentTime;o.type='triangle';o.frequency.setValueAtTime(freq,at);o.frequency.exponentialRampToValueAtTime(freq*.45,at+duration);g.gain.setValueAtTime(.12,at);g.gain.exponentialRampToValueAtTime(.001,at+duration);o.connect(g);g.connect(context.destination);o.start(at);o.stop(at+duration);}
 export function playMoveSound(){playShogi();}
+// An original crack followed by falling, ringing fragments. No audio download.
+export function playTossShatterSound(){
+ prepare();if(!context||context.state!=='running')return;
+ const at=context.currentTime,output=context.createGain();output.gain.value=.6;output.connect(context.destination);
+ const noise=context.createBuffer(1,Math.ceil(context.sampleRate*.32),context.sampleRate),samples=noise.getChannelData(0);
+ for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*Math.exp(-i/samples.length*8);
+ const crack=context.createBufferSource(),filter=context.createBiquadFilter(),crackGain=context.createGain();crack.buffer=noise;filter.type='highpass';filter.frequency.value=1300;crackGain.gain.value=.32;
+ crack.connect(filter);filter.connect(crackGain);crackGain.connect(output);crack.start(at);
+ const fragments=[];
+ for(const [delay,freq,duration,volume] of [[0,110,.22,.18],[.025,1860,.36,.07],[.07,2970,.45,.055],[.15,4310,.4,.035],[.25,2510,.46,.035],[.36,3580,.46,.025]]){
+  const osc=context.createOscillator(),gain=context.createGain(),start=at+delay;
+  osc.type='sine';osc.frequency.setValueAtTime(freq,start);osc.frequency.exponentialRampToValueAtTime(freq<200?45:freq*.82,start+duration);
+  gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(volume,start+.003);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
+  osc.connect(gain);gain.connect(output);osc.start(start);osc.stop(start+duration+.01);fragments.push({osc,gain});
+ }
+ fragments.at(-1).osc.onended=()=>{crack.disconnect();filter.disconnect();crackGain.disconnect();for(const {osc,gain}of fragments){osc.disconnect();gain.disconnect();}output.disconnect();};
+}
 export function playSwordSound(signal){
  prepare();if(!context||context.state!=='running'||signal?.aborted)return ()=>{};
  const output=context.createGain();output.gain.value=.65;output.connect(context.destination);

@@ -13,7 +13,7 @@ import {moveEffects,runEffects,showVictory} from './move-effect.js';
 import {startAI} from './ai-client.js';
 import {createLocalAIStore} from './local-ai-game.js';
 import {createRoomTransport,createRoomPoller} from './room-network.js';
-import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
+import {playMoveSound,playTossShatterSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
 import {initial,moves,label,names,points} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const localAI=createLocalAIStore();
@@ -232,7 +232,7 @@ function render(){
  $('offerRematch').hidden=requested;$('acceptRematch').hidden=!requested||mine;$('declineRematch').hidden=!requested;
  for(const id of ['offerRematch','acceptRematch','declineRematch'])$(id).disabled=busy||!connected;
  if(!online)$('furigoma').hidden=true;
- if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;presentToss({toss:online.toss,playerSide:online.side,dialog:$('furigoma'),coins:$('tossCoins'),result:$('tossResult'),banner:$('tossSide'),close:$('closeToss'),isCurrent:()=>lastTossKey===key&&online?.room+':'+online?.round===key});}}
+ if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;presentToss({toss:online.toss,playerSide:online.side,dialog:$('furigoma'),coins:$('tossCoins'),result:$('tossResult'),banner:$('tossSide'),close:$('closeToss'),onShatter:playTossShatterSound,isCurrent:()=>lastTossKey===key&&online?.room+':'+online?.round===key});}}
 
  paintLastCollapse();syncAI();
 }
