@@ -239,8 +239,15 @@ $('confirmYes').onclick=()=>{$('confirm').close();confirmAction?.();};$('confirm
 $('promote').onclick=()=>{$('promotion').close();commit(pending.find(m=>m.prom));};$('stay').onclick=()=>{$('promotion').close();commit(pending.find(m=>!m.prom));};
 function clearSession(){clearTimeout(helperIdeaTimer);helperJob?.cancel();helperJob=null;helperDeparting=false;helperLingering=false;helperIdea=false;cancelCombo();cancelCollapse();stopAI();aiTiming=null;clearTimeout(pollTimer);online=null;inviteRoom=null;connected=true;busy=false;animationKey='';}
 function leaveGame(){routeVersion++;clearSession();history.replaceState(null,'',location.pathname);start(initial(),homeMessage);}
+async function resignAndLeave(){
+ if(busy)return;
+ if(!online||!online.joined||state.result){leaveGame();return;}
+ const room=online.room,round=online.round;
+ const data=await sendAction('resign');
+ if(data?.state.result&&online?.room===room&&online.round===round)leaveGame();
+}
 $('closeResult').onclick=()=>leaveGame();
-$('reset').onclick=()=>{if(state.result)leaveGame();else confirm('対局を離れますか？',leaveGame);};
+$('reset').onclick=()=>{if(busy)return;if(state.result||!online?.joined)leaveGame();else confirm('対局を離れますか？',resignAndLeave);};
 $('requestUndo').onclick=()=>sendAction('offer-undo');$('acceptUndo').onclick=()=>sendAction('accept-undo');$('declineUndo').onclick=()=>sendAction('decline-undo');
 $('resign').onclick=()=>{if(online&&!state.result)confirm('投了しますか？',()=>sendAction('resign'));};
 $('draw').onclick=()=>{if(online&&!state.result)sendAction('offer-draw');};
@@ -283,7 +290,7 @@ async function poll(){
 }
 async function sendAction(action,move){
  if(!online||busy)return;interruptMoveEffects();busy=true;render();const room=online.room;
- try{const data=await request('/'+room+'/action',online.token,{action,move,version:online.version});if(online?.room===room)adopt(data);}
+ try{const data=await request('/'+room+'/action',online.token,{action,move,version:online.version});if(online?.room===room){adopt(data);return data;}}
  catch(e){message=e.message;if(e.status===409)await poll();}
  finally{busy=false;render();}
 }
