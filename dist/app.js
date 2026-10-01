@@ -93,6 +93,14 @@ $('boardTheme').onchange=()=>setBoardTheme($('boardTheme').value);
 $('openSettings').onclick=()=>$('settingsDialog').showModal();
 $('closeSettings').onclick=()=>{$('settingsDialog').close();syncAI();};
 $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
+function syncDebugCollapseOption(){
+ const enabled=$('debugCollapseOption').checked,option=$('paradoxAt').querySelector('option[value="2"]');
+ option.hidden=!enabled;option.disabled=!enabled;
+ if(!enabled&&$('paradoxAt').value==='2')$('paradoxAt').value='150';
+}
+$('debugCollapseOption').onchange=()=>{syncDebugCollapseOption();render();};
+syncDebugCollapseOption();
+
 initDeveloper(()=>({state,side:online?.side??0}));
 function stone(side){const el=document.createElement('span');el.className='stone '+(side===0?'black':'white');el.setAttribute('aria-hidden','true');return el;}
 function recordLine(text){const el=document.createElement('div');for(const part of text.split(/([▲▽])/)){if(part==='▲'||part==='▽'){const mark=stone(part==='▲'?0:1);mark.removeAttribute('aria-hidden');mark.setAttribute('aria-label',part==='▲'?'先手':'後手');el.append(mark);}else el.append(document.createTextNode(part));}return el;}
