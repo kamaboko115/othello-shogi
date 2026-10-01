@@ -225,7 +225,7 @@ function render(){
  $('offerRematch').hidden=requested;$('acceptRematch').hidden=!requested||mine;$('declineRematch').hidden=!requested;
  for(const id of ['offerRematch','acceptRematch','declineRematch'])$(id).disabled=busy||!connected;
  if(!online)$('furigoma').hidden=true;
- if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;presentToss({toss:online.toss,playerSide:online.side,dialog:$('furigoma'),coins:$('tossCoins'),result:$('tossResult'),close:$('closeToss'),isCurrent:()=>lastTossKey===key&&online?.room+':'+online?.round===key});}}
+ if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;presentToss({toss:online.toss,playerSide:online.side,dialog:$('furigoma'),coins:$('tossCoins'),result:$('tossResult'),banner:$('tossSide'),close:$('closeToss'),isCurrent:()=>lastTossKey===key&&online?.room+':'+online?.round===key});}}
 
  paintLastCollapse();syncAI();
 }
