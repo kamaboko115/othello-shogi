@@ -10,7 +10,7 @@ import {paradoxSound,paradoxBanner} from './paradox.js';
 import {animateFlipLight} from './flip-light.js';
 import {moveEffects,runEffects,showVictory} from './move-effect.js';
 import {startAI} from './ai-client.js';
-import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue,playHelperDeparture} from './sound.js';
+import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
 import {initial,moves,label,names,points} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const statusPanel=document.querySelector('.status'),statusParent=statusPanel.parentElement,statusNext=statusPanel.nextSibling;
@@ -33,13 +33,13 @@ let aiJob=null,aiTiming=null,helperJob=null,helperDeparting=false,helperLingerin
 let collapseEffect=null,collapseTimer=null,removeParadoxBanner=null;
 function cancelCollapse(){clearTimeout(collapseTimer);removeParadoxBanner?.();removeParadoxBanner=null;collapseEffect=null;}
 function paintLastCollapse(){
- if(collapseEffect?.spawned){paintCollapse($('board'),null);const d=collapseEffect.spawned,cell=$('board').querySelector('[data-square="'+d.square+'"]');if(cell){cell.querySelectorAll('.spawn-marker').forEach(el=>el.remove());const glow=document.createElement('span');glow.className='spawn-marker paradox-spawn-glow'+(collapseEffect.breaking?' arriving':'');glow.setAttribute('aria-label',label(d.piece)+'が降臨');cell.append(glow);}return;}
+ if(collapseEffect?.spawned){paintCollapse($('board'),null);const d=collapseEffect.spawned,cell=$('board').querySelector('[data-square="'+d.square+'"]');if(cell){cell.querySelectorAll('.spawn-marker').forEach(el=>el.remove());const glow=document.createElement('span');glow.className='spawn-marker paradox-spawn-glow'+(collapseEffect.breaking?' arriving':'');glow.setAttribute('aria-label',label(d.piece)+'が降臨');cell.append(glow);cell.classList.toggle('paradox-spawn-cell',collapseEffect.breaking);}return;}
  paintCollapse($('board'),collapseEffect?.destroyed||state.destroyed,{perspective:online?.side??0,phase:collapseEffect?(collapseEffect.breaking?'breaking':'waiting'):comboPreparing||comboActive?'waiting':'ash',eventKey:(online?.room||'')+':'+(online?.round||1)+':'+state.ply});
 }
 function beginCollapse(next){
  cancelCollapse();collapseEffect={destroyed:next.destroyed,spawned:next.spawned,breaking:false};
  if(next.paradoxStarted){removeParadoxBanner=paradoxBanner();paradoxSound(true);}
- const finish=()=>{removeParadoxBanner?.();removeParadoxBanner=null;paradoxSound(false);collapseEffect.breaking=true;render();collapseTimer=setTimeout(()=>{collapseEffect=null;presentEffects(state);render();},next.destroyed?collapseStrikeDuration:600);};
+ const finish=()=>{removeParadoxBanner?.();removeParadoxBanner=null;if(next.paradoxStarted){collapseEffect=null;presentEffects(state);render();return;}if(next.spawned)playParadoxArrival();else paradoxSound(false);collapseEffect.breaking=true;render();collapseTimer=setTimeout(()=>{collapseEffect=null;presentEffects(state);render();},next.destroyed?collapseStrikeDuration:1200);};
  collapseTimer=setTimeout(finish,next.paradoxStarted?3000:next.destroyed?collapseStrikeDelay:120);
 }
 function stopAI(){aiJob?.task.cancel();aiJob=null;}
@@ -266,7 +266,7 @@ function adopt(data){
   if(moved){
    if(promotedNow&&!state.result)playArcadeCue('promote');
    animationStarted=performance.now();animationKey=data.room+':'+(data.round||1)+':'+state.ply;
-   const finish=()=>{if(state.destroyed||state.spawned)beginCollapse(state);else presentEffects(state);};
+   const finish=()=>{if(state.paradoxStarted||state.destroyed||state.spawned)beginCollapse(state);else presentEffects(state);};
    if(state.flipped.length>=1||capture||slide||kingImpact!==null){
     comboPreparing=true;render();comboActive=true;comboPreparing=false;
     const controller=new AbortController();comboController=controller;

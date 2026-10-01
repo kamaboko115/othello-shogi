@@ -52,12 +52,14 @@ export function demo(){const s=empty(true);for(const [i,type,side,prom] of [[76,
 export function collapseAfterMove(s,pick,spawn){
  const threshold=s.paradoxAt??150;
  if(threshold===false||!s.mode||s.result||s.ply<threshold)return s;
+ s.paradoxStarted=s.ply===threshold;
+ // Activation is an announcement only: the first random event is the next move.
+ if(s.paradoxStarted){s.destroyed=null;s.spawned=null;return s;}
  const choices=s.board.flatMap((p,i)=>p?[i]:[]);
  if(!choices.length)return s;
  const suppliedPick=!!pick;
  if(!pick)pick=n=>{const a=new Uint32Array(1),limit=Math.floor(4294967296/n)*n;do{crypto.getRandomValues(a);}while(a[0]>=limit);return a[0]%n;};
  if(!spawn)spawn=suppliedPick?()=>false:()=>pick(8)===0;
- s.paradoxStarted=s.ply===threshold;
  if(spawn()){
   const emptySquares=s.board.flatMap((p,i)=>p?[]:[i]);if(!emptySquares.length)return s;
   const square=emptySquares[pick(emptySquares.length)],piece={type:pick(2)?'R':'B',side:pick(2),prom:false};s.board[square]=piece;

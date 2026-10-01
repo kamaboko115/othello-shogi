@@ -44,7 +44,9 @@ export function finishClockMove(data,mover,now){
  // A shared animation allowance protects both players while controls are locked.
  const n=data.state.flipped.length;let delay=n?Array.from({length:n},(_,i)=>Math.max(140,360-i*32)+20).reduce((a,b)=>a+b,0)+225:330;
  if(n>=4)delay+=3400;else if(n>=2)delay+=1000;else delay+=1000;
- if(data.state.destroyed)delay+=data.state.paradoxStarted?3600:720;
+ if(data.state.paradoxStarted)delay+=3000;
+ else if(data.state.destroyed)delay+=1700; // 500ms wait + 1200ms lightning
+ else if(data.state.spawned)delay+=1320; // 120ms wait + 1200ms arrival
  const to=data.state.last?.[1],from=data.state.last?.[0],previous=data.takebacks?.at(-1)?.state;
  if(to!==undefined&&data.state.board[to]?.prom&&!previous?.board[from]?.prom&&['R','B'].includes(data.state.board[to]?.type))delay+=1500;
  data.clock.since=now+delay+500;

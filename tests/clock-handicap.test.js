@@ -32,3 +32,11 @@ test('時間切れはGETでも確定・遅い着手拒否・再試合で時計�
  d=(await call(db,path+'/action',h,{action:'offer-rematch',version:d.version})).data;d=(await call(db,path+'/action',g,{action:'accept-rematch',version:d.version})).data;
  assert.equal(d.state.result,'');assert.equal(d.clock.remaining[0],30000);assert.ok(d.clock.since>Date.now());assert.equal(d.state.board.filter(p=>p?.side===d.toss.hostSide).length,14);
  }finally{db.close();}});
+
+test('開始の予告・落雷・降臨中は持ち時間を消費しない',()=>{
+ const allowance=event=>{const d={kind:'friend',settings:{timeControl:'turn30'},state:{...initial(),...event}};startClock(d,0);finishClockMove(d,0,1000);return d.clock.since;};
+ const normal=allowance({});
+ assert.equal(allowance({paradoxStarted:true})-normal,3000);
+ assert.equal(allowance({destroyed:{square:0}})-normal,1700);
+ assert.equal(allowance({spawned:{square:40}})-normal,1320);
+});
