@@ -291,3 +291,10 @@ header .brand span{color:#254b40}
 .collapse-lightning{background:#eaff00;filter:drop-shadow(0 0 5px #f3ff00) drop-shadow(0 0 12px #79ff00);animation-duration:1.2s}.paradox-breaking,.paradox-breaking.enemy{animation-duration:1.2s}
 
 #furigoma.toss-settled .toss-piece{animation:none}#closeToss:disabled{opacity:.45;cursor:wait}
+/* The ordinary side is the centerpiece of the toss, before any divine intervention. */
+.toss-side{position:relative;isolation:isolate;margin:12px 0 22px;font-family:serif;font-size:clamp(72px,17vw,120px);font-weight:900;line-height:1.12;letter-spacing:.12em;color:#ffe1a2;text-shadow:0 3px 0 #805525,0 0 30px #efb95d66;animation:toss-side-reveal .35s ease-out both}
+.toss-side-label{display:block;font:inherit}.toss-side-shard{position:absolute;inset:0;display:none;clip-path:polygon(calc(var(--shard)*12.5%) 0,calc((var(--shard) + 1)*12.5%) 0,calc((var(--shard) + 1)*12.5%) 100%,calc(var(--shard)*12.5%) 100%)}
+#furigoma.toss-shattering .toss-side-label{visibility:hidden}#furigoma.toss-shattering .toss-side-shard{display:block;animation:toss-side-shatter .65s cubic-bezier(.2,.75,.4,1) both}
+@keyframes toss-side-reveal{from{opacity:0;transform:scale(1.35)}to{opacity:1;transform:scale(1)}}
+@keyframes toss-side-shatter{0%{opacity:1;transform:translate(0,0) rotate(0)}20%{opacity:1}100%{opacity:0;transform:translate(var(--fly-x),var(--fly-y)) rotate(var(--spin)) scale(.7)}}
+@media(prefers-reduced-motion:reduce){.toss-side,#furigoma.toss-shattering .toss-side-shard{animation:none}#furigoma.toss-shattering .toss-side-label{visibility:visible;opacity:.25}#furigoma.toss-shattering .toss-side-shard{display:none}}
