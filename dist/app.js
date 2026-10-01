@@ -1,3 +1,4 @@
+import {guideHTML,initBeginnerGuide} from './novice-guide.js';
 import {presentToss} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
 import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
@@ -303,6 +304,7 @@ function enter(data,token,invite){
 for(const [value,name] of Object.entries(handicapOptions)){const option=document.createElement('option');option.value=value;option.textContent=name;$('handicap').append(option);$('aiHandicap').append(option.cloneNode(true));}
 const explainTime=()=>{const unlimited=Number($('mainTime').value)===minuteSteps.length;$('incrementTime').disabled=$('byoyomiTime').disabled=unlimited;const minutes=minuteSteps[Number($('mainTime').value)],increment=Number($('incrementTime').value),byoyomi=byoyomiSteps[Number($('byoyomiTime').value)];for(const [id,out,value,unit] of [['mainTime','mainTimeValue',minutes,'分'],['incrementTime','incrementValue',increment,'秒'],['byoyomiTime','byoyomiValue',byoyomi,'秒']]){const text=id==='mainTime'?(unlimited?'無限':value+unit):(unlimited?'なし':clockSecondsLabel(value));$(out).textContent=text;$(id).setAttribute('aria-valuetext',text);}$('timeHelp').textContent=unlimited?'時間無制限':timeHelp({minutes,increment,byoyomi});};
 for(const id of ['mainTime','incrementTime','byoyomiTime'])$(id).oninput=explainTime;explainTime();
+initBeginnerGuide(document,guideHTML);
 for(const id of ['chooseRules','openRulesAlways','openRulesSettings'])$(id).onclick=()=>$('rulesDialog').showModal();$('closeRules').onclick=()=>$('rulesDialog').close();
 setInterval(()=>{for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock;if(el.hidden)continue;const now=Date.now()+clockOffset,ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}},100);
 const advancedOpen={ai:false,friend:false};
