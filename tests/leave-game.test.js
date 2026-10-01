@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {createRoomPoller} from '../dist/room-network.js';
 
 const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
 const leaving=source.slice(source.indexOf('async function resignAndLeave()'),source.indexOf("$('requestUndo').onclick"));
@@ -11,7 +12,7 @@ function client(kind='friend'){
  const context={state,online:{room:'room',round:1,joined:true,kind,side:0,version:1,token:'token'},busy:false,message:'',
   $:id=>elements[id],interruptMoveEffects(){},render(){},confirm(title,fn){context.confirmAction=fn;},
   leaveGame(){calls.push('lobby');context.online=null;},adopt(data){calls.push('adopt');context.state=data.state;},
-  async poll(){calls.push('poll');},async request(path,token,body){calls.push(body.action);return {closed:true,state:{result:'後手の勝ち（投了）'}};}};
+  roomPoller:{stop(){}},schedulePolling(){},async poll(){calls.push('poll');},async request(path,token,body){calls.push(body.action);return {closed:true,state:{result:'後手の勝ち（投了）'}};}};
  vm.createContext(context);vm.runInContext(sending+leaving,context);
  return {context,calls,elements};
 }
@@ -44,23 +45,23 @@ test('削除済みの部屋への離脱再試行はロビーへ戻る',async()=>
 });
 
 test('閉鎖通知を受け取ったらポーリングを止める',async()=>{
- const polling=source.slice(source.indexOf('async function poll()'),source.indexOf('async function sendAction('));
+ const polling=source.slice(source.indexOf('const roomPoller=createRoomPoller('),source.indexOf('async function sendAction('));
  for(const closed of [false,true]){
-  let scheduled=0;
-  const context={online:{room:'room',token:'token'},pollTimer:null,connected:true,
-   clearTimeout(){},setTimeout(){scheduled++;},request:async()=>({closed}),
+  const timers=new Map();let nextId=0;
+  const context={online:{room:'room',token:'token'},state:{turn:0},document:{hidden:false},connected:true,
+   createRoomPoller:options=>createRoomPoller({...options,setTimer:fn=>{timers.set(++nextId,fn);return nextId;},clearTimer:id=>timers.delete(id)}),paintNetworkUsage(){},request:async()=>({closed}),
    adopt(data){context.online={...context.online,...data};}};
   vm.createContext(context);vm.runInContext(polling,context);await context.poll();
-  assert.equal(scheduled,closed?0:1);
+  assert.equal(timers.size,closed?0:1);
  }
 });
 test('部屋が期限切れでもエラーを表示して定期通信を止める',async()=>{
- const polling=source.slice(source.indexOf('async function poll()'),source.indexOf('async function sendAction('));
- let scheduled=0;
- const context={online:{room:'room',token:'token'},pollTimer:null,connected:true,message:'',
-  clearTimeout(){},setTimeout(){scheduled++;},render(){},request:async()=>{throw Object.assign(new Error('部屋は閉じられています'),{status:404});}};
+ const polling=source.slice(source.indexOf('const roomPoller=createRoomPoller('),source.indexOf('async function sendAction('));
+ const timers=new Map();let nextId=0;
+ const context={online:{room:'room',token:'token'},state:{turn:0},document:{hidden:false},connected:true,message:'',
+  createRoomPoller:options=>createRoomPoller({...options,setTimer:fn=>{timers.set(++nextId,fn);return nextId;},clearTimer:id=>timers.delete(id)}),paintNetworkUsage(){},render(){},request:async()=>{throw Object.assign(new Error('部屋は閉じられています'),{status:404});}};
  vm.createContext(context);vm.runInContext(polling,context);await context.poll();
- assert.equal(scheduled,0);assert.equal(context.online.closed,true);assert.match(context.message,/閉じられ/);
+ assert.equal(timers.size,0);assert.equal(context.online.closed,true);assert.match(context.message,/閉じられ/);
 });
 
 test('投了処理中の重複離脱、終了未確認の応答、別対局への移動でロビーへ戻らない',async()=>{

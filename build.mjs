@@ -4,7 +4,7 @@ const out='.sites-runtime/release/dist';
 await mkdir(out+'/server',{recursive:true});await mkdir(out+'/.openai/drizzle/meta',{recursive:true});
 const assets={},binary={},etags={};
 const etag=bytes=>'"'+createHash('sha256').update(bytes).digest('hex')+'"';
-for(const name of ['toss.js','judge-options.js','match-options.js','index.html','style.css','app.js','engine.js','sound.js','ai.js','osesho-ai.js','ai-worker.js','ai-client.js','room-network.js','move-effect.js','result-view.js','combo.js','impact.js','collapse-view.js','tutorial-lessons.js','novice-guide.js','developer.js','board-code.js','flip-light.js','paradox.js','fonts/OFL-MPLUSRounded1c.txt']){
+for(const name of ['toss.js','judge-options.js','match-options.js','index.html','style.css','app.js','engine.js','sound.js','ai.js','osesho-ai.js','ai-worker.js','ai-client.js','room-network.js','local-ai-game.js','move-effect.js','result-view.js','combo.js','impact.js','collapse-view.js','tutorial-lessons.js','novice-guide.js','developer.js','board-code.js','flip-light.js','paradox.js','fonts/OFL-MPLUSRounded1c.txt']){
  const bytes=await readFile('dist/'+name);assets['/'+name]=bytes.toString('utf8');etags['/'+name]=etag(bytes);
 }
 assets['/']=assets['/index.html'];etags['/']=etags['/index.html'];
