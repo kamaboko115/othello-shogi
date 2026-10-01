@@ -10,7 +10,7 @@ const section=(from,to)=>source.slice(source.indexOf(from),source.indexOf(to,sou
 function client(){
  const elements={},timers=new Map(),calls=[],adoptions=[];let nextId=0;
  const snapshot={room:'room',token:'token',kind:'friend',side:0,joined:true,version:3,state:{ply:2,turn:0,result:''},logs:[],round:1};
- const c={online:structuredClone(snapshot),state:structuredClone(snapshot.state),busy:false,connected:true,clockOffset:0,document:{hidden:false},Date,
+ const c={online:structuredClone(snapshot),state:structuredClone(snapshot.state),busy:false,connected:true,clockOffset:0,routeVersion:0,document:{hidden:false},Date,
   clockBudget,location:{pathname:'/'},history:{replaceState(){}},storage:{set(){}},$:id=>elements[id]??={},
   interruptMoveEffects(){},cancelCombo(){},cancelCollapse(){},stopAI(){},render(){},paintNetworkUsage(){},
   createRoomPoller:options=>createRoomPoller({...options,setTimer:(fn,ms)=>{timers.set(++nextId,{fn,ms});return nextId;},clearTimer:id=>timers.delete(id),random:()=>0.5}),
@@ -55,6 +55,16 @@ test('undo/rematch/closure updates arrive and closure prevents any further polli
  }
  assert.equal(adoptions.length,3);assert.equal(c.online.closed,true);assert.equal(timers.size,0);
  const count=c.transport.getStats().requests;await c.poll();assert.equal(c.transport.getStats().requests,count);
+});
+
+test('late action success or failure cannot change a newly entered room or release its busy lock',async()=>{
+ for(const status of [200,404,409,500])for(const sameRoom of [false,true]){
+  const {c,snapshot,adoptions}=client();let settle,leaves=0;c.leaveGame=()=>{leaves++;c.online=null;};
+  c.fetch=()=>new Promise(resolve=>{settle=resolve;});const pending=c.sendAction('leave');
+  c.online={...snapshot,room:sameRoom?'room':'other-room'};c.routeVersion++;c.busy=true;c.message='new session';
+  settle(Response.json(status===200?{...snapshot,closed:true,state:{result:'投了'}}:{error:'old error'},{status}));await pending;
+  assert.equal(leaves,0);assert.equal(adoptions.length,0);assert.equal(c.online.room,sameRoom?'room':'other-room');assert.equal(c.busy,true);assert.equal(c.message,'new session');
+ }
 });
 
 test('collapsed tutorial video does not load until opened, loads once and pauses when closed',()=>{

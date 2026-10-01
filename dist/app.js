@@ -304,9 +304,10 @@ function schedulePolling(){if(online&&!online.local&&!online.closed)roomPoller.s
 async function poll(){if(!online||online.local||online.closed)return;roomPoller.start({immediate:false});return roomPoller.refresh();}
 async function sendAction(action,move){
  if(!online||busy)return;roomPoller.stop();interruptMoveEffects();busy=true;render();const room=online.room;
- try{const data=await request('/'+room+'/action',online.token,{action,move,version:online.version});if(online?.room===room){adopt(data);return data;}}
- catch(e){if(action==='leave'&&e.status===404){leaveGame();return;}message=e.message;if(e.status===409){if(online?.local)adopt(localAI.read(room));else await poll();}}
- finally{busy=false;render();schedulePolling();}
+ const generation=routeVersion,current=()=>generation===routeVersion&&online?.room===room;
+ try{const data=await request('/'+room+'/action',online.token,{action,move,version:online.version});if(current()){adopt(data);return data;}}
+ catch(e){if(!current())return;if(action==='leave'&&e.status===404){leaveGame();return;}message=e.message;if(e.status===409){if(online?.local)adopt(localAI.read(room));else await poll();}}
+ finally{if(current()){busy=false;render();schedulePolling();}}
 }
 function enter(data,token,invite){
  roomPoller.stop();cancelCombo();cancelCollapse();
