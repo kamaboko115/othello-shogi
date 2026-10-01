@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
 const source=readFileSync(new URL('../dist/sound.js',import.meta.url),'utf8');
-const code='let context;'+source.slice(source.indexOf('function prepare(){'),source.indexOf('function tone('))+source.slice(source.indexOf('export function playTossShatterSound()'),source.indexOf('export function playSwordSound(')).replace('export ','');
+const code='let context;'+source.slice(source.indexOf('function prepare(){'),source.indexOf('function tone('))+source.slice(source.indexOf('export function playTossShatterSound()'),source.indexOf('export function playSwordSound(')).replaceAll('export ','');
 function audio(){
  const nodes=[];
  const parameter=()=>({value:0,setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}});
@@ -24,6 +24,14 @@ test('文字の破壊音は遅延なしで鳴り、破片の余韻後に音声�
 test('音声が使えない環境では演出を止めず、停止中は合成しない',()=>{
  for(const state of ['unsupported','suspended']){
   const {context,nodes}=audio();context.state=state;context.resume=()=>Promise.resolve();
-  const c={window:state==='unsupported'?{}:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);assert.doesNotThrow(()=>c.playTossShatterSound());assert.equal(nodes.length,0);
+  const c={window:state==='unsupported'?{}:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);assert.doesNotThrow(()=>c.playTossShatterSound());assert.doesNotThrow(()=>c.playTossCutInSound());assert.equal(nodes.length,0);
  }
+});
+
+test('カットインの金属音はその瞬間に開始し、1秒以内の余韻後にノードを解放する',()=>{
+ const {context,nodes}=audio(),c={window:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);c.playTossCutInSound();
+ const swish=nodes.find(n=>n.kind==='source'),tones=nodes.filter(n=>n.kind==='oscillator');
+ assert.equal(swish.started,10);assert.equal(tones[0].started,10);assert.equal(tones.length,4);
+ assert.ok(swish.buffer.getChannelData(0).some(value=>value!==0));assert.ok(tones.every(n=>n.stopped<11));
+ tones.at(-1).onended();assert.ok(nodes.every(n=>n.disconnected));
 });

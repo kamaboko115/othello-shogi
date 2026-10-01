@@ -298,6 +298,12 @@ header .brand span{color:#254b40}
 @keyframes toss-side-reveal{from{opacity:0;transform:scale(1.35)}to{opacity:1;transform:scale(1)}}
 @keyframes toss-side-shatter{0%{opacity:1;transform:translate(0,0) rotate(0)}20%{opacity:1}100%{opacity:0;transform:translate(var(--fly-x),var(--fly-y)) rotate(var(--spin)) scale(.7)}}
 @media(prefers-reduced-motion:reduce){.toss-side,#furigoma.toss-shattering .toss-side-shard{animation:none}#furigoma.toss-shattering .toss-side-label{visibility:visible;opacity:.25}#furigoma.toss-shattering .toss-side-shard{display:none}}
+.toss-cutin{position:absolute;z-index:2;left:50%;top:50%;width:100vw;height:clamp(180px,24vw,290px);transform:translate(-50%,-50%);background:linear-gradient(115deg,#071b26 4%,#153f63 36%,#4b2475 65%,#091d30 95%);border-block:3px solid #b9f5ff;box-shadow:0 0 28px #7edbff99,inset 0 0 50px #4bcbff33;overflow:hidden;pointer-events:none;animation:toss-cutin var(--toss-cutin-duration,1s) cubic-bezier(.16,.7,.28,1) both}
+.toss-cutin[hidden]{display:none}.toss-cutin:before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(-12deg,transparent 0 30px,#b4efff24 31px 33px,transparent 34px 70px)}
+html:has(.toss-cutin:not([hidden])){overflow-x:clip}
+.toss-cutin-inner{position:relative;display:flex;justify-content:center;align-items:center;gap:clamp(16px,5vw,80px);height:100%;padding:8px 18px}.toss-cutin img{height:100%;width:auto;max-width:45vw;object-fit:contain;mix-blend-mode:screen;filter:drop-shadow(0 0 12px #a7f2ff);transform:rotate(-9deg) scale(1.04)}
+@keyframes toss-cutin{0%{opacity:0;transform:translate(-150%,-50%) skewX(-10deg)}18%{opacity:1;transform:translate(-50%,-50%) skewX(0)}78%{opacity:1;transform:translate(-50%,-50%)}100%{opacity:0;transform:translate(50%,-50%) skewX(-8deg)}}
+@media(prefers-reduced-motion:reduce){.toss-cutin{animation:none}.toss-cutin img{transform:none}}
 
 /* Beginner guides are independent of the live game board. */
 .rules-heading,.guide-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}

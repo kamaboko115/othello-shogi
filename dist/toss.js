@@ -1,8 +1,8 @@
 // Five coins land over 1 second with 100 ms stagger. The ordinary result
-// stays visible for a second before Osesho shatters it and changes the toss.
+// stays visible for a second before Osesho shatters it, cuts in, and changes it.
 const interventionSpeed=3/5;
-export const tossLandingMs=1400, tossPauseMs=1000, tossShatterMs=Math.round(650/interventionSpeed), tossInterventionMs=Math.round(1400/interventionSpeed);
-export function presentToss({toss,playerSide,dialog,coins,result,banner,close,isCurrent,onShatter=()=>{},schedule=setTimeout}){
+export const tossLandingMs=1400, tossPauseMs=1000, tossShatterMs=Math.round(650/interventionSpeed), tossCutInMs=1000, tossInterventionMs=Math.round(1400/interventionSpeed);
+export function presentToss({toss,playerSide,dialog,coins,result,banner,cutin,close,isCurrent,onShatter=()=>{},onCutIn=()=>{},schedule=setTimeout}){
  const show=faces=>coins.replaceChildren(...faces.map((face,i)=>{
   const el=document.createElement('span');el.className='toss-piece';el.textContent=face?'歩':'と';el.style.animationDelay=(i*.1)+'s';return el;
  }));
@@ -18,6 +18,8 @@ export function presentToss({toss,playerSide,dialog,coins,result,banner,close,is
  // Use the same durations for the CSS motion and its stage transitions.
  dialog.style.setProperty('--toss-shatter-duration',tossShatterMs+'ms');
  dialog.style.setProperty('--toss-intervention-duration',tossInterventionMs+'ms');
+ dialog.style.setProperty('--toss-cutin-duration',tossCutInMs+'ms');
+ if(cutin)cutin.hidden=true;
  dialog.classList.remove('osesho-intervention','toss-settled','toss-shattering');dialog.hidden=false;banner.hidden=true;
  show(original);close.disabled=true;result.textContent=counts(original);
  schedule(()=>{
@@ -32,13 +34,19 @@ export function presentToss({toss,playerSide,dialog,coins,result,banner,close,is
    schedule(()=>{
     if(!isCurrent())return;
     banner.hidden=true;dialog.classList.remove('toss-shattering');
-    for(const coin of coins.children)coin.style.animationDelay='0s';
-    dialog.classList.add('osesho-intervention');result.textContent='謎の力が駒に働きかける！！';
+    if(cutin)cutin.hidden=false;result.textContent='オセショ様が振り駒に介入！';
+    onCutIn();
     schedule(()=>{
      if(!isCurrent())return;
-     dialog.classList.remove('osesho-intervention');dialog.classList.add('toss-settled');show(toss.coins);showSide(playerSide);
-     result.textContent=counts(toss.coins)+'あなたは'+(playerSide===0?'先手':'後手')+'です。';close.disabled=false;
-    },tossInterventionMs);
+     if(cutin)cutin.hidden=true;
+     for(const coin of coins.children)coin.style.animationDelay='0s';
+     dialog.classList.add('osesho-intervention');result.textContent='謎の力が駒に働きかける！！';
+     schedule(()=>{
+      if(!isCurrent())return;
+      dialog.classList.remove('osesho-intervention');dialog.classList.add('toss-settled');show(toss.coins);showSide(playerSide);
+      result.textContent=counts(toss.coins)+'あなたは'+(playerSide===0?'先手':'後手')+'です。';close.disabled=false;
+     },tossInterventionMs);
+    },tossCutInMs);
    },tossShatterMs);
   },tossPauseMs);
  },tossLandingMs);
