@@ -11,9 +11,11 @@ import {paradoxSound,paradoxBanner} from './paradox.js';
 import {animateFlipLight} from './flip-light.js';
 import {moveEffects,runEffects,showVictory} from './move-effect.js';
 import {startAI} from './ai-client.js';
+import {createLocalAIStore} from './local-ai-game.js';
 import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
 import {initial,moves,label,names,points} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
+const localAI=createLocalAIStore();
 const statusPanel=document.querySelector('.status'),statusParent=statusPanel.parentElement,statusNext=statusPanel.nextSibling;
 let comboActive=false,comboPreparing=false,comboController=null;
 function cancelCombo(){comboController?.abort();comboController=null;comboActive=false;comboPreparing=false;cancelEffects();}
@@ -200,6 +202,7 @@ function render(){
   if(aiJob)$('connection').textContent+=oseshoMatch?' · オセショ様思考中…':' · AI思考中…';
   else if(aiTiming)$('connection').textContent+=' · AI思考 '+(aiTiming.elapsedMs/1000).toFixed(2)+'秒';
   $('connection').dataset.aiTiming=aiTiming?JSON.stringify(aiTiming):'';
+  if(online.local&&online.storageWarning)$('connection').textContent+=' · '+online.storageWarning;
  }
  $('inviteTools').hidden=!online||(online.seat??0)!==0||online.joined;
  if(online?.invite)$('inviteLink').value=location.origin+location.pathname+'#room='+online.room+'&invite='+online.invite+'&limit='+(adjudicationLimit(online.settings||{})===false?'no':adjudicationLimit(online.settings||{}))+'&drops='+(online.settings?.noDrops?'no':'yes');
@@ -253,6 +256,7 @@ $('requestUndo').onclick=()=>sendAction('offer-undo');$('acceptUndo').onclick=()
 $('resign').onclick=()=>{if(online&&!state.result)confirm('投了しますか？',()=>sendAction('resign'));};
 $('draw').onclick=()=>{if(online&&!state.result)sendAction('offer-draw');};
 async function request(path,token,body){
+ if(online?.local&&path==='/'+online.room+(body?'/action':''))return body?localAI.action(online.room,body):localAI.read(online.room);
  const response=await fetch('/api/rooms'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(12000)});
  let data;try{data=await response.json();}catch{throw new Error('サーバーに接続できません。再試行してください。');}
  if(!response.ok)throw Object.assign(new Error(data.error||'通信に失敗しました。'),{status:response.status});return data;
@@ -285,7 +289,7 @@ function adopt(data){
  if(changed||reconnected)render();else paintLastCollapse();syncAI();
 }
 async function poll(){
- clearTimeout(pollTimer);if(!online)return;const room=online.room,token=online.token;
+ clearTimeout(pollTimer);if(!online||online.local)return;const room=online.room,token=online.token;
  try{const data=await request('/'+room,token);if(online?.room===room)adopt(data);}catch(e){if(online?.room===room){connected=false;if(e.status===404)online.closed=true;message=e.message;render();}}
  if(online?.room===room&&!online.closed)pollTimer=setTimeout(poll,connected?2000:5000);
 }
@@ -298,7 +302,7 @@ async function sendAction(action,move){
 function enter(data,token,invite){
  cancelCombo();cancelCollapse();
  stopAI();aiTiming=null;online={...data,token,invite};state=data.state;logs=data.logs;stack=[];selected=null;legal=[];inviteRoom=null;connected=true;
- storage.set('hanten-room-'+data.room,{token,invite});history.replaceState(null,'',location.pathname+'#room='+data.room);
+ if(!data.local)storage.set('hanten-room-'+data.room,{token,invite});history.replaceState(null,'',location.pathname+(data.local?'#ai=':'#room=')+data.room);
  message=state.result|| (data.joined?(data.kind==='ai'?'AIと対局を開始しました。':'対戦相手と接続しました。自分の手番で指してください。'):'招待リンクを相手に送ってください。');render();poll();
 }
 for(const [value,name] of Object.entries(handicapOptions)){const option=document.createElement('option');option.value=value;option.textContent=name;$('handicap').append(option);$('aiHandicap').append(option.cloneNode(true));}
@@ -320,8 +324,9 @@ syncOseshoChallenge();
 $('challengeOsesho').onchange=()=>{try{storage.set('hanten-osesho-challenge',$('challengeOsesho').checked);}catch{}syncOseshoChallenge();render();};
 $('createRoom').onclick=async()=>{
  if(!$('paradoxAt').reportValidity())return;
- if(state.ply&&!window.confirm('現在の盤面から離れ、新しいオンライン対局を作成しますか？'))return;
+ if(state.ply&&!window.confirm(selectedKind==='ai'?'現在の盤面から離れ、新しいAI対局を作成しますか？':'現在の盤面から離れ、新しいオンライン対局を作成しますか？'))return;
  busy=true;render();try{
+  if(selectedKind==='ai'){enter(localAI.create(selectedSettings()));return;}
   let draft=storage.get('hanten-pending-room');if(draft&&(draft.kind!==selectedKind||JSON.stringify(draft.settings)!==JSON.stringify(selectedSettings())))draft=null;if(!draft){draft={token:freshToken(),invite:freshToken(),kind:selectedKind,settings:selectedSettings()};storage.set('hanten-pending-room',draft);}
   const data=await request('',draft.token,{invite:draft.invite,kind:draft.kind,settings:draft.settings});enter(data,draft.token,draft.invite);localStorage.removeItem('hanten-pending-room');
  }catch(e){message=e.message;}finally{busy=false;render();}
@@ -333,10 +338,12 @@ $('acceptDraw').onclick=()=>sendAction('accept-draw');$('declineDraw').onclick=(
 let routeVersion=0;
 async function restore(){
  const version=++routeVersion;clearSession();start(initial(),homeMessage);
- const params=new URLSearchParams(location.hash.slice(1)),room=params.get('room'),invite=params.get('invite');if(!room)return;
+ const params=new URLSearchParams(location.hash.slice(1)),localRoom=params.get('ai'),room=params.get('room'),invite=params.get('invite');
+ if(localRoom){try{enter(localAI.read(localRoom));}catch(e){message=e.message;render();}return;}
+ if(!room)return;
  if(!/^[a-f0-9]{32}$/.test(room)){message='招待リンクが正しくありません。';render();return;}
  const saved=storage.get('hanten-room-'+room);
- if(saved?.token){busy=true;render();try{const data=await request('/'+room,saved.token);if(version===routeVersion)enter(data,saved.token,saved.invite);return;}catch(e){if(version===routeVersion)message=e.message;return;}finally{if(version===routeVersion){busy=false;render();}}}
+ if(saved?.token){busy=true;render();try{let data=await request('/'+room,saved.token);if(version===routeVersion){if(data.kind==='ai')data=localAI.import(data);enter(data,saved.token,saved.invite);}return;}catch(e){if(version===routeVersion)message=e.message;return;}finally{if(version===routeVersion){busy=false;render();}}}
  if(invite&&/^[a-f0-9]{64}$/.test(invite)){try{const preview=await request('/'+room+'/preview',freshToken(),{invite});if(version!==routeVersion)return;inviteRoom={room,invite,settings:preview.settings};}catch(e){if(version===routeVersion){message=e.message;render();}return;}message='「この対局に参加」を押すと、振り駒で先手・後手を決めます。';}
  else message='参加情報がありません。元の招待リンクを開くか、参加したブラウザで開いてください。';render();
 }
