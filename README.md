@@ -70,6 +70,12 @@ node build.mjs
 
 ## 公開と共同開発
 
+### 公開版の開発者ツール
+
+公開版では、設定の「開発者ツール」を初めて開くときに `kamaboko` と入力します。ブラウザ内で比較する簡単なUIロックで、入力・解除による通信やCloudflare側の設定はありません。入力値を保存せず、成功したページを再読み込みするまで入力を省略します。`localhost`・`127.0.0.1`・IPv6ループバックから開くローカルプレビューでは、従来どおり入力不要です。
+
+これは開発者ツールへの誤操作を防ぐ入口です。パスワードは公開ソースに記載しており、秘密を守る認証や、改変したクライアント・ブラウザの開発者コンソールを制限する仕組みではありません。
+
 GitHubの `main` をCloudflare Workers Buildsに接続しています。Pull Requestを確認して `main` に取り込むと、Cloudflareがビルドして新しい版を公開します。ビルドコマンドは `npm run build`、デプロイコマンドは `npx wrangler deploy` です。D1データベース `othello-shogi-db` は `DB` に割り当て、初期スキーマは `drizzle/0000_rooms.sql` にあります。設定は `wrangler.jsonc` を参照してください。
 
 変更前に `npm test` と `npm run build` を実行してください。ローカルでは `npm start` で遊べます。既存のChatGPT Sites版は別の公開先で、Cloudflareへ対局データは自動移行しません。

@@ -21,3 +21,6 @@ test('compiled worker retains MP4 byte ranges, HEAD and unsatisfiable range beha
  const head=await request('/tutorial.mp4',{method:'HEAD',headers:{Range:'bytes=10-29'}});assert.equal(head.status,206);assert.equal(head.headers.get('Content-Length'),'20');assert.equal(await head.text(),'');
  for(const range of ['bytes=0-1,4-5','bytes=20-10','bytes='+bytes.length+'-']){const invalid=await request('/tutorial.mp4',{headers:{Range:range}});assert.equal(invalid.status,416);assert.equal(invalid.headers.get('Content-Range'),'bytes */'+bytes.length);}
 });
+test('compiled worker serves the developer UI lock module',async()=>{
+ assert.equal((await request('/dev-access.js')).status,200);
+});
