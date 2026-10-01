@@ -48,6 +48,37 @@ export function play(s,m){
 }
 export function demo(){const s=empty(true);for(const [i,type,side,prom] of [[76,'K',0,false],[4,'K',1,false],[49,'G',0,false],[39,'R',1,true],[38,'P',1,false],[37,'S',0,false]])s.board[i]={type,side,prom};return s;}
 
+// Evaluate the opponent's next legal move, including drops and simultaneous flips.
+// Read hypothetical occupancy instead of cloning the entire state per candidate.
+export function safeArrivalSquares(s,piece){
+ const enemy=1-piece.side,trial={...s,board:s.board.slice(),turn:enemy,result:''},safe=[];
+ for(let square=0;square<81;square++){
+  if(trial.board[square])continue;
+  trial.board[square]=piece;
+  const threatened=move=>{
+   if(move.to===square)return true;
+   if(!s.mode)return false;
+   const at=i=>i===move.to?{side:enemy}:i===move.from?null:trial.board[i];
+   for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+    if(!dr&&!dc)continue;
+    let r=Math.floor(move.to/9)+dr,c=move.to%9+dc,contains=false;
+    while(inside(r,c)){
+     const i=r*9+c,p=at(i);if(!p)break;
+     if(p.side===enemy){if(contains)return true;break;}
+     if(i===square)contains=true;r+=dr;c+=dc;
+    }
+   }
+   return false;
+  };
+  let danger=false;
+  for(let from=0;from<81&&!danger;from++)if(trial.board[from]?.side===enemy)danger=moves(trial,from).some(threatened);
+  for(const type of Object.keys(trial.hands[enemy]))if(!danger)danger=moves(trial,type).some(threatened);
+  if(!danger)safe.push(square);
+  trial.board[square]=null;
+ }
+ return safe;
+}
+
 // Randomness is resolved only by the authoritative server after a legal move.
 export function collapseAfterMove(s,pick,spawn){
  const threshold=s.paradoxAt??150;
@@ -62,7 +93,9 @@ export function collapseAfterMove(s,pick,spawn){
  if(!spawn)spawn=suppliedPick?()=>false:()=>pick(8)===0;
  if(spawn()){
   const emptySquares=s.board.flatMap((p,i)=>p?[]:[i]);if(!emptySquares.length)return s;
-  const square=emptySquares[pick(emptySquares.length)],piece={type:pick(2)?'R':'B',side:pick(2),prom:false};s.board[square]=piece;
+  const piece={type:pick(2)?'R':'B',side:pick(2),prom:true};
+  const safe=safeArrivalSquares(s,piece),pool=safe.length&&pick(10)<9?safe:emptySquares;
+  const square=pool[pick(pool.length)];s.board[square]=piece;
   s.destroyed=null;s.spawned={square,piece};return s;
  }
  const index=pick(choices.length);if(!Number.isInteger(index)||index<0||index>=choices.length)throw Error('Invalid random choice');

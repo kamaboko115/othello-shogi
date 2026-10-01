@@ -56,7 +56,7 @@ test('練習1〜8で他の駒・移動先を押しても進まず、指定の駒
   assert.equal(get('lessonComplete').open,false);
   get('lessonNext').onclick();
  }
- assert.match(get('lessonText').textContent,/破壊の代わりに飛車か角が降臨/);
+ assert.match(get('lessonText').textContent,/破壊の代わりに龍か馬が降臨/);
  assert.equal(get('lessonAdvice').hidden,false);
  assert.ok(!get('devBoard').children.some(el=>el.className==='tutorial-arrow'));
  assert.equal(get('devBoard').querySelector('[data-square="58"]').disabled,false);
