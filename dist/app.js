@@ -93,11 +93,19 @@ $('boardTheme').onchange=()=>setBoardTheme($('boardTheme').value);
 $('openSettings').onclick=()=>$('settingsDialog').showModal();
 $('closeSettings').onclick=()=>{$('settingsDialog').close();syncAI();};
 $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
+function syncDebugCollapseOption(){
+ const enabled=$('debugCollapseOption').checked,option=$('paradoxAt').querySelector('option[value="2"]');
+ option.hidden=!enabled;option.disabled=!enabled;
+ if(!enabled&&$('paradoxAt').value==='2')$('paradoxAt').value='150';
+}
+$('debugCollapseOption').onchange=()=>{syncDebugCollapseOption();render();};
+syncDebugCollapseOption();
+
 initDeveloper(()=>({state,side:online?.side??0}));
 function stone(side){const el=document.createElement('span');el.className='stone '+(side===0?'black':'white');el.setAttribute('aria-hidden','true');return el;}
 function recordLine(text){const el=document.createElement('div');for(const part of text.split(/([▲▽])/)){if(part==='▲'||part==='▽'){const mark=stone(part==='▲'?0:1);mark.removeAttribute('aria-hidden');mark.setAttribute('aria-label',part==='▲'?'先手':'後手');el.append(mark);}else el.append(document.createTextNode(part));}return el;}
 const selectedSettings=()=>({timeControl:selectedKind==='friend'&&Number($('mainTime').value)<minuteSteps.length?{minutes:minuteSteps[Number($('mainTime').value)],increment:Number($('incrementTime').value),byoyomi:byoyomiSteps[Number($('byoyomiTime').value)]}:'none',handicap:selectedKind==='friend'?$('handicap').value:$('aiHandicap').value,paradoxAt:$('paradoxAt').value==='none'?false:Number($('paradoxAt').value),moveLimit:judgeSteps[Number($('moveLimit').value)],noDrops:$('allowDrops').value==='no',...(selectedKind==='ai'?{helperUnlimited:$('helperUnlimited').checked,handicapSide:$('aiHandicapSide').value,aiLevel:$('aiLevel').value,thinkMs:Number($('thinkTime').value)}:{})});
-const canAct=()=>!comboActive&&!comboPreparing&&!effectsActive&&!collapseEffect&&!state.result&&!busy&&!!online&&connected&&online.joined&&online.side===state.turn;
+const canAct=()=>!state.result&&!busy&&!!online&&connected&&online.joined&&online.side===state.turn;
 function renderHand(n){
  let clock=$('clock'+n);if(!clock){clock=document.createElement('div');clock.id='clock'+n;clock.className='player-clock';$('hand'+n).before(clock);}
  const h=$('hand'+n);h.replaceChildren();h.setAttribute('aria-label',`${side(n)}の駒台`);
@@ -119,10 +127,10 @@ function renderHand(n){
 function render(){
  const oseshoMatch=online?.kind==='ai'&&online.settings?.aiLevel==='osesho';
  const helperVisible=online?.kind==='ai'&&online.joined&&((!state.result&&(online.settings?.helperUnlimited||online.helperUsedRound!==(online.round||1)))||helperLingering||helperIdea);
- $('askOsesho').hidden=!helperVisible||oseshoMatch;$('askOsesho').disabled=!helperAvailable();$('osesho').hidden=!(oseshoMatch||helperVisible);$('tagline').hidden=!!online;
- $('osesho').disabled=oseshoMatch||!canAct()||!!helperJob||helperLingering;
+ $('askOsesho').hidden=!oseshoMatch||!helperVisible;$('askOsesho').disabled=!helperAvailable();$('osesho').hidden=!(oseshoMatch||helperVisible);$('tagline').hidden=!!online;
+ $('osesho').disabled=!canAct()||!!helperJob||helperLingering;
  $('osesho').classList.toggle('idea',helperIdea);$('osesho').classList.toggle('thinking',!!helperJob);$('osesho').classList.toggle('departing',helperDeparting);
- $('oseshoStatus').textContent=oseshoMatch?'対局中のオセショ様':helperIdea?'ひらめいた！':helperLingering?(helperFarewell?'じゃあの':''):helperJob?'オセショ様が考えています…':state.turn!==online?.side?'あなたの手番で頼めます':online?.settings?.helperUnlimited?'無限オセショ様':'オセショ様 · 1局1回';
+ $('oseshoStatus').textContent=oseshoMatch&&!helperJob&&!helperLingering&&!helperIdea?'対局中のオセショ様':helperIdea?'ひらめいた！':helperLingering?(helperFarewell?'じゃあの':''):helperJob?'オセショ様が考えています…':state.turn!==online?.side?'あなたの手番で頼めます':online?.settings?.helperUnlimited?'無限オセショ様':'オセショ様 · 1局1回';
  if(comboActive)return;
  const showTutorial=!online;
  const homeNotice=showTutorial&&message!==homeMessage;
@@ -162,7 +170,7 @@ function render(){
   el.disabled=!canAct();el.onclick=()=>click(i);board.append(el);
  }
  for(let n=0;n<2;n++)renderHand(n);
- const oseshoTarget=oseshoMatch?document.querySelector('.player.opponent'):(helperJob||helperLingering||helperIdea)?document.querySelector('.player.self'):null;if(oseshoTarget){if($('osesho').parentElement!==oseshoTarget)oseshoTarget.prepend($('osesho'));}else if($('osesho').previousElementSibling!==$('oseshoHome'))$('oseshoHome').after($('osesho'));
+ const oseshoTarget=oseshoMatch?document.querySelector('.player.opponent'):null;if(oseshoTarget){if($('osesho').parentElement!==oseshoTarget)oseshoTarget.prepend($('osesho'));}else if($('osesho').previousElementSibling!==$('oseshoHome'))$('oseshoHome').after($('osesho'));
  const turnName=oseshoMatch&&state.turn!==online.side?'オセショ様':side(state.turn);$('turn').textContent=state.result||` ${turnName}の番`;if(!state.result)$('turn').prepend(stone(state.turn));
  $('boardProgress').hidden=!state.mode;
  const collapseAt=state.paradoxAt===false?null:(state.paradoxAt??150);
@@ -220,8 +228,9 @@ function render(){
 
  paintLastCollapse();syncAI();
 }
-function select(src){if(!canAct())return;selected=selected===src?null:src;legal=selected===null?[]:moves(state,selected);message=selected===null?'駒を選んで、移動先をクリック。':legal.length?'緑の印のマスへ移動できます。':'この駒は今、動かせません。';render();}
-function click(i){if(!canAct())return;const choices=legal.filter(m=>m.to===i);if(choices.length>1){pending=choices;$('promotion').showModal();return;}if(choices.length){commit(choices[0]);return;}if(state.board[i]?.side===state.turn)select(i);else{selected=null;legal=[];message='自分の駒、または駒台の駒を選んでください。';render();}}
+function interruptMoveEffects(){if(!comboActive&&!comboPreparing&&!effectsActive&&!collapseEffect)return;cancelCombo();cancelCollapse();animationKey='';render();}
+function select(src){if(!canAct())return;interruptMoveEffects();selected=selected===src?null:src;legal=selected===null?[]:moves(state,selected);message=selected===null?'駒を選んで、移動先をクリック。':legal.length?'緑の印のマスへ移動できます。':'この駒は今、動かせません。';render();}
+function click(i){if(!canAct())return;interruptMoveEffects();const choices=legal.filter(m=>m.to===i);if(choices.length>1){pending=choices;$('promotion').showModal();return;}if(choices.length){commit(choices[0]);return;}if(state.board[i]?.side===state.turn)select(i);else{selected=null;legal=[];message='自分の駒、または駒台の駒を選んでください。';render();}}
 function commit(m){if(canAct())sendAction('move',m);}
 function start(s,msg){state=s;stack=[];logs=[];selected=null;legal=[];message=msg||'駒を選んで、移動先をクリック。';render();}
 let confirmAction=null;function confirm(title,fn){$('confirmTitle').textContent=title;confirmAction=fn;$('confirm').showModal();}
@@ -272,7 +281,7 @@ async function poll(){
  if(online?.room===room)pollTimer=setTimeout(poll,connected?2000:5000);
 }
 async function sendAction(action,move){
- if(!online||busy||collapseEffect||comboActive||comboPreparing||effectsActive)return;busy=true;render();const room=online.room;
+ if(!online||busy)return;interruptMoveEffects();busy=true;render();const room=online.room;
  try{const data=await request('/'+room+'/action',online.token,{action,move,version:online.version});if(online?.room===room)adopt(data);}
  catch(e){message=e.message;if(e.status===409)await poll();}
  finally{busy=false;render();}
@@ -331,13 +340,14 @@ render();restore();
 function helperAvailable(){return canAct()&&online?.kind==='ai'&&!helperJob&&!helperLingering&&(online.settings?.helperUnlimited||online.helperUsedRound!==(online.round||1));}
 const helperConfirmKey=()=>online?'skip-helper-confirm-'+online.room+'-'+(online.round||1):null;
 $('skipHelperConfirm').onchange=()=>{const key=helperConfirmKey();if(key)storage.set(key,$('skipHelperConfirm').checked);};
-const askOsesho=()=>{if(helperAvailable()){if(storage.get(helperConfirmKey())===true){useHelper();return;}$('skipHelperConfirm').checked=false;$('oseshoDialog').querySelector('p').textContent=(online.settings?.helperUnlimited?'オセロ将棋の神 オセショ様が何度でも代わりに打ってくれます':'オセロ将棋の神 オセショ様がゲーム中に1回だけ代わりに打ってくれます')+'。「仕方ないなぁ…」';$('oseshoDialog').showModal();}};$('askOsesho').onclick=askOsesho;$('osesho').onclick=askOsesho;
+const askOsesho=()=>{if(helperAvailable()){if(storage.get(helperConfirmKey())===true){useHelper();return;}$('skipHelperConfirm').checked=false;$('oseshoDialog').querySelector('p').textContent=(online.settings?.helperUnlimited?'オセロ将棋の神 オセショ様が何度でも代わりに打ってくれます':'オセロ将棋の神 オセショ様がゲーム中に1回だけ代わりに打ってくれます')+(online.settings?.aiLevel==='osesho'?'。「仕方ないなぁ…」':'。');$('oseshoDialog').showModal();}};$('askOsesho').onclick=askOsesho;$('osesho').onclick=askOsesho;
 $('oseshoNo').onclick=()=>$('oseshoDialog').close();
 $('oseshoYes').onclick=()=>useHelper();
 async function useHelper(){
  $('oseshoDialog').close();if(!helperAvailable())return;
  clearTimeout(helperIdeaTimer);helperIdea=false;
- message='仕方ないなぁ… オセショ様がこちらへ移動しました。';
+ interruptMoveEffects();
+ message=online.settings?.aiLevel==='osesho'?'仕方ないなぁ… オセショ様が代わりに指します。':'オセショ様が代わりに指します。';
  const room=online.room,version=online.version,token=online.token,task=startAI(state,'osesho',5000);helperJob=task;busy=true;selected=null;legal=[];render();
  try{
   const result=await task.promise;
