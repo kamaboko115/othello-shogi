@@ -23,7 +23,7 @@ const firstMove=s=>[...s.board.flatMap((p,i)=>p?.side===s.turn?[i]:[]),...Object
 function client(){
  const saved=new Map(),elements={},calls=[],hashes=[],timers=[];
  const disk={getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)};
- const context={localAI:createLocalAIStore({storage:disk,random:bytes=>bytes.fill(1)}),online:null,state:initial(),logs:[],stack:[],legal:[],busy:false,connected:true,message:'',selectedKind:'ai',helperJob:null,helperIdeaTimer:null,aiJob:null,aiTiming:null,helperLingering:false,helperIdea:false,comboActive:false,comboPreparing:false,effectsActive:false,collapseEffect:null,pollTimer:null,routeVersion:0,
+ const context={winAds:{betweenMatches:async()=>({shown:false})},localAI:createLocalAIStore({storage:disk,random:bytes=>bytes.fill(1)}),online:null,state:initial(),logs:[],stack:[],legal:[],busy:false,connected:true,message:'',selectedKind:'ai',helperJob:null,helperIdeaTimer:null,aiJob:null,aiTiming:null,helperLingering:false,helperIdea:false,comboActive:false,comboPreparing:false,effectsActive:false,collapseEffect:null,pollTimer:null,routeVersion:0,
   $:id=>elements[id]??=(id==='furigoma'?{hidden:true}:id==='paradoxAt'?{reportValidity:()=>true}:{close(){}}),
   selectedSettings:()=>({aiLevel:'expert',thinkMs:5000,paradoxAt:false,moveLimit:300,helperUnlimited:true}),
   fetch:async(...args)=>{calls.push(args);return Response.json({room:'f'.repeat(32),kind:'friend',version:0});},AbortSignal,JSON,Date,URLSearchParams,Error,initial,

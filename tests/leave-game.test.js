@@ -9,7 +9,7 @@ const leaving=source.slice(source.indexOf('async function resignAndLeave()'),sou
 const sending=source.slice(source.indexOf('async function sendAction('),source.indexOf('function enter('));
 function client(kind='friend'){
  const calls=[],elements={reset:{},closeResult:{}},state={result:'',turn:1};
- const context={state,online:{room:'room',round:1,joined:true,kind,side:0,version:1,token:'token'},busy:false,message:'',routeVersion:0,
+ const context={winAds:{betweenMatches:async()=>({shown:false})},state,online:{room:'room',round:1,joined:true,kind,side:0,version:1,token:'token'},busy:false,message:'',routeVersion:0,
   $:id=>elements[id],interruptMoveEffects(){},render(){},confirm(title,fn){context.confirmAction=fn;},
   leaveGame(){calls.push('lobby');context.online=null;},adopt(data){calls.push('adopt');context.state=data.state;},
   roomPoller:{stop(){}},schedulePolling(){},async poll(){calls.push('poll');},async request(path,token,body){calls.push(body.action);return {closed:true,state:{result:'後手の勝ち（投了）'}};}};

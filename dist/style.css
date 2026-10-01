@@ -338,3 +338,9 @@ html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 #devAccessPassword{display:block;width:100%;font:inherit;padding:10px;border:1px solid #8b9b90;border-radius:4px;background:#fff;color:#243b32}
 #devAccessError{min-height:1.5em;color:#a33228;font-size:14px}
 
+
+.interstitial-test{width:min(720px,calc(100vw - 40px));min-height:340px;text-align:center;padding:36px;background:#e4e8e2;color:#243b32;border:1px solid #8b9b90;border-radius:4px}
+.interstitial-test::backdrop{background:rgba(0,0,0,.75)}
+.interstitial-test>p:first-child{font-size:11px;letter-spacing:.15em}
+.interstitial-test h2{margin:65px 0 16px}
+.interstitial-test button{margin-top:40px;min-width:210px}

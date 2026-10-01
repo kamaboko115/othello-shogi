@@ -1,3 +1,4 @@
+import {createWinAdBreak} from './ad-break.js';
 import {guideHTML,initBeginnerGuide} from './novice-guide.js';
 import {initCredits} from './credits.js';
 import {placeHelper} from './helper-visit.js';
@@ -20,6 +21,7 @@ import {playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound
 import {initial,moves,label,names,points} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const localAI=createLocalAIStore();
+const winAds=createWinAdBreak();
 const statusPanel=document.querySelector('.status'),statusParent=statusPanel.parentElement,statusNext=statusPanel.nextSibling;
 let comboActive=false,comboPreparing=false,comboController=null;
 function cancelCombo(){comboController?.abort();comboController=null;comboActive=false;comboPreparing=false;cancelEffects();}
@@ -164,6 +166,7 @@ function render(){
  document.body.classList.toggle('game-ended',ending);
  $('resultHeading').hidden=$('resultActions').hidden=!ending;
  const resultInfo=ending?resultView(state,perspective):null;
+ if(ending)winAds.counter.record({...online,state});
  if(resultInfo){$('resultTitle').textContent=resultInfo.title;$('resultReason').textContent=resultInfo.reason;$('resultDetail').textContent=resultInfo.detail;}
  const rematchHome=ending?$('resultActions'):document.querySelector('aside');
  if($('rematchPanel').parentElement!==rematchHome)rematchHome.prepend($('rematchPanel'));
@@ -257,7 +260,7 @@ async function resignAndLeave(){
  if(!online){leaveGame();return;}
  const room=online.room,round=online.round;
  const data=await sendAction('leave');
- if(data?.closed&&online?.room===room&&online.round===round)leaveGame();
+ if(data?.closed&&online?.room===room&&online.round===round){leaveGame();await winAds.betweenMatches();}
 }
 $('closeResult').onclick=()=>resignAndLeave();
 $('reset').onclick=()=>{if(busy)return;if(state.result||!online?.joined)resignAndLeave();else confirm('対局を離れますか？',resignAndLeave);};
@@ -341,7 +344,9 @@ $('challengeOsesho').onchange=()=>{try{storage.set('hanten-osesho-challenge',$('
 $('createRoom').onclick=async()=>{
  if(!$('paradoxAt').reportValidity())return;
  if(state.ply&&!window.confirm(selectedKind==='ai'?'現在の盤面から離れ、新しいAI対局を作成しますか？':'現在の盤面から離れ、新しいオンライン対局を作成しますか？'))return;
+ if(busy)return;
  transport.resetStats();busy=true;render();try{
+  await winAds.betweenMatches();
   if(selectedKind==='ai'){enter(localAI.create(selectedSettings()));return;}
   let draft=storage.get('hanten-pending-room');if(draft&&(draft.kind!==selectedKind||JSON.stringify(draft.settings)!==JSON.stringify(selectedSettings())))draft=null;if(!draft){draft={token:freshToken(),invite:freshToken(),kind:selectedKind,settings:selectedSettings()};storage.set('hanten-pending-room',draft);}
   const data=await request('',draft.token,{invite:draft.invite,kind:draft.kind,settings:draft.settings});enter(data,draft.token,draft.invite);localStorage.removeItem('hanten-pending-room');
@@ -349,7 +354,12 @@ $('createRoom').onclick=async()=>{
 };
 $('joinRoom').onclick=async()=>{if(!inviteRoom)return;busy=true;render();try{const saved=storage.get('hanten-room-'+inviteRoom.room)||{token:freshToken()};storage.set('hanten-room-'+inviteRoom.room,saved);const data=await request('/'+inviteRoom.room+'/join',saved.token,{invite:inviteRoom.invite});enter(data,saved.token);}catch(e){message=e.message;}finally{busy=false;render();}};
 $('copyInvite').onclick=async()=>{try{await navigator.clipboard.writeText($('inviteLink').value);$('copyInvite').textContent='コピーしました';}catch{$('inviteLink').select();message='招待リンクを選択しました。コピーして相手に送ってください。';render();}};
-$('offerRematch').onclick=()=>sendAction('offer-rematch');$('acceptRematch').onclick=()=>sendAction('accept-rematch');$('declineRematch').onclick=()=>sendAction('decline-rematch');$('closeToss').onclick=()=>{playArcadeCue('start');$('furigoma').hidden=true;syncAI();};
+async function rematchWithAd(action){
+ if(busy||!online)return;const room=online.room,round=online.round;busy=true;render();
+ await winAds.betweenMatches();busy=false;render();
+ if(online?.room===room&&online.round===round&&state.result)return sendAction(action);
+}
+$('offerRematch').onclick=()=>rematchWithAd('offer-rematch');$('acceptRematch').onclick=()=>rematchWithAd('accept-rematch');$('declineRematch').onclick=()=>sendAction('decline-rematch');$('closeToss').onclick=()=>{playArcadeCue('start');$('furigoma').hidden=true;syncAI();};
 $('acceptDraw').onclick=()=>sendAction('accept-draw');$('declineDraw').onclick=()=>sendAction('decline-draw');
 let routeVersion=0;
 async function restore(){
