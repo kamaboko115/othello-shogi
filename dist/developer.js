@@ -1,4 +1,4 @@
-import {paintCollapse,collapseStrikeDuration} from './collapse-view.js';
+import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {lessons,lessonState,collapseReply,tutorialMoves} from './tutorial-lessons.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {paradoxSound} from './paradox.js';
@@ -78,7 +78,7 @@ export function initDeveloper(getCurrent){
     collapsePhase='waiting';draw();
     const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':state.spawned?label(state.spawned.piece)+'が降臨！':tutorial?'穴熊の守りから1枚壊れます':'盤上の駒が1枚壊れます';$('devBoard').append(note);
     try{
-     if(state.paradoxStarted){paradoxSound(true);await wait(3000);}
+     if(state.paradoxStarted){paradoxSound(true);await wait(3000);}else if(state.destroyed)await wait(collapseStrikeDelay);
      if(current.signal.aborted)return;
      paradoxSound(false);collapsePhase='breaking';draw();
     await wait(state.destroyed?collapseStrikeDuration:600);collapsePhase='ash';
@@ -88,7 +88,7 @@ export function initDeveloper(getCurrent){
    await collapse();
    if(tutorial&&!state.result&&!current.signal.aborted){
     await wait(450);if(current.signal.aborted)return;const reply=collapseReply(state,lessons[lesson].collapseSequence.slice(collapseTrial));
-    if(reply){state=play(state,reply);$('devStatus').textContent='相手が穴熊を守る手を指しました。';draw();playMoveSound();await wait(500);if(!current.signal.aborted)await collapse();}
+    if(reply){state=play(state,reply);$('devStatus').textContent='相手が穴熊を守る手を指しました。';draw();playMoveSound();if(!current.signal.aborted)await collapse();}
    }
    effects.splice(0,effects.length,...moveEffects(state));
   }

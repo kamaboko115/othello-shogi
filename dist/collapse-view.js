@@ -2,6 +2,7 @@ import {label} from './engine.js';
 
 const displays=new WeakMap();
 export const collapseStrikeDuration=1200;
+export const collapseStrikeDelay=500;
 export const collapseAshDuration=500;
 const ashDuration=collapseStrikeDuration+collapseAshDuration;
 function clearMarkers(board){

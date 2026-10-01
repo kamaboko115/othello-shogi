@@ -1,5 +1,5 @@
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
-import {paintCollapse,collapseStrikeDuration} from './collapse-view.js';
+import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget} from './match-options.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide} from './combo.js';
@@ -39,7 +39,7 @@ function beginCollapse(next){
  cancelCollapse();collapseEffect={destroyed:next.destroyed,spawned:next.spawned,breaking:false};
  if(next.paradoxStarted){removeParadoxBanner=paradoxBanner();paradoxSound(true);}
  const finish=()=>{removeParadoxBanner?.();removeParadoxBanner=null;paradoxSound(false);collapseEffect.breaking=true;render();collapseTimer=setTimeout(()=>{collapseEffect=null;presentEffects(state);render();},next.destroyed?collapseStrikeDuration:600);};
- collapseTimer=setTimeout(finish,next.paradoxStarted?3000:120);
+ collapseTimer=setTimeout(finish,next.paradoxStarted?3000:next.destroyed?collapseStrikeDelay:120);
 }
 function stopAI(){aiJob?.task.cancel();aiJob=null;}
 function syncAutoHelper(){
