@@ -1,7 +1,6 @@
 // Static credits keep opening this screen independent of GitHub and the network.
-// Add a tester's chosen public name here after confirming it with them.
 export const creators=['kamaboko115','yuuki1293','9syk','urua12345'];
-export const testPlayers=[];
+export const testPlayers=['テストプレイの皆様'];
 
 export function initCredits(document){
  const get=id=>document.getElementById(id),dialog=get('creditsDialog');
