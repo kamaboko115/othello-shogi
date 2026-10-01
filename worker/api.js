@@ -3,6 +3,10 @@ import {normalizeTime,timeOptions,handicapOptions,applyHandicap,startClock,clock
 import {initial,play,collapseAfterMove,label,names,moves} from '../dist/engine.js';
 
 export const schema=`CREATE TABLE IF NOT EXISTS rooms (id TEXT PRIMARY KEY, host_hash TEXT NOT NULL, guest_hash TEXT, invite_hash TEXT NOT NULL, data TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS rooms_expires ON rooms(expires);`;
+export const roomCloseGraceMs=60000;
+export async function cleanupRooms(env,now=Date.now()){
+ return env.DB.prepare('DELETE FROM rooms WHERE expires <= ?').bind(now).run();
+}
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff'}});
 const hash=async token=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token)))).map(x=>x.toString(16).padStart(2,'0')).join('');
 const validToken=t=>typeof t==='string'&&/^[a-f0-9]{64}$/.test(t);
@@ -46,7 +50,8 @@ export async function api(request,env){
   }
   if(parts[1]!=='rooms'||!/^[a-f0-9]{32}$/.test(parts[2]||''))fail('対局が見つかりません。',404);
   const id=parts[2];let row=await env.DB.prepare('SELECT * FROM rooms WHERE id = ?').bind(id).first();
-  if(!row||row.expires<now)fail('対局が見つからないか、有効期限（7日間）が切れています。',404);
+  if(row&&row.expires<=now){await env.DB.prepare('DELETE FROM rooms WHERE id = ? AND expires <= ?').bind(id,now).run();row=null;}
+  if(!row)fail('対局が見つからないか、すでに閉じられています。',404);
   if(JSON.parse(row.data).state.mode===false)fail('通常将棋モードは終了しました。新しい対局を作成してください。',410);
   const side=row.host_hash===tokenHash?0:row.guest_hash===tokenHash?1:null,action=parts[3];
   if(action==='preview'&&request.method==='POST'){if(!validToken(body.invite)||await hash(body.invite)!==row.invite_hash)fail('招待リンクが正しくありません。',403);return json({settings:JSON.parse(row.data).settings||{moveLimit:true,noDrops:false}});}
@@ -61,13 +66,33 @@ export async function api(request,env){
   }
   if(side===null)fail('この対局を操作する権限がありません。',403);
   const timed=JSON.parse(row.data);
-  if(row.guest_hash&&!timed.state.result&&clockBudget(timed,timed.state.turn,now)<=0){
+  if(body.action!=='leave'&&row.guest_hash&&!timed.state.result&&clockBudget(timed,timed.state.turn,now)<=0){
    chargeClock(timed,now);timed.state.result=sideName(1-timed.state.turn)+'の勝ち（時間切れ）';timed.offer=null;timed.undoOffer=null;
    await env.DB.prepare('UPDATE rooms SET data = ?, version = version + 1 WHERE id = ? AND version = ?').bind(JSON.stringify(timed),id,row.version).run();
    row=await env.DB.prepare('SELECT * FROM rooms WHERE id = ?').bind(id).first();return json(view(row,side));
   }
   if(request.method==='GET'&&!action)return json(view(row,side));
   if(request.method!=='POST'||action!=='action')fail('操作が見つかりません。',404);
+  // Leaving atomically records a resignation and closes the room. A friend
+  // can still receive the final state during a short grace period.
+  if(body.action==='leave'){
+   const data=JSON.parse(row.data),playingSide=side===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0);
+   if(data.closed)return json(view(row,side));
+   if(!Number.isInteger(body.version)||body.version!==row.version)fail('盤面が更新されています。最新の盤面で操作してください。',409);
+   if(row.guest_hash&&!data.state.result){
+    const timedOut=clockBudget(data,data.state.turn,now)<=0;
+    chargeClock(data,now);data.state.result=timedOut?`${sideName(1-data.state.turn)}の勝ち（時間切れ）`:`${sideName(1-playingSide)}の勝ち（投了）`;
+   }
+   data.closed=true;data.offer=null;data.undoOffer=null;data.rematch=null;
+   const expires=Math.min(row.expires,now+roomCloseGraceMs);
+   const updated=await env.DB.prepare('UPDATE rooms SET data = ?, expires = ?, version = version + 1 WHERE id = ? AND version = ?').bind(JSON.stringify(data),expires,id,row.version).run();
+   if(!updated.meta.changes)fail('盤面が更新されています。もう一度確認してください。',409);
+   row={...row,data:JSON.stringify(data),expires,version:row.version+1};
+   const final=view(row,side);
+   if(data.kind==='ai'||!row.guest_hash)await env.DB.prepare('DELETE FROM rooms WHERE id = ? AND version = ?').bind(id,row.version).run();
+   return json(final);
+  }
+  if(JSON.parse(row.data).closed)fail('相手が対局を離れたため、この部屋は閉じられました。',410);
   if(!row.guest_hash)fail('対戦相手の参加を待っています。',409);
   if(!Number.isInteger(body.version)||body.version!==row.version)fail('盤面が更新されています。最新の盤面で操作してください。',409);
   const data=JSON.parse(row.data),s=data.state,playingSide=side===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0);

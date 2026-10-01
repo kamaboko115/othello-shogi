@@ -1,6 +1,7 @@
 import http from 'node:http';import {readFile,mkdir} from 'node:fs/promises';import path from 'node:path';
-import {api} from './worker/api.js';import {localDB} from './worker/local-db.js';
+import {api,cleanupRooms} from './worker/api.js';import {localDB} from './worker/local-db.js';
 await mkdir('.sites-runtime',{recursive:true});const DB=localDB('.sites-runtime/rooms.sqlite');
+setInterval(()=>cleanupRooms({DB}).catch(error=>console.error('Room cleanup failed:',error.message)),300000).unref();
 const root=path.resolve('dist');
 const server=http.createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://'+req.headers.host);

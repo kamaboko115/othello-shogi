@@ -1,3 +1,4 @@
+import {guideHTML,initBeginnerGuide} from './novice-guide.js';
 import {presentToss} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
 import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
@@ -113,7 +114,7 @@ function renderHand(n){
  h.parentElement.className='player '+(n===(online?.side??0)?'self':'opponent');
  const oseshoMatch=online?.kind==='ai'&&online.settings?.aiLevel==='osesho',name=oseshoMatch&&n!==online.side?'オセショ様':side(n);h.parentElement.querySelector('strong').lastChild.textContent=' '+name;
  let badge=h.parentElement.querySelector('.hand-turn');if(!badge){badge=document.createElement('button');badge.type='button';badge.className='hand-turn';h.parentElement.insertBefore(badge,h);}
- badge.hidden=n!==(online?.side??0);badge.textContent=state.result?'対局終了':!online?.joined?'相手の参加待ち':online.side===state.turn?'自分の手番です':online?.settings?.aiLevel==='osesho'?'オセショ様の手番です':'相手の手番です';badge.disabled=!state.result;badge.onclick=()=>{if(state.result)leaveGame();};badge.title=state.result?'開始画面に戻る':'';badge.classList.toggle('my-turn',!!online&&online.side===state.turn&&!state.result);
+ badge.hidden=n!==(online?.side??0);badge.textContent=state.result?'対局終了':!online?.joined?'相手の参加待ち':online.side===state.turn?'自分の手番です':online?.settings?.aiLevel==='osesho'?'オセショ様の手番です':'相手の手番です';badge.disabled=!state.result;badge.onclick=()=>{if(state.result)resignAndLeave();};badge.title=state.result?'開始画面に戻る':'';badge.classList.toggle('my-turn',!!online&&online.side===state.turn&&!state.result);
 
  for(const type of ['R','B','G','S','N','L','P']){
   const count=state.hands[n][type]||0,btn=document.createElement('button');
@@ -241,13 +242,13 @@ function clearSession(){clearTimeout(helperIdeaTimer);helperJob?.cancel();helper
 function leaveGame(){routeVersion++;clearSession();history.replaceState(null,'',location.pathname);start(initial(),homeMessage);}
 async function resignAndLeave(){
  if(busy)return;
- if(!online||!online.joined||state.result){leaveGame();return;}
+ if(!online){leaveGame();return;}
  const room=online.room,round=online.round;
- const data=await sendAction('resign');
- if(data?.state.result&&online?.room===room&&online.round===round)leaveGame();
+ const data=await sendAction('leave');
+ if(data?.closed&&online?.room===room&&online.round===round)leaveGame();
 }
-$('closeResult').onclick=()=>leaveGame();
-$('reset').onclick=()=>{if(busy)return;if(state.result||!online?.joined)leaveGame();else confirm('対局を離れますか？',resignAndLeave);};
+$('closeResult').onclick=()=>resignAndLeave();
+$('reset').onclick=()=>{if(busy)return;if(state.result||!online?.joined)resignAndLeave();else confirm('対局を離れますか？',resignAndLeave);};
 $('requestUndo').onclick=()=>sendAction('offer-undo');$('acceptUndo').onclick=()=>sendAction('accept-undo');$('declineUndo').onclick=()=>sendAction('decline-undo');
 $('resign').onclick=()=>{if(online&&!state.result)confirm('投了しますか？',()=>sendAction('resign'));};
 $('draw').onclick=()=>{if(online&&!state.result)sendAction('offer-draw');};
@@ -285,13 +286,13 @@ function adopt(data){
 }
 async function poll(){
  clearTimeout(pollTimer);if(!online)return;const room=online.room,token=online.token;
- try{const data=await request('/'+room,token);if(online?.room===room)adopt(data);}catch(e){if(online?.room===room){connected=false;message=e.message;render();}}
- if(online?.room===room)pollTimer=setTimeout(poll,connected?2000:5000);
+ try{const data=await request('/'+room,token);if(online?.room===room)adopt(data);}catch(e){if(online?.room===room){connected=false;if(e.status===404)online.closed=true;message=e.message;render();}}
+ if(online?.room===room&&!online.closed)pollTimer=setTimeout(poll,connected?2000:5000);
 }
 async function sendAction(action,move){
  if(!online||busy)return;interruptMoveEffects();busy=true;render();const room=online.room;
  try{const data=await request('/'+room+'/action',online.token,{action,move,version:online.version});if(online?.room===room){adopt(data);return data;}}
- catch(e){message=e.message;if(e.status===409)await poll();}
+ catch(e){if(action==='leave'&&e.status===404){leaveGame();return;}message=e.message;if(e.status===409)await poll();}
  finally{busy=false;render();}
 }
 function enter(data,token,invite){
@@ -303,6 +304,7 @@ function enter(data,token,invite){
 for(const [value,name] of Object.entries(handicapOptions)){const option=document.createElement('option');option.value=value;option.textContent=name;$('handicap').append(option);$('aiHandicap').append(option.cloneNode(true));}
 const explainTime=()=>{const unlimited=Number($('mainTime').value)===minuteSteps.length;$('incrementTime').disabled=$('byoyomiTime').disabled=unlimited;const minutes=minuteSteps[Number($('mainTime').value)],increment=Number($('incrementTime').value),byoyomi=byoyomiSteps[Number($('byoyomiTime').value)];for(const [id,out,value,unit] of [['mainTime','mainTimeValue',minutes,'分'],['incrementTime','incrementValue',increment,'秒'],['byoyomiTime','byoyomiValue',byoyomi,'秒']]){const text=id==='mainTime'?(unlimited?'無限':value+unit):(unlimited?'なし':clockSecondsLabel(value));$(out).textContent=text;$(id).setAttribute('aria-valuetext',text);}$('timeHelp').textContent=unlimited?'時間無制限':timeHelp({minutes,increment,byoyomi});};
 for(const id of ['mainTime','incrementTime','byoyomiTime'])$(id).oninput=explainTime;explainTime();
+initBeginnerGuide(document,guideHTML);
 for(const id of ['chooseRules','openRulesAlways','openRulesSettings'])$(id).onclick=()=>$('rulesDialog').showModal();$('closeRules').onclick=()=>$('rulesDialog').close();
 setInterval(()=>{for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock;if(el.hidden)continue;const now=Date.now()+clockOffset,ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}},100);
 const advancedOpen={ai:false,friend:false};

@@ -11,18 +11,18 @@ function client(kind='friend'){
  const context={state,online:{room:'room',round:1,joined:true,kind,side:0,version:1,token:'token'},busy:false,message:'',
   $:id=>elements[id],interruptMoveEffects(){},render(){},confirm(title,fn){context.confirmAction=fn;},
   leaveGame(){calls.push('lobby');context.online=null;},adopt(data){calls.push('adopt');context.state=data.state;},
-  async poll(){calls.push('poll');},async request(path,token,body){calls.push(body.action);return {state:{result:'後手の勝ち（投了）'}};}};
+  async poll(){calls.push('poll');},async request(path,token,body){calls.push(body.action);return {closed:true,state:{result:'後手の勝ち（投了）'}};}};
  vm.createContext(context);vm.runInContext(sending+leaving,context);
  return {context,calls,elements};
 }
 
 for(const kind of ['ai','friend'])test(`${kind}対局を離れると相手番でも投了の確認完了を待ってロビーへ戻る`,async()=>{
  const {context,calls,elements}=client(kind);let resolve;
- context.request=async(path,token,body)=>{assert.equal(body.action,'resign');assert.equal(body.version,1);calls.push('resign');return new Promise(r=>{resolve=r;});};
+ context.request=async(path,token,body)=>{assert.equal(body.action,'leave');assert.equal(body.version,1);calls.push('leave');return new Promise(r=>{resolve=r;});};
  elements.reset.onclick();assert.equal(calls.length,0);
- const pending=context.confirmAction();assert.deepEqual(calls,['resign']);assert.equal(context.online.room,'room');
- resolve({state:{result:'後手の勝ち（投了）'}});await pending;
- assert.deepEqual(calls,['resign','adopt','lobby']);
+ const pending=context.confirmAction();assert.deepEqual(calls,['leave']);assert.equal(context.online.room,'room');
+ resolve({closed:true,state:{result:'後手の勝ち（投了）'}});await pending;
+ assert.deepEqual(calls,['leave','adopt','lobby']);
 });
 
 for(const status of [409,500])test(`投了に失敗 (${status}) すると対局とエラーを残す`,async()=>{
@@ -31,16 +31,41 @@ for(const status of [409,500])test(`投了に失敗 (${status}) すると対局�
  assert.equal(calls.includes('lobby'),false);assert.equal(context.busy,false);assert.equal(calls.includes('poll'),status===409);
 });
 
-test('終了後と参加待ちのルームは投了なしで離れられる',async()=>{
+test('終了後と参加待ちでも部屋を閉じてから離れる',async()=>{
  for(const ended of [false,true]){
   const {context,calls,elements}=client();context.online.joined=ended;context.state.result=ended?'先手の勝ち':'';
-  elements.reset.onclick();assert.deepEqual(calls,['lobby']);
+  await context.resignAndLeave();assert.deepEqual(calls,['leave','adopt','lobby']);
  }
+});
+
+test('削除済みの部屋への離脱再試行はロビーへ戻る',async()=>{
+ const {context,calls}=client();context.request=async()=>{throw Object.assign(new Error('部屋がありません'),{status:404});};
+ await context.resignAndLeave();assert.equal(calls.at(-1),'lobby');
+});
+
+test('閉鎖通知を受け取ったらポーリングを止める',async()=>{
+ const polling=source.slice(source.indexOf('async function poll()'),source.indexOf('async function sendAction('));
+ for(const closed of [false,true]){
+  let scheduled=0;
+  const context={online:{room:'room',token:'token'},pollTimer:null,connected:true,
+   clearTimeout(){},setTimeout(){scheduled++;},request:async()=>({closed}),
+   adopt(data){context.online={...context.online,...data};}};
+  vm.createContext(context);vm.runInContext(polling,context);await context.poll();
+  assert.equal(scheduled,closed?0:1);
+ }
+});
+test('部屋が期限切れでもエラーを表示して定期通信を止める',async()=>{
+ const polling=source.slice(source.indexOf('async function poll()'),source.indexOf('async function sendAction('));
+ let scheduled=0;
+ const context={online:{room:'room',token:'token'},pollTimer:null,connected:true,message:'',
+  clearTimeout(){},setTimeout(){scheduled++;},render(){},request:async()=>{throw Object.assign(new Error('部屋は閉じられています'),{status:404});}};
+ vm.createContext(context);vm.runInContext(polling,context);await context.poll();
+ assert.equal(scheduled,0);assert.equal(context.online.closed,true);assert.match(context.message,/閉じられ/);
 });
 
 test('投了処理中の重複離脱、終了未確認の応答、別対局への移動でロビーへ戻らない',async()=>{
  const {context,calls}=client();context.busy=true;await context.resignAndLeave();assert.deepEqual(calls,[]);
  context.busy=false;context.request=async()=>({state:{result:''}});await context.resignAndLeave();assert.equal(context.online.room,'room');
- context.request=async()=>{context.online={...context.online,round:2};return {state:{result:'後手の勝ち（投了）'}};};
+ context.request=async()=>{context.online={...context.online,round:2};return {closed:true,state:{result:'後手の勝ち（投了）'}};};
  await context.resignAndLeave();assert.equal(calls.includes('lobby'),false);
 });
