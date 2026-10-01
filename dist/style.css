@@ -302,7 +302,6 @@ header .brand span{color:#254b40}
 .toss-cutin[hidden]{display:none}.toss-cutin:before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(-12deg,transparent 0 30px,#b4efff24 31px 33px,transparent 34px 70px)}
 html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 .toss-cutin-inner{position:relative;display:flex;justify-content:center;align-items:center;gap:clamp(16px,5vw,80px);height:100%;padding:8px 18px}.toss-cutin img{height:100%;width:auto;max-width:45vw;object-fit:contain;mix-blend-mode:screen;filter:drop-shadow(0 0 12px #a7f2ff);transform:rotate(-9deg) scale(1.04)}
-.toss-cutin small{display:block;font-size:clamp(16px,2.4vw,28px);color:#deefff;font-weight:700;text-align:left;margin-bottom:10px}.toss-cutin strong{display:block;white-space:nowrap;font-size:clamp(30px,6vw,74px);font-weight:900;letter-spacing:.06em;color:#fff7d3;text-shadow:3px 3px 0 #19243a,0 0 24px #ffd7ff70}
 @keyframes toss-cutin{0%{opacity:0;transform:translate(-150%,-50%) skewX(-10deg)}18%{opacity:1;transform:translate(-50%,-50%) skewX(0)}78%{opacity:1;transform:translate(-50%,-50%)}100%{opacity:0;transform:translate(50%,-50%) skewX(-8deg)}}
 @media(prefers-reduced-motion:reduce){.toss-cutin{animation:none}.toss-cutin img{transform:none}}
 
