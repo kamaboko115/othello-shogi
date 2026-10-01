@@ -114,7 +114,7 @@ function renderHand(n){
  h.parentElement.className='player '+(n===(online?.side??0)?'self':'opponent');
  const oseshoMatch=online?.kind==='ai'&&online.settings?.aiLevel==='osesho',name=oseshoMatch&&n!==online.side?'オセショ様':side(n);h.parentElement.querySelector('strong').lastChild.textContent=' '+name;
  let badge=h.parentElement.querySelector('.hand-turn');if(!badge){badge=document.createElement('button');badge.type='button';badge.className='hand-turn';h.parentElement.insertBefore(badge,h);}
- badge.hidden=n!==(online?.side??0);badge.textContent=state.result?'対局終了':!online?.joined?'相手の参加待ち':online.side===state.turn?'自分の手番です':online?.settings?.aiLevel==='osesho'?'オセショ様の手番です':'相手の手番です';badge.disabled=!state.result;badge.onclick=()=>{if(state.result)leaveGame();};badge.title=state.result?'開始画面に戻る':'';badge.classList.toggle('my-turn',!!online&&online.side===state.turn&&!state.result);
+ badge.hidden=n!==(online?.side??0);badge.textContent=state.result?'対局終了':!online?.joined?'相手の参加待ち':online.side===state.turn?'自分の手番です':online?.settings?.aiLevel==='osesho'?'オセショ様の手番です':'相手の手番です';badge.disabled=!state.result;badge.onclick=()=>{if(state.result)resignAndLeave();};badge.title=state.result?'開始画面に戻る':'';badge.classList.toggle('my-turn',!!online&&online.side===state.turn&&!state.result);
 
  for(const type of ['R','B','G','S','N','L','P']){
   const count=state.hands[n][type]||0,btn=document.createElement('button');
@@ -242,13 +242,13 @@ function clearSession(){clearTimeout(helperIdeaTimer);helperJob?.cancel();helper
 function leaveGame(){routeVersion++;clearSession();history.replaceState(null,'',location.pathname);start(initial(),homeMessage);}
 async function resignAndLeave(){
  if(busy)return;
- if(!online||!online.joined||state.result){leaveGame();return;}
+ if(!online){leaveGame();return;}
  const room=online.room,round=online.round;
- const data=await sendAction('resign');
- if(data?.state.result&&online?.room===room&&online.round===round)leaveGame();
+ const data=await sendAction('leave');
+ if(data?.closed&&online?.room===room&&online.round===round)leaveGame();
 }
-$('closeResult').onclick=()=>leaveGame();
-$('reset').onclick=()=>{if(busy)return;if(state.result||!online?.joined)leaveGame();else confirm('対局を離れますか？',resignAndLeave);};
+$('closeResult').onclick=()=>resignAndLeave();
+$('reset').onclick=()=>{if(busy)return;if(state.result||!online?.joined)resignAndLeave();else confirm('対局を離れますか？',resignAndLeave);};
 $('requestUndo').onclick=()=>sendAction('offer-undo');$('acceptUndo').onclick=()=>sendAction('accept-undo');$('declineUndo').onclick=()=>sendAction('decline-undo');
 $('resign').onclick=()=>{if(online&&!state.result)confirm('投了しますか？',()=>sendAction('resign'));};
 $('draw').onclick=()=>{if(online&&!state.result)sendAction('offer-draw');};
@@ -286,13 +286,13 @@ function adopt(data){
 }
 async function poll(){
  clearTimeout(pollTimer);if(!online)return;const room=online.room,token=online.token;
- try{const data=await request('/'+room,token);if(online?.room===room)adopt(data);}catch(e){if(online?.room===room){connected=false;message=e.message;render();}}
- if(online?.room===room)pollTimer=setTimeout(poll,connected?2000:5000);
+ try{const data=await request('/'+room,token);if(online?.room===room)adopt(data);}catch(e){if(online?.room===room){connected=false;if(e.status===404)online.closed=true;message=e.message;render();}}
+ if(online?.room===room&&!online.closed)pollTimer=setTimeout(poll,connected?2000:5000);
 }
 async function sendAction(action,move){
  if(!online||busy)return;interruptMoveEffects();busy=true;render();const room=online.room;
  try{const data=await request('/'+room+'/action',online.token,{action,move,version:online.version});if(online?.room===room){adopt(data);return data;}}
- catch(e){message=e.message;if(e.status===409)await poll();}
+ catch(e){if(action==='leave'&&e.status===404){leaveGame();return;}message=e.message;if(e.status===409)await poll();}
  finally{busy=false;render();}
 }
 function enter(data,token,invite){
