@@ -5,8 +5,8 @@ import {paradoxSound} from './paradox.js';
 import {encodeBoard,decodeBoard} from './board-code.js';
 import {initial,empty,moves,play,label,collapseAfterMove} from './engine.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide,runSword} from './combo.js';
-import {moveEffects,runEffects,showVictory} from './move-effect.js';
-import {playParadoxArrival,playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue} from './sound.js';
+import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js';
+import {playParadoxArrival,playMoveSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue} from './sound.js';
 export function initDeveloper(getCurrent){
  const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0,collapseTrial=0,collapsePhase='ash';
  for(const side of [1,0]){const tray=document.createElement('div');tray.id='devHand'+side;tray.className='dev-capture-hand';tray.setAttribute('aria-label',side?'相手の駒台':'自分の駒台');$('devBoardFrame').insertAdjacentElement(side?'beforebegin':'afterend',tray);}
@@ -94,7 +94,7 @@ export function initDeveloper(getCurrent){
   }
   if(current.signal.aborted)return;
   let banner=null,clearFinish=null;
-  await runEffects(effects,{signal:current.signal,applause:playApplauseSound,victory:()=>{if(effects[0]?.text.startsWith('先手'))playVictorySound();},hide:()=>{clearFinish?.();clearFinish=null;banner?.remove();banner=null;},show:effect=>{if(effect.kind==='check')playArcadeCue('check');if(effect.kind==='victory'){banner=showVictory(effect,0,$('developerDialog'));return;}banner=document.createElement('div');banner.className='combo-notice dev-finish '+(effect.kind==='flip'?comboTier(state.flipped.length):'');banner.textContent=effect.text;$('devStatus').textContent=effect.text;$('devBoard').append(banner);if(effect.kind==='flip')clearFinish=decorateFinish(banner,state.flipped.length);}});
+  await runEffects(effects,{signal:current.signal,applause:playApplauseSound,victory:effect=>playResultSound(isVictoryFor(effect,0),current.signal),hide:()=>{clearFinish?.();clearFinish=null;banner?.remove();banner=null;},show:effect=>{if(effect.kind==='check')playArcadeCue('check');if(effect.kind==='victory'){banner=showVictory(effect,0,$('developerDialog'));return;}banner=document.createElement('div');banner.className='combo-notice dev-finish '+(effect.kind==='flip'?comboTier(state.flipped.length):'');banner.textContent=effect.text;$('devStatus').textContent=effect.text;$('devBoard').append(banner);if(effect.kind==='flip')clearFinish=decorateFinish(banner,state.flipped.length);}});
   if(current.signal.aborted)return;
   $('devStatus').textContent=effects.filter(effect=>effect.text).at(-1)?.text||(state.turn?'相手':'自分')+'の手番';
   working=false;$('devTurn').value=String(state.turn);draw();

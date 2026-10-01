@@ -13,11 +13,11 @@ import {initDeveloper} from './developer.js';
 import {resultView} from './result-view.js';
 import {paradoxSound,paradoxBanner} from './paradox.js';
 import {animateFlipLight} from './flip-light.js';
-import {moveEffects,runEffects,showVictory} from './move-effect.js';
+import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js';
 import {startAI} from './ai-client.js';
 import {createLocalAIStore} from './local-ai-game.js';
 import {createRoomTransport,createRoomPoller} from './room-network.js';
-import {playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
+import {playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
 import {initial,moves,label,names,points} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const localAI=createLocalAIStore();
@@ -31,7 +31,7 @@ function cancelEffects(){effectsController?.abort();effectsController=null;effec
 function presentEffects(next){
  cancelEffects();const effects=moveEffects(next);if(!effects.length)return;
  const controller=new AbortController();effectsController=controller;effectsActive=true;
- runEffects(effects,{signal:controller.signal,show:effect=>{if(effect.kind==='check')playArcadeCue('check');if(effect.kind==='victory')victoryNode=showVictory(effect,online?.side??0);else showFlipBurst(0,effect.text);},hide:()=>{if(effectsController===controller)hideBurst();},applause:playApplauseSound,victory:()=>{if(effects[0]?.text.startsWith(side(online?.side??0)))playVictorySound();}}).finally(()=>{if(controller.signal.aborted)return;effectsActive=false;render();});
+ runEffects(effects,{signal:controller.signal,show:effect=>{if(effect.kind==='check')playArcadeCue('check');if(effect.kind==='victory')victoryNode=showVictory(effect,online?.side??0);else showFlipBurst(0,effect.text);},hide:()=>{if(effectsController===controller)hideBurst();},applause:playApplauseSound,victory:effect=>playResultSound(isVictoryFor(effect,online?.side??0),controller.signal)}).finally(()=>{if(controller.signal.aborted)return;effectsActive=false;render();});
 }
 const homeMessage='対局を作成するか、招待リンクから参加してください。';
 let state=initial(),selected=null,legal=[],stack=[],logs=[],pending=[],message=homeMessage;
@@ -278,6 +278,7 @@ function adopt(data){
  if(changed){
   cancelCombo();cancelCollapse();
   const moved=data.state.ply>state.ply&&(data.round||1)===previousRound,rewound=data.state.ply<state.ply;
+  const ended=!state.result&&!!data.state.result&&(data.round||1)===previousRound;
   const last=data.state.last,promotedNow=moved&&last.length===2&&!state.board[last[0]]?.prom&&data.state.board[last[1]]?.prom;
   const slide=moved?slidingMove(state,data.state):null;
   const capture=moved?capturedPiece(state,data.state):null;
@@ -294,7 +295,7 @@ function adopt(data){
     const controller=new AbortController();comboController=controller;
     (async()=>{if(slide)await runSlide(slide,$('board'),controller.signal,playMoveSound);if(controller.signal.aborted)return;if(kingImpact!==null)await runKingImpact($('board'),kingImpact,controller.signal);if(controller.signal.aborted)return;if(!slide&&!capture&&!state.flipped.length&&!state.result)playMoveSound();if(capture)await runCapture(capture,controller.signal,{moveSound:!slide,shake:!flipNeedsShake(state)});if(controller.signal.aborted)return;if(state.flipped.length)await runCombo(state,document.querySelector('.board-area'),online.side,controller.signal);})().finally(()=>{if(controller.signal.aborted)return;comboActive=false;comboController=null;animationKey='';finish();render();});
    }else{if(!state.destroyed&&!state.spawned&&!state.result){if(state.flipped.length)playMultiFlipSound();else playMoveSound();}finish();}
-  }
+  }else if(ended)presentEffects(state);
  }
  if(changed||reconnected)render();else paintLastCollapse();syncAI();
 }
