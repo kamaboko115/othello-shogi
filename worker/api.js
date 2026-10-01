@@ -1,6 +1,7 @@
 import {normalizeMoveLimit} from '../dist/judge-options.js';
 import {normalizeTime,timeOptions,handicapOptions,applyHandicap,startClock,clockBudget,chargeClock,finishClockMove} from '../dist/match-options.js';
 import {initial,play,collapseAfterMove,label,names,moves} from '../dist/engine.js';
+import {devAccessApi} from './dev-access.js';
 
 export const schema=`CREATE TABLE IF NOT EXISTS rooms (id TEXT PRIMARY KEY, host_hash TEXT NOT NULL, guest_hash TEXT, invite_hash TEXT NOT NULL, data TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS rooms_expires ON rooms(expires);`;
 export const roomCloseGraceMs=60000;
@@ -24,6 +25,7 @@ const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status
 export async function api(request,env){
  try{
   const url=new URL(request.url),parts=url.pathname.split('/').filter(Boolean);
+  if(url.pathname==='/api/dev-access')return await devAccessApi(request,env);
   if(!env.DB)return json({error:'対戦サーバーの準備ができていません。'},503);
   if(!['GET','POST'].includes(request.method))return json({error:'対応していない操作です。'},405);
   if(request.method==='POST'){

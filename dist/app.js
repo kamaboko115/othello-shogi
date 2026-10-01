@@ -1,5 +1,7 @@
 import {guideHTML,initBeginnerGuide} from './novice-guide.js';
 import {initCredits} from './credits.js';
+import {placeHelper} from './helper-visit.js';
+import {createDevAccess} from './dev-access.js';
 import {presentToss} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
 import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
@@ -37,6 +39,7 @@ const transport=createRoomTransport({onClock:now=>{clockOffset=now-Date.now();}}
 function paintNetworkUsage(){const stats=transport.getStats(),el=$('networkUsage');if(el)el.textContent=`この対局のAPI通信: ${stats.requests}回（取得 ${stats.reads}／操作 ${stats.writes}） · 受信 ${(stats.responseBytes/1024).toFixed(1)} KiB · 変更なし ${stats.unchanged}回`+(online?.local?' · AI対局は端末内で処理':'');}
 let autoHelperAttempt=null;
 let aiJob=null,aiTiming=null,helperJob=null,helperDeparting=false,helperLingering=false,helperIdea=false,helperFarewell=false,helperIdeaTimer=null;
+let helperVisiting=false,helperGreeting=false,helperTravelPending=false;
 let collapseEffect=null,collapseTimer=null,removeParadoxBanner=null;
 function cancelCollapse(){clearTimeout(collapseTimer);removeParadoxBanner?.();removeParadoxBanner=null;collapseEffect=null;}
 function paintLastCollapse(){
@@ -101,6 +104,7 @@ $('boardTheme').onchange=()=>setBoardTheme($('boardTheme').value);
 $('openSettings').onclick=()=>{paintNetworkUsage();$('settingsDialog').showModal();};
 $('closeSettings').onclick=()=>{$('settingsDialog').close();syncAI();};
 initCredits(document);
+createDevAccess({document}).guardDeveloperTools();
 $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
 function syncDebugCollapseOption(){
  const enabled=$('debugCollapseOption').checked,option=$('paradoxAt').querySelector('option[value="2"]');
@@ -137,9 +141,9 @@ function render(){
  const oseshoMatch=online?.kind==='ai'&&online.settings?.aiLevel==='osesho';
  const helperVisible=online?.kind==='ai'&&online.joined&&((!state.result&&(online.settings?.helperUnlimited||online.helperUsedRound!==(online.round||1)))||helperLingering||helperIdea);
  $('askOsesho').hidden=!oseshoMatch||!helperVisible;$('askOsesho').disabled=!helperAvailable();$('osesho').hidden=!(oseshoMatch||helperVisible);$('tagline').hidden=!!online;
- $('osesho').disabled=!canAct()||!!helperJob||helperLingering;
+ $('osesho').disabled=oseshoMatch||!canAct()||!!helperJob||helperLingering;
  $('osesho').classList.toggle('idea',helperIdea);$('osesho').classList.toggle('thinking',!!helperJob);$('osesho').classList.toggle('departing',helperDeparting);
- $('oseshoStatus').textContent=oseshoMatch&&!helperJob&&!helperLingering&&!helperIdea?'対局中のオセショ様':helperIdea?'ひらめいた！':helperLingering?(helperFarewell?'じゃあの':''):helperJob?'オセショ様が考えています…':state.turn!==online?.side?'あなたの手番で頼めます':online?.settings?.helperUnlimited?'無限オセショ様':'オセショ様 · 1局1回';
+ $('oseshoStatus').textContent=helperGreeting?'仕方ないなぁ…':helperIdea?'ひらめいた！':helperFarewell?'じゃあの':oseshoMatch&&!helperJob&&!helperLingering?'対局中のオセショ様':helperLingering?'':helperJob?'オセショ様が考えています…':state.turn!==online?.side?'あなたの手番で頼めます':online?.settings?.helperUnlimited?'無限オセショ様':'オセショ様 · 1局1回';
  if(comboActive)return;
  const showTutorial=!online;
  const homeNotice=showTutorial&&message!==homeMessage;
@@ -179,7 +183,7 @@ function render(){
   el.disabled=!canAct();el.onclick=()=>click(i);board.append(el);
  }
  for(let n=0;n<2;n++)renderHand(n);
- const oseshoTarget=oseshoMatch?document.querySelector('.player.opponent'):null;if(oseshoTarget){if($('osesho').parentElement!==oseshoTarget)oseshoTarget.prepend($('osesho'));}else if($('osesho').previousElementSibling!==$('oseshoHome'))$('oseshoHome').after($('osesho'));
+ placeHelper($('osesho'),{home:$('oseshoHome'),opponent:oseshoMatch?document.querySelector('.player.opponent'):null,visiting:helperVisiting,travel:helperTravelPending,sound:playHelperDeparture});helperTravelPending=false;
  const turnName=oseshoMatch&&state.turn!==online.side?'オセショ様':side(state.turn);$('turn').textContent=state.result||` ${turnName}の番`;if(!state.result)$('turn').prepend(stone(state.turn));
  $('boardProgress').hidden=!state.mode;
  const collapseAt=state.paradoxAt===false?null:(state.paradoxAt??150);
@@ -246,7 +250,7 @@ function start(s,msg){state=s;stack=[];logs=[];selected=null;legal=[];message=ms
 let confirmAction=null;function confirm(title,fn){$('confirmTitle').textContent=title;confirmAction=fn;$('confirm').showModal();}
 $('confirmYes').onclick=()=>{$('confirm').close();confirmAction?.();};$('confirmNo').onclick=()=>$('confirm').close();
 $('promote').onclick=()=>{$('promotion').close();commit(pending.find(m=>m.prom));};$('stay').onclick=()=>{$('promotion').close();commit(pending.find(m=>!m.prom));};
-function clearSession(){clearTimeout(helperIdeaTimer);helperJob?.cancel();helperJob=null;helperDeparting=false;helperLingering=false;helperIdea=false;cancelCombo();cancelCollapse();stopAI();aiTiming=null;roomPoller.stop();online=null;inviteRoom=null;connected=true;busy=false;animationKey='';}
+function clearSession(){clearTimeout(helperIdeaTimer);helperJob?.cancel();helperJob=null;helperDeparting=false;helperLingering=false;helperIdea=false;helperFarewell=false;helperGreeting=false;helperVisiting=false;helperTravelPending=false;cancelCombo();cancelCollapse();stopAI();aiTiming=null;roomPoller.stop();online=null;inviteRoom=null;connected=true;busy=false;animationKey='';}
 function leaveGame(){routeVersion++;clearSession();history.replaceState(null,'',location.pathname);start(initial(),homeMessage);}
 async function resignAndLeave(){
  if(busy)return;
@@ -381,27 +385,30 @@ render();restore();
 function helperAvailable(){return canAct()&&online?.kind==='ai'&&!helperJob&&!helperLingering&&(online.settings?.helperUnlimited||online.helperUsedRound!==(online.round||1));}
 const helperConfirmKey=()=>online?'skip-helper-confirm-'+online.room+'-'+(online.round||1):null;
 $('skipHelperConfirm').onchange=()=>{const key=helperConfirmKey();if(key)storage.set(key,$('skipHelperConfirm').checked);};
-const askOsesho=()=>{if(helperAvailable()){if(storage.get(helperConfirmKey())===true){useHelper();return;}$('skipHelperConfirm').checked=false;$('oseshoDialog').querySelector('p').textContent=(online.settings?.helperUnlimited?'オセロ将棋の神 オセショ様が何度でも代わりに打ってくれます':'オセロ将棋の神 オセショ様がゲーム中に1回だけ代わりに打ってくれます')+(online.settings?.aiLevel==='osesho'?'。「仕方ないなぁ…」':'。');$('oseshoDialog').showModal();}};$('askOsesho').onclick=askOsesho;$('osesho').onclick=askOsesho;
+const askOsesho=()=>{if(helperAvailable()){if(storage.get(helperConfirmKey())===true){useHelper();return;}$('skipHelperConfirm').checked=false;$('oseshoDialog').querySelector('p').textContent=(online.settings?.helperUnlimited?'オセロ将棋の神 オセショ様が何度でも代わりに打ってくれます':'オセロ将棋の神 オセショ様がゲーム中に1回だけ代わりに打ってくれます')+'。';$('oseshoDialog').showModal();}};$('askOsesho').onclick=askOsesho;$('osesho').onclick=()=>{if(online?.settings?.aiLevel!=='osesho')askOsesho();};
 $('oseshoNo').onclick=()=>$('oseshoDialog').close();
 $('oseshoYes').onclick=()=>useHelper();
 async function useHelper(){
  $('oseshoDialog').close();if(!helperAvailable())return;
  clearTimeout(helperIdeaTimer);helperIdea=false;
  interruptMoveEffects();
- message=online.settings?.aiLevel==='osesho'?'仕方ないなぁ… オセショ様が代わりに指します。':'オセショ様が代わりに指します。';
+ const challenge=online.settings?.aiLevel==='osesho';helperVisiting=challenge;helperGreeting=challenge;helperTravelPending=challenge;helperFarewell=false;
+ message='オセショ様が代わりに指します。';
  const room=online.room,version=online.version,token=online.token,task=startAI(state,'osesho',5000);helperJob=task;busy=true;selected=null;legal=[];render();
  try{
-  const result=await task.promise;
+  // Search runs during the greeting; ordinary AI helper timing is unchanged.
+  const result=challenge?(await Promise.all([task.promise,new Promise(resolve=>setTimeout(()=>{if(helperJob===task&&online?.room===room){helperGreeting=false;render();}resolve();},1000))]))[0]:await task.promise;
   if(helperJob!==task||online?.room!==room||online.version!==version)return;
+  helperGreeting=false;
   if(!result.move)throw new Error('指せる手がありません。');
   helperIdea=true;render();
   if(helperJob!==task||online?.room!==room||online.version!==version)return;
   const data=await request('/'+room+'/action',token,{action:'helper-move',move:result.move,version});
   if(helperJob!==task||online?.room!==room)return;
-  helperJob=null;helperFarewell=false;helperLingering=!data.settings?.helperUnlimited;adopt(data);
-  const round=online.round;helperIdeaTimer=setTimeout(()=>{if(online?.room!==room||online.round!==round)return;helperIdea=false;if(helperLingering)helperFarewell=true;render();},1800);setTimeout(()=>{if(online?.room!==room||online.round!==round||!helperLingering)return;helperDeparting=true;playHelperDeparture();render();setTimeout(()=>{if(online?.room===room&&online.round===round){helperDeparting=false;helperLingering=false;render();}},450);},2300);
+  helperJob=null;helperFarewell=false;helperLingering=challenge||!data.settings?.helperUnlimited;adopt(data);
+  const round=online.round;helperIdeaTimer=setTimeout(()=>{if(online?.room!==room||online.round!==round)return;helperIdea=false;if(helperLingering)helperFarewell=true;if(challenge){helperVisiting=false;helperTravelPending=true;}render();},1800);setTimeout(()=>{if(online?.room!==room||online.round!==round||!helperLingering)return;if(challenge){helperLingering=false;helperFarewell=false;render();return;}helperDeparting=true;playHelperDeparture();render();setTimeout(()=>{if(online?.room===room&&online.round===round){helperDeparting=false;helperLingering=false;helperFarewell=false;render();}},450);},2300);
  }catch(error){if(error.name!=='AbortError'){message=error.message;}}
- finally{if(helperJob===task){helperJob=null;helperIdea=false;}if(online?.room===room){busy=false;render();}}
+ finally{if(helperJob===task){helperJob=null;helperIdea=false;helperGreeting=false;if(helperVisiting){helperVisiting=false;helperTravelPending=true;}}if(online?.room===room){busy=false;render();}}
 };
 
 $('helperAd').onclick=()=>{$('helperUnlimited').checked=true;$('helperAdNote').textContent='無限を有効にしました。現在は広告なしで利用できます。';};

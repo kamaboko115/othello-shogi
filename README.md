@@ -70,6 +70,20 @@ node build.mjs
 
 ## 公開と共同開発
 
+### 公開版の開発者ツール
+
+公開版では、設定の「開発者ツール」を初めて開くときにパスワードを確認します。`DEVTOOLS_PASSWORD` が未設定の場合は開けません。CloudflareのWorkerの「Settings → Variables and Secrets」で、名前を `DEVTOOLS_PASSWORD`、種類を Secret として設定してください。CLIの場合はリポジトリで次を実行し、表示される入力欄にパスワードを入力します。値をソース・README・`wrangler.jsonc` に書かないでください。
+
+```sh
+npx wrangler secret put DEVTOOLS_PASSWORD
+```
+
+設定場所とコマンドの詳細は [Cloudflare公式のSecretsの説明](https://developers.cloudflare.com/workers/configuration/secrets/) を参照してください。
+
+パスワードはサーバー側で検証します。入力値をブラウザの保存領域には残さず、成功したページを再読み込みするまで入力を省略します。通常のAI対局・友人対局では認証の通信を行いません。`localhost`・`127.0.0.1`・IPv6ループバックから開くローカルプレビューでは、従来どおりパスワード不要です。
+
+これは開発者ツールへの誤操作を防ぐ画面上の入口です。ゲームのJavaScriptは公開されており、改変したクライアントやブラウザの開発者コンソールを制限するものではありません。サーバーの管理権限を与える認証としては使えません。短時間の失敗回数にWorker内の簡易制限を設けていますが、Cloudflareの複数の実行環境にまたがる厳密な制限ではありません。
+
 GitHubの `main` をCloudflare Workers Buildsに接続しています。Pull Requestを確認して `main` に取り込むと、Cloudflareがビルドして新しい版を公開します。ビルドコマンドは `npm run build`、デプロイコマンドは `npx wrangler deploy` です。D1データベース `othello-shogi-db` は `DB` に割り当て、初期スキーマは `drizzle/0000_rooms.sql` にあります。設定は `wrangler.jsonc` を参照してください。
 
 変更前に `npm test` と `npm run build` を実行してください。ローカルでは `npm start` で遊べます。既存のChatGPT Sites版は別の公開先で、Cloudflareへ対局データは自動移行しません。

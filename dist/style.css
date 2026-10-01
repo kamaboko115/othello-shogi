@@ -331,3 +331,10 @@ html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 /* Credits share the existing settings dialog without extra network requests. */
 .settings-pages{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}.settings-pages button{margin:0}#creditsDialog{width:480px;max-height:85dvh;overflow:auto}#creditsDialog h2{margin:4px 0 24px}#creditsDialog h3{font-size:15px;margin:20px 0 8px}#creditsDialog ul{list-style:none;padding:0;margin:0;color:inherit;display:flex;flex-wrap:wrap;gap:8px 20px}#creditsDialog a{color:#194e40;text-underline-offset:4px}#creditsDialog li{margin:0}.credits-kicker{letter-spacing:.2em;font-size:11px;margin:0;color:#586a61}.credits-you{font-size:24px;font-weight:600;border-top:1px solid #243b3226;padding-top:20px;margin:24px 0}
 
+/* The helper flies between its opponent seat and the sidebar when asked. */
+#osesho.helper-travelling{transform-origin:0 0;z-index:15;pointer-events:none}
+#askOsesho{max-width:100%;line-height:1.65;white-space:normal}
+#devAccessForm label{display:block;margin-bottom:8px}
+#devAccessPassword{display:block;width:100%;font:inherit;padding:10px;border:1px solid #8b9b90;border-radius:4px;background:#fff;color:#243b32}
+#devAccessError{min-height:1.5em;color:#a33228;font-size:14px}
+

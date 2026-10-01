@@ -32,12 +32,13 @@ test('駒の選択は古い演出をキャンセルしてから合法手を表�
  assert.equal(context.animationKey,'');assert.deepEqual(calls,['cancel','collapse','render','render']);
 });
 
-test('通常AI戦の確認は通常文言、対オセショ様のみ特殊セリフ',()=>{
+test('代打の確認文は共通で、対オセショ様の画像タップは依頼を開かない',()=>{
  const code=source.slice(source.indexOf('const askOsesho=()=>'),source.indexOf("$('oseshoNo').onclick"));
  for(const challenge of [false,true]){
   const elements={oseshoDialog:{querySelector:()=>elements.copy,showModal(){elements.open=true;}},copy:{},skipHelperConfirm:{},askOsesho:{},osesho:{}};
   const context={$:id=>elements[id],helperAvailable:()=>true,helperConfirmKey:()=>'',storage:{get:()=>false},online:{settings:{aiLevel:challenge?'osesho':'expert',helperUnlimited:false}}};
   vm.createContext(context);vm.runInContext(code+'askOsesho();',context);
-  assert.equal(elements.open,true);assert.equal(elements.copy.textContent.includes('仕方ない'),challenge);
+  assert.equal(elements.open,true);assert.equal(elements.copy.textContent.includes('仕方ない'),false);
+  elements.open=false;elements.osesho.onclick();assert.equal(elements.open,!challenge);
  }
 });
