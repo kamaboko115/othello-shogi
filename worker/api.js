@@ -71,7 +71,13 @@ export async function api(request,env){
    await env.DB.prepare('UPDATE rooms SET data = ?, version = version + 1 WHERE id = ? AND version = ?').bind(JSON.stringify(timed),id,row.version).run();
    row=await env.DB.prepare('SELECT * FROM rooms WHERE id = ?').bind(id).first();return json(view(row,side));
   }
-  if(request.method==='GET'&&!action)return json(view(row,side));
+  if(request.method==='GET'&&!action){
+   // Authorize and settle expired clocks before considering the client's version.
+   // Room versions include offers, joins, undo, rematches and closure, not just moves.
+   const version=url.searchParams.get('version');
+   if(version!==null&&/^(0|[1-9][0-9]*)$/.test(version)&&Number.isSafeInteger(Number(version))&&Number(version)===row.version)return new Response(null,{status:304,headers:{'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','X-Room-Version':String(row.version),'X-Room-Server-Now':String(Date.now())}});
+   return json(view(row,side));
+  }
   if(request.method!=='POST'||action!=='action')fail('操作が見つかりません。',404);
   // Leaving atomically records a resignation and closes the room. A friend
   // can still receive the final state during a short grace period.

@@ -11,9 +11,12 @@ import {paradoxSound,paradoxBanner} from './paradox.js';
 import {animateFlipLight} from './flip-light.js';
 import {moveEffects,runEffects,showVictory} from './move-effect.js';
 import {startAI} from './ai-client.js';
+import {createLocalAIStore} from './local-ai-game.js';
+import {createRoomTransport,createRoomPoller} from './room-network.js';
 import {playMoveSound,playMultiFlipSound,playVictorySound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
 import {initial,moves,label,names,points} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
+const localAI=createLocalAIStore();
 const statusPanel=document.querySelector('.status'),statusParent=statusPanel.parentElement,statusNext=statusPanel.nextSibling;
 let comboActive=false,comboPreparing=false,comboController=null;
 function cancelCombo(){comboController?.abort();comboController=null;comboActive=false;comboPreparing=false;cancelEffects();}
@@ -27,8 +30,10 @@ function presentEffects(next){
 }
 const homeMessage='対局を作成するか、招待リンクから参加してください。';
 let state=initial(),selected=null,legal=[],stack=[],logs=[],pending=[],message=homeMessage;
-let online=null,busy=false,connected=true,pollTimer=null,inviteRoom=null;
+let online=null,busy=false,connected=true,inviteRoom=null;
 let selectedKind='friend',clockOffset=0;
+const transport=createRoomTransport({onClock:now=>{clockOffset=now-Date.now();}});
+function paintNetworkUsage(){const stats=transport.getStats(),el=$('networkUsage');if(el)el.textContent=`この対局のAPI通信: ${stats.requests}回（取得 ${stats.reads}／操作 ${stats.writes}） · 受信 ${(stats.responseBytes/1024).toFixed(1)} KiB · 変更なし ${stats.unchanged}回`+(online?.local?' · AI対局は端末内で処理':'');}
 let autoHelperAttempt=null;
 let aiJob=null,aiTiming=null,helperJob=null,helperDeparting=false,helperLingering=false,helperIdea=false,helperFarewell=false,helperIdeaTimer=null;
 let collapseEffect=null,collapseTimer=null,removeParadoxBanner=null;
@@ -92,7 +97,7 @@ function setBoardTheme(theme){
 }
 setBoardTheme(storage.get('hanten-board-theme-v2')||'green');
 $('boardTheme').onchange=()=>setBoardTheme($('boardTheme').value);
-$('openSettings').onclick=()=>$('settingsDialog').showModal();
+$('openSettings').onclick=()=>{paintNetworkUsage();$('settingsDialog').showModal();};
 $('closeSettings').onclick=()=>{$('settingsDialog').close();syncAI();};
 $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
 function syncDebugCollapseOption(){
@@ -145,7 +150,7 @@ function render(){
  for(const selector of ['.actions','.end-actions','.record'])document.querySelector(selector).hidden=showTutorial;
  const video=$('tutorialVideo');
  if(!showTutorial)video.pause();
- else if(video.dataset.active==='false'&&!matchMedia('(prefers-reduced-motion: reduce)').matches)video.play().catch(()=>{});
+ else if(video.dataset.active==='false'&&video.closest('details').open&&!matchMedia('(prefers-reduced-motion: reduce)').matches)video.play().catch(()=>{});
  video.dataset.active=String(showTutorial);
 
  const perspective=online?.side??0;
@@ -200,6 +205,7 @@ function render(){
   if(aiJob)$('connection').textContent+=oseshoMatch?' · オセショ様思考中…':' · AI思考中…';
   else if(aiTiming)$('connection').textContent+=' · AI思考 '+(aiTiming.elapsedMs/1000).toFixed(2)+'秒';
   $('connection').dataset.aiTiming=aiTiming?JSON.stringify(aiTiming):'';
+  if(online.local&&online.storageWarning)$('connection').textContent+=' · '+online.storageWarning;
  }
  $('inviteTools').hidden=!online||(online.seat??0)!==0||online.joined;
  if(online?.invite)$('inviteLink').value=location.origin+location.pathname+'#room='+online.room+'&invite='+online.invite+'&limit='+(adjudicationLimit(online.settings||{})===false?'no':adjudicationLimit(online.settings||{}))+'&drops='+(online.settings?.noDrops?'no':'yes');
@@ -238,7 +244,7 @@ function start(s,msg){state=s;stack=[];logs=[];selected=null;legal=[];message=ms
 let confirmAction=null;function confirm(title,fn){$('confirmTitle').textContent=title;confirmAction=fn;$('confirm').showModal();}
 $('confirmYes').onclick=()=>{$('confirm').close();confirmAction?.();};$('confirmNo').onclick=()=>$('confirm').close();
 $('promote').onclick=()=>{$('promotion').close();commit(pending.find(m=>m.prom));};$('stay').onclick=()=>{$('promotion').close();commit(pending.find(m=>!m.prom));};
-function clearSession(){clearTimeout(helperIdeaTimer);helperJob?.cancel();helperJob=null;helperDeparting=false;helperLingering=false;helperIdea=false;cancelCombo();cancelCollapse();stopAI();aiTiming=null;clearTimeout(pollTimer);online=null;inviteRoom=null;connected=true;busy=false;animationKey='';}
+function clearSession(){clearTimeout(helperIdeaTimer);helperJob?.cancel();helperJob=null;helperDeparting=false;helperLingering=false;helperIdea=false;cancelCombo();cancelCollapse();stopAI();aiTiming=null;roomPoller.stop();online=null;inviteRoom=null;connected=true;busy=false;animationKey='';}
 function leaveGame(){routeVersion++;clearSession();history.replaceState(null,'',location.pathname);start(initial(),homeMessage);}
 async function resignAndLeave(){
  if(busy)return;
@@ -252,10 +258,9 @@ $('reset').onclick=()=>{if(busy)return;if(state.result||!online?.joined)resignAn
 $('requestUndo').onclick=()=>sendAction('offer-undo');$('acceptUndo').onclick=()=>sendAction('accept-undo');$('declineUndo').onclick=()=>sendAction('decline-undo');
 $('resign').onclick=()=>{if(online&&!state.result)confirm('投了しますか？',()=>sendAction('resign'));};
 $('draw').onclick=()=>{if(online&&!state.result)sendAction('offer-draw');};
-async function request(path,token,body){
- const response=await fetch('/api/rooms'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(12000)});
- let data;try{data=await response.json();}catch{throw new Error('サーバーに接続できません。再試行してください。');}
- if(!response.ok)throw Object.assign(new Error(data.error||'通信に失敗しました。'),{status:response.status});return data;
+async function request(path,token,body,options){
+ if(online?.local&&path==='/'+online.room+(body?'/action':''))return body?localAI.action(online.room,body):localAI.read(online.room);
+ try{return await transport.request(path,token,body,options);}finally{paintNetworkUsage();}
 }
 function adopt(data){
  if(!online||data.room!==online.room||data.version<online.version)return;
@@ -284,22 +289,31 @@ function adopt(data){
  }
  if(changed||reconnected)render();else paintLastCollapse();syncAI();
 }
-async function poll(){
- clearTimeout(pollTimer);if(!online)return;const room=online.room,token=online.token;
- try{const data=await request('/'+room,token);if(online?.room===room)adopt(data);}catch(e){if(online?.room===room){connected=false;if(e.status===404)online.closed=true;message=e.message;render();}}
- if(online?.room===room&&!online.closed)pollTimer=setTimeout(poll,connected?2000:5000);
-}
+const roomPoller=createRoomPoller({
+ read:options=>options.signal.aborted||!online||online.local?null:request('/'+online.room,online.token,undefined,{...options,version:online.version}),
+ getState:()=>({joined:online?.joined,turn:state.turn,side:online?.side,result:!!state.result,hidden:document.hidden,connected,closed:!online||online.local||online.closed}),
+ getDelay:(data,delay)=>{
+  if(!online?.clock||state.result||!connected)return delay;
+  const remaining=clockBudget(online,state.turn,Date.now()+clockOffset);
+  return Number.isFinite(remaining)?Math.min(delay,Math.max(1000,remaining+100)):delay;
+ },
+ onData:data=>{if(data)adopt(data);else if(!connected){connected=true;render();}},
+ onError:error=>{connected=false;if(error.status===404)online.closed=true;message=error.message;render();}
+});
+function schedulePolling(){if(online&&!online.local&&!online.closed)roomPoller.start({immediate:false});paintNetworkUsage();}
+async function poll(){if(!online||online.local||online.closed)return;roomPoller.start({immediate:false});return roomPoller.refresh();}
 async function sendAction(action,move){
- if(!online||busy)return;interruptMoveEffects();busy=true;render();const room=online.room;
- try{const data=await request('/'+room+'/action',online.token,{action,move,version:online.version});if(online?.room===room){adopt(data);return data;}}
- catch(e){if(action==='leave'&&e.status===404){leaveGame();return;}message=e.message;if(e.status===409)await poll();}
- finally{busy=false;render();}
+ if(!online||busy)return;roomPoller.stop();interruptMoveEffects();busy=true;render();const room=online.room;
+ const generation=routeVersion,current=()=>generation===routeVersion&&online?.room===room;
+ try{const data=await request('/'+room+'/action',online.token,{action,move,version:online.version});if(current()){adopt(data);return data;}}
+ catch(e){if(!current())return;if(action==='leave'&&e.status===404){leaveGame();return;}message=e.message;if(e.status===409){if(online?.local)adopt(localAI.read(room));else await poll();}}
+ finally{if(current()){busy=false;render();schedulePolling();}}
 }
 function enter(data,token,invite){
- cancelCombo();cancelCollapse();
+ roomPoller.stop();cancelCombo();cancelCollapse();
  stopAI();aiTiming=null;online={...data,token,invite};state=data.state;logs=data.logs;stack=[];selected=null;legal=[];inviteRoom=null;connected=true;
- storage.set('hanten-room-'+data.room,{token,invite});history.replaceState(null,'',location.pathname+'#room='+data.room);
- message=state.result|| (data.joined?(data.kind==='ai'?'AIと対局を開始しました。':'対戦相手と接続しました。自分の手番で指してください。'):'招待リンクを相手に送ってください。');render();poll();
+ if(!data.local)storage.set('hanten-room-'+data.room,{token,invite});history.replaceState(null,'',location.pathname+(data.local?'#ai=':'#room=')+data.room);
+ message=state.result|| (data.joined?(data.kind==='ai'?'AIと対局を開始しました。':'対戦相手と接続しました。自分の手番で指してください。'):'招待リンクを相手に送ってください。');render();schedulePolling();
 }
 for(const [value,name] of Object.entries(handicapOptions)){const option=document.createElement('option');option.value=value;option.textContent=name;$('handicap').append(option);$('aiHandicap').append(option.cloneNode(true));}
 const explainTime=()=>{const unlimited=Number($('mainTime').value)===minuteSteps.length;$('incrementTime').disabled=$('byoyomiTime').disabled=unlimited;const minutes=minuteSteps[Number($('mainTime').value)],increment=Number($('incrementTime').value),byoyomi=byoyomiSteps[Number($('byoyomiTime').value)];for(const [id,out,value,unit] of [['mainTime','mainTimeValue',minutes,'分'],['incrementTime','incrementValue',increment,'秒'],['byoyomiTime','byoyomiValue',byoyomi,'秒']]){const text=id==='mainTime'?(unlimited?'無限':value+unit):(unlimited?'なし':clockSecondsLabel(value));$(out).textContent=text;$(id).setAttribute('aria-valuetext',text);}$('timeHelp').textContent=unlimited?'時間無制限':timeHelp({minutes,increment,byoyomi});};
@@ -320,8 +334,9 @@ syncOseshoChallenge();
 $('challengeOsesho').onchange=()=>{try{storage.set('hanten-osesho-challenge',$('challengeOsesho').checked);}catch{}syncOseshoChallenge();render();};
 $('createRoom').onclick=async()=>{
  if(!$('paradoxAt').reportValidity())return;
- if(state.ply&&!window.confirm('現在の盤面から離れ、新しいオンライン対局を作成しますか？'))return;
- busy=true;render();try{
+ if(state.ply&&!window.confirm(selectedKind==='ai'?'現在の盤面から離れ、新しいAI対局を作成しますか？':'現在の盤面から離れ、新しいオンライン対局を作成しますか？'))return;
+ transport.resetStats();busy=true;render();try{
+  if(selectedKind==='ai'){enter(localAI.create(selectedSettings()));return;}
   let draft=storage.get('hanten-pending-room');if(draft&&(draft.kind!==selectedKind||JSON.stringify(draft.settings)!==JSON.stringify(selectedSettings())))draft=null;if(!draft){draft={token:freshToken(),invite:freshToken(),kind:selectedKind,settings:selectedSettings()};storage.set('hanten-pending-room',draft);}
   const data=await request('',draft.token,{invite:draft.invite,kind:draft.kind,settings:draft.settings});enter(data,draft.token,draft.invite);localStorage.removeItem('hanten-pending-room');
  }catch(e){message=e.message;}finally{busy=false;render();}
@@ -332,15 +347,29 @@ $('offerRematch').onclick=()=>sendAction('offer-rematch');$('acceptRematch').onc
 $('acceptDraw').onclick=()=>sendAction('accept-draw');$('declineDraw').onclick=()=>sendAction('decline-draw');
 let routeVersion=0;
 async function restore(){
- const version=++routeVersion;clearSession();start(initial(),homeMessage);
- const params=new URLSearchParams(location.hash.slice(1)),room=params.get('room'),invite=params.get('invite');if(!room)return;
+ const version=++routeVersion;clearSession();transport.resetStats();paintNetworkUsage();start(initial(),homeMessage);
+ const params=new URLSearchParams(location.hash.slice(1)),localRoom=params.get('ai'),room=params.get('room'),invite=params.get('invite');
+ if(localRoom){try{enter(localAI.read(localRoom));}catch(e){message=e.message;render();}return;}
+ if(!room)return;
  if(!/^[a-f0-9]{32}$/.test(room)){message='招待リンクが正しくありません。';render();return;}
+ // An old bookmark must resume the migrated local position, not overwrite it
+ // with the server snapshot from before the migration.
+ try{enter(localAI.read(room));return;}catch(e){if(e.status!==404){message=e.message;render();return;}}
  const saved=storage.get('hanten-room-'+room);
- if(saved?.token){busy=true;render();try{const data=await request('/'+room,saved.token);if(version===routeVersion)enter(data,saved.token,saved.invite);return;}catch(e){if(version===routeVersion)message=e.message;return;}finally{if(version===routeVersion){busy=false;render();}}}
+ if(saved?.token){busy=true;render();try{let data=await request('/'+room,saved.token);if(version===routeVersion){if(data.kind==='ai')data=localAI.import(data);enter(data,saved.token,saved.invite);}return;}catch(e){if(version===routeVersion)message=e.message;return;}finally{if(version===routeVersion){busy=false;render();}}}
  if(invite&&/^[a-f0-9]{64}$/.test(invite)){try{const preview=await request('/'+room+'/preview',freshToken(),{invite});if(version!==routeVersion)return;inviteRoom={room,invite,settings:preview.settings};}catch(e){if(version===routeVersion){message=e.message;render();}return;}message='「この対局に参加」を押すと、振り駒で先手・後手を決めます。';}
  else message='参加情報がありません。元の招待リンクを開くか、参加したブラウザで開いてください。';render();
 }
 if(matchMedia('(prefers-reduced-motion: reduce)').matches){$('tutorialVideo').autoplay=false;$('tutorialVideo').pause();}
+const tutorialVideo=$('tutorialVideo'),tutorialDetails=tutorialVideo.closest('details');
+tutorialDetails.addEventListener('toggle',()=>{
+ if(!tutorialDetails.open||online){tutorialVideo.pause();return;}
+ const source=tutorialVideo.querySelector('source');
+ if(!source.getAttribute('src')){source.src=source.dataset.src;tutorialVideo.load();}
+ if(!matchMedia('(prefers-reduced-motion: reduce)').matches)tutorialVideo.play().catch(()=>{});
+});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){roomPoller.stop();schedulePolling();}else if(!busy)void poll();});
+window.addEventListener('online',()=>{if(!busy)void poll();});
 document.addEventListener('click',event=>{if(event.target.closest?.('#chooseAI,#chooseFriend,#chooseRules,#openRulesAlways,#openSettings,#closeSettings,#closeRules,#copyInvite'))playArcadeCue('tap');});
 window.addEventListener('hashchange',restore);
 render();restore();
