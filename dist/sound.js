@@ -14,6 +14,20 @@ function playShogi(rate=1,volume=.7){
 function prepare(){try{context ||= new (window.AudioContext||window.webkitAudioContext)();if(context.state==='suspended')context.resume().catch(()=>{});}catch{}}
 function tone(freq,duration){prepare();if(!context||context.state!=='running')return;const o=context.createOscillator(),g=context.createGain(),at=context.currentTime;o.type='triangle';o.frequency.setValueAtTime(freq,at);o.frequency.exponentialRampToValueAtTime(freq*.45,at+duration);g.gain.setValueAtTime(.12,at);g.gain.exponentialRampToValueAtTime(.001,at+duration);o.connect(g);g.connect(context.destination);o.start(at);o.stop(at+duration);}
 export function playMoveSound(){playShogi();}
+window.addEventListener('pointerdown',prepare,{passive:true});
+window.addEventListener('keydown',prepare);
+// Short electronic clock cues, synthesized locally without downloading audio.
+export function playClockWarning(urgent=false){
+ prepare();if(!context||context.state!=='running')return;
+ const at=context.currentTime;
+ for(let i=0;i<(urgent?2:1);i++){
+  const oscillator=context.createOscillator(),gain=context.createGain(),start=at+i*.12;
+  oscillator.type='sine';oscillator.frequency.value=urgent?1200:1000;
+  gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.16,start+.006);gain.gain.setValueAtTime(.16,start+.065);gain.gain.linearRampToValueAtTime(0,start+.085);
+  oscillator.connect(gain);gain.connect(context.destination);oscillator.start(start);oscillator.stop(start+.09);
+  oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+ }
+}
 // An original crack followed by falling, ringing fragments. No audio download.
 export function playTossShatterSound(){
  prepare();if(!context||context.state!=='running')return;
