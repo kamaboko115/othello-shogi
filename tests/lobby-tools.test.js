@@ -54,7 +54,7 @@ test('record dialog browses the first and latest pages, refreshes after undo, an
 });
 
 test('the app moves the record button out of the hidden sidebar after a result and restores it for the next game',()=>{
- const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),start=source.indexOf(' const recordHome=ending?'),end=source.indexOf('\n\n',start),code=source.slice(start,end);
+ const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),start=source.indexOf(' const recordHome=ending?'),end=source.indexOf(' const moveKey=',start),code=source.slice(start,end);
  const sidebar={insertBefore(node,before){assert.equal(before,record);node.parentElement=this;}},results={append(node){node.parentElement=this;}},record={parentElement:sidebar},button={parentElement:sidebar};
  for(const ending of [true,false,true,false]){
   vm.runInNewContext(code,{ending,$:id=>({record,resultActions:results,openRecord:button})[id]});
