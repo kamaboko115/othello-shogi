@@ -17,6 +17,8 @@ import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js'
 import {startAI} from './ai-client.js';
 import {createLocalAIStore} from './local-ai-game.js';
 import {createRoomTransport,createRoomPoller} from './room-network.js';
+import {createClockWarning} from './clock-warning.js';
+import {playClockWarning} from './sound.js';
 import {playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
 import {initial,moves,label,names,points} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
@@ -97,12 +99,6 @@ function showFlipBurst(count,victoryText=''){
 }
 const freshToken=()=>Array.from(crypto.getRandomValues(new Uint8Array(32))).map(x=>x.toString(16).padStart(2,'0')).join('');
 const storage={get(k){try{return JSON.parse(localStorage.getItem(k));}catch{return null;}},set(k,v){localStorage.setItem(k,JSON.stringify(v));}};
-function setBoardTheme(theme){
- const value=theme==='wood'?'wood':'green';document.documentElement.dataset.boardTheme=value;$('boardTheme').value=value;
- try{storage.set('hanten-board-theme-v2',value);}catch{}
-}
-setBoardTheme(storage.get('hanten-board-theme-v2')||'green');
-$('boardTheme').onchange=()=>setBoardTheme($('boardTheme').value);
 $('openSettings').onclick=()=>{paintNetworkUsage();$('settingsDialog').showModal();};
 $('closeSettings').onclick=()=>{$('settingsDialog').close();syncAI();};
 initCredits(document);
@@ -326,7 +322,12 @@ const explainTime=()=>{const unlimited=Number($('mainTime').value)===minuteSteps
 for(const id of ['mainTime','incrementTime','byoyomiTime'])$(id).oninput=explainTime;explainTime();
 initBeginnerGuide(document,guideHTML);
 for(const id of ['chooseRules','openRulesAlways','openRulesSettings'])$(id).onclick=()=>$('rulesDialog').showModal();$('closeRules').onclick=()=>$('rulesDialog').close();
-setInterval(()=>{for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock;if(el.hidden)continue;const now=Date.now()+clockOffset,ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}},100);
+const warnClock=createClockWarning(playClockWarning);
+setInterval(()=>{
+ const now=Date.now()+clockOffset;
+ for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock;if(el.hidden)continue;const ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}
+ warnClock({turnKey:online?`${online.room}:${online.round}:${state.ply}:${state.turn}`:null,remaining:online?.clock?clockBudget(online,online.side,now):Infinity,active:!!online?.clock&&online.kind==='friend'&&online.joined&&!online.closed&&!state.result&&state.turn===online.side&&now>=online.clock.since&&$('furigoma').hidden,audible:!document.hidden});
+},100);
 const advancedOpen={ai:false,friend:false};
 function selectKind(kind){advancedOpen[selectedKind]=$('advancedSettings').open;selectedKind=kind;$('advancedSettings').open=advancedOpen[kind];render();}
 $('chooseAI').onclick=()=>selectKind('ai');$('chooseFriend').onclick=()=>selectKind('friend');initJudgeSlider($('moveLimit'),$('moveLimitValue'));$('moveLimit').onchange=render;$('allowDrops').onchange=render;$('aiLevel').onchange=render;$('thinkTime').onchange=render;
