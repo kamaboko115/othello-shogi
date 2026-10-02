@@ -27,7 +27,7 @@ AI対局（4段階）、友人との招待リンク対局、振り駒、合意�
 
 AI対局はブラウザ内で完結します。作成・着手・オセショ様・待った・再試合・再読み込みで対局APIを呼びません。局面はこのブラウザに7日間保存し、`#ai=…` のURLから復帰できます。他の端末には引き継げません。保存を拒否された場合は警告を表示し、そのページを開いている間だけ保持します。旧AIの `#room=…` は初回の取得1回でローカル対局へ移行します。
 
-友人対局は相手番・参加待ち・終了後は2秒、自分の手番は8秒、非表示中は10秒を目安に確認します。時計の期限が近い場合は早めに確認し、画面へ戻った時や回線復帰時も再確認します。変化がなければ盤面の本文を返さず、失敗時は間隔を段階的に延ばします。設定の開発者ツールでAPI通信回数と受信本文量を確認できます。初回の画面・画像・音声の取得はこの集計に含みません。動画は「動画でも見る」を開いた時に読み込みます。比較条件・計測結果は [通信ベンチマーク](docs/benchmarks/issue-46-network.md) を参照してください。
+友人対局は相手番・参加待ち・終了後は2秒、自分の手番は8秒、非表示中は10秒を目安に確認します。時計の期限が近い場合は早めに確認し、画面へ戻った時や回線復帰時も再確認します。変化がなければ盤面の本文を返さず、失敗時は間隔を段階的に延ばします。設定の開発者ツールでAPI通信回数と受信本文量を確認できます。初回の画面・画像・音声の取得はこの集計に含みません。動画版チュートリアルは廃止し、遊べる練習を残しています。比較条件・計測結果は [通信ベンチマーク](docs/benchmarks/issue-46-network.md) を参照してください。
 
 オセショ様はAI対局で使える代打機能です。`dist/osesho-ai.js` の専用AIで最大5秒考えます。通常は1局1回、開始前の設定で無限にもできます。開発者ツールには自動代打と対オセショ様の設定があります。比較条件と評価結果は [benchmarks/results/summary.md](benchmarks/results/summary.md) を参照してください。
 
@@ -82,17 +82,20 @@ node build.mjs
 
 ## 公開と共同開発
 
+本番の設定・検証・通知・復旧手順は [運用手順](docs/production.md) を参照してください。PRとmainの更新ではGitHub Actionsがテストとビルドを実行します。仮広告の箱はローカルプレビューだけに表示します。
+
+
 ### 公開版の開発者ツール
 
 公開版では、設定の「開発者ツール」を初めて開くときに `kamaboko` と入力します。ブラウザ内で比較する簡単なUIロックで、入力・解除による通信やCloudflare側の設定はありません。入力値を保存せず、成功したページを再読み込みするまで入力を省略します。`localhost`・`127.0.0.1`・IPv6ループバックから開くローカルプレビューでは、従来どおり入力不要です。
 
 これは開発者ツールへの誤操作を防ぐ入口です。パスワードは公開ソースに記載しており、秘密を守る認証や、改変したクライアント・ブラウザの開発者コンソールを制限する仕組みではありません。
 
-GitHubの `main` をCloudflare Workers Buildsに接続しています。Pull Requestを確認して `main` に取り込むと、Cloudflareがビルドして新しい版を公開します。ビルドコマンドは `npm run build`、デプロイコマンドは `npx wrangler deploy` です。D1データベース `othello-shogi-db` は `DB` に割り当て、初期スキーマは `drizzle/0000_rooms.sql` にあります。設定は `wrangler.jsonc` を参照してください。
+GitHubの `main` をCloudflare Workers Buildsに接続しています。Pull Requestを確認して `main` に取り込むと、Cloudflareが検査して新しい版を公開します。ビルドコマンドは `npm test && npm run build`、デプロイコマンドは `npx wrangler d1 migrations apply othello-shogi-db --remote && npx wrangler deploy` です。D1データベース `othello-shogi-db` は `DB` に割り当て、初期スキーマは `drizzle/0000_rooms.sql` にあります。設定は `wrangler.jsonc` を参照してください。
 
 変更前に `npm test` と `npm run build` を実行してください。ローカルでは `npm start` で遊べます。既存のChatGPT Sites版は別の公開先で、Cloudflareへ対局データは自動移行しません。
 
-作成制限の初回公開前に、Wrangler 4.36.0以降でD1のマイグレーションを適用してください。Cloudflare Workers Buildsのデプロイコマンドも、マイグレーションを先に実行する次のコマンドに設定します（ビルドコマンドは引き続き `npm run build`）。必要なD1権限を持つCloudflare認証が必要です。
+DBのマイグレーションは、Wrangler 4.36.0以降でデプロイ前に適用します。Cloudflare Workers Buildsも次の順で実行する設定です。必要なD1権限を持つCloudflare認証が必要です。
 
 ```sh
 npx wrangler d1 migrations apply othello-shogi-db --remote && npx wrangler deploy

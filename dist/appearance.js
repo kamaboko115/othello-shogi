@@ -18,7 +18,9 @@
  apply();
  function init(){
   apply();
-  if(!['127.0.0.1','localhost'].includes(location.hostname)) { const link=document.querySelector('.trial-compare');if(link)link.remove(); }
+  const local=['127.0.0.1','localhost','[::1]'].includes(location.hostname);
+  if(local)for(const placeholder of document.querySelectorAll('.ad-placeholder'))placeholder.hidden=false;
+  if(!local) { const link=document.querySelector('.trial-compare');if(link)link.remove(); }
   const design=document.getElementById('designMode'),color=document.getElementById('uiTheme');
   if(!design||!color)return;
   const note=document.querySelector('#roomTools>.note');

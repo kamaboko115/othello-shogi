@@ -1,0 +1,65 @@
+# 本番の運用手順
+
+公開先: https://othello-shogi.oshogi-games.workers.dev/
+
+GitHubの`main`を編集元にし、Cloudflare Workers Buildsで公開します。AI対局は端末内で処理し、友人対局だけD1を使います。通知先の個人メールアドレス・APIトークンは公開ソースへ書きません。
+
+## 更新と確認
+
+1. 未保存の変更を保護してから`git fetch origin`で最新版を取得し、`origin/main`を取り込みます。
+2. `npm test`と`npm run build`を実行し、`npm start`でローカル表示を確認します。
+3. PRを作り、GitHub Actionsの`Test and build`を確認してからmainへ取り込みます。
+4. CloudflareのBuildsで成功したコミットがmainと一致することを確認します。
+5. 公開URLを開いてAI対局・チュートリアル・設定を確認し、必要なら`npm run smoke:production`を実行します。
+
+`smoke:production`は専用の友人対局を1部屋作り、招待・参加・認証拒否・変更なし304応答・着手同期・合意した待った・投了・再試合・離脱を確認します。最後にそのテスト部屋だけ閉じます。自動定期実行や負荷テストには使いません。`SITE_URL`環境変数で別の検証先も指定できます。
+
+## Cloudflare設定
+
+- Worker: `othello-shogi`
+- D1: `othello-shogi-db`、バインディング名`DB`
+- 短時間の作成制限: `ROOM_CREATE_BURST`
+- 期限切れの清掃: 5分ごとのCron
+- 本番ブランチ: `main`
+- ビルドコマンド: `npm test && npm run build`
+- デプロイコマンド: `npx wrangler d1 migrations apply othello-shogi-db --remote && npx wrangler deploy`
+
+DBの更新に失敗した場合はデプロイも止めます。Cloudflare Buildsの既存トークンにはWorkerの公開権限とD1の編集権限が必要です。権限エラー時は管理者が必要なD1権限を確認してください。ローカルから公開する場合も、認証後に`npm run deploy`で検査・ビルド・DB更新・公開の順に実行できます。WranglerはCloudflare公式のnpmパッケージです。
+
+2026年10月2日の本番確認では`0001_room_creation_limits.sql`が未適用で、新規友人対局が500になっていました。D1 Consoleで同じテーブルと索引を追加し、上記の一連の対局操作が成功したことを確認しました。その後Cloudflare Buildsで新しい公開手順を実行し、0000・0001のマイグレーション履歴とデプロイの成功を確認しました。SQLは`IF NOT EXISTS`なので既存対局を保持します。
+
+## 通知と無料枠
+
+Cloudflare Alertsに、Workers・D1の基盤障害をメールで知らせる`オセロ将棋：Cloudflare障害`を設定しています。これはCloudflareが公表する障害の通知であり、アプリ固有の500エラーや無料枠80％を直接監視するものではありません。テスト通知はCloudflareのAlerts画面から送信できます。実際の受信は宛先側で確認してください。
+
+アプリ固有の障害と80％通知は設定完了まで運用上の残作業です。WorkersとD1の使用量はアカウント全体で確認します。無料枠の目安は次のとおりです（2026年10月2日確認）。
+
+|対象|無料枠|80％の目安|
+|---|---:|---:|
+|Workersのリクエスト|1日100,000|80,000|
+|D1の読み取り行|1日5,000,000|4,000,000|
+|D1の書き込み行|1日100,000|80,000|
+|D1の合計容量|5GB|4GB|
+
+日次枠はUTC午前0時（日本時間午前9時）に更新されます。APIの読取・書込は対局回数とは一致せず、清掃・SQL・索引の更新も影響します。80％到達通知を追加する場合はCloudflare Analyticsの読み取り専用権限とメール送信経路を用意し、メール宛先は非公開の設定に保存します。GitHub Actions失敗のメールはGitHubアカウント側の通知設定にも依存します。
+
+## 障害時の復旧
+
+1. CloudflareのStatusとWorkersのMetrics、最新Buildログを確認します。部屋作成だけ500になる場合は、D1のテーブル・索引とバインディングを先に確認します。
+2. コード変更が原因ならWorkersのDeploymentsで直前に成功していた版へRollbackし、公開URLで確認します。コードのRollbackはDBを過去へ戻しません。
+3. GitHubでは原因となった変更をrevertするPRを作り、修正後のmainを再公開します。強制pushで共同作業の履歴を消さないでください。
+4. DBデータが壊れた場合だけ、D1 Time Travelで復元時点を選びます。復元するとその後の対局データが失われるため、事前に対象・時刻・退避方法を確認します。単なるコード障害ではDB全体を復元しません。
+
+## 公開画面と保存データ
+
+仮広告の箱はlocalhost・127.0.0.1・IPv6ループバックだけで表示します。実広告は未接続です。保存期間と外部サービスは設定から開ける`privacy.html`に記載しています。広告サービスを接続するときは案内とCSPの許可先を更新してください。
+
+## 公式資料
+
+- [Workersの制限](https://developers.cloudflare.com/workers/platform/limits/)
+- [D1の制限](https://developers.cloudflare.com/d1/platform/limits/)
+- [D1の料金と無料枠](https://developers.cloudflare.com/d1/platform/pricing/)
+- [D1マイグレーション](https://developers.cloudflare.com/d1/reference/migrations/)
+- [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
+- [WorkerのRollback](https://developers.cloudflare.com/workers/configuration/versions-and-deployments/rollbacks/)
+- [Cloudflareの通知](https://developers.cloudflare.com/notifications/notification-available/)
