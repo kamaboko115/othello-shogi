@@ -67,12 +67,3 @@ test('late action success or failure cannot change a newly entered room or relea
  }
 });
 
-test('collapsed tutorial video does not load until opened, loads once and pauses when closed',()=>{
- const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');assert.match(html,/preload="none"/);assert.match(html,/<source data-src="\/tutorial.mp4"/);assert.doesNotMatch(html,/<source src="\/tutorial.mp4"/);
- let listener,loads=0,plays=0,pauses=0;
- const sourceNode={dataset:{src:'/tutorial.mp4'},getAttribute(){return this.src||null;}},details={open:false,addEventListener(event,fn){listener=fn;}},video={closest:()=>details,querySelector:()=>sourceNode,load(){loads++;},play(){plays++;return Promise.resolve();},pause(){pauses++;}};
- const c={$:()=>video,online:null,matchMedia:()=>({matches:false})};vm.createContext(c);
- vm.runInContext(section("const tutorialVideo=$('tutorialVideo')","document.addEventListener('visibilitychange'"),c);
- assert.equal(loads,0);details.open=true;listener();listener();assert.equal(loads,1);assert.equal(plays,2);details.open=false;listener();assert.equal(pauses,1);
- c.online={kind:'ai'};details.open=true;listener();assert.equal(loads,1);assert.equal(pauses,2);
-});

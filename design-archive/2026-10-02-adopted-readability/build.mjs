@@ -4,11 +4,11 @@ const out='.sites-runtime/release/dist';
 await mkdir(out+'/server',{recursive:true});await mkdir(out+'/.openai/drizzle/meta',{recursive:true});
 const assets={},binary={},etags={};
 const etag=bytes=>'"'+createHash('sha256').update(bytes).digest('hex')+'"';
-for(const name of ['ad-break.js','toss.js','judge-options.js','match-options.js','index.html','appearance.js','appearance.css','interface-craft.css','hallmark-preview.css','hallmark-game.css','hallmark-tokens.css','style.css','app.js','engine.js','sound.js','ai.js','osesho-ai.js','ai-worker.js','ai-client.js','room-network.js','local-ai-game.js','move-effect.js','result-view.js','combo.js','impact.js','collapse-view.js','tutorial-lessons.js','novice-guide.js','credits.js','developer.js','dev-access.js','helper-visit.js','board-code.js','flip-light.js','paradox.js','fonts/OFL-MPLUSRounded1c.txt']){
+for(const name of ['puzzles.html','puzzles.css','puzzles.js','puzzle-solver.js','puzzle-page.js','puzzle-worker.js','puzzle-book.js','ad-break.js','toss.js','judge-options.js','match-options.js','index.html','appearance.js','appearance.css','hallmark-preview.css','hallmark-game.css','hallmark-tokens.css','style.css','app.js','engine.js','sound.js','ai.js','osesho-ai.js','ai-worker.js','ai-client.js','room-network.js','local-ai-game.js','move-effect.js','result-view.js','combo.js','impact.js','collapse-view.js','tutorial-lessons.js','novice-guide.js','credits.js','developer.js','dev-access.js','helper-visit.js','board-code.js','flip-light.js','paradox.js','fonts/OFL-MPLUSRounded1c.txt']){
  const bytes=await readFile('dist/'+name);assets['/'+name]=bytes.toString('utf8');etags['/'+name]=etag(bytes);
 }
 assets['/']=assets['/index.html'];etags['/']=etags['/index.html'];
-for(const name of ['osesho.png','fonts/title-mplus-rounded.woff2']){
+for(const name of ['osesho.png','tutorial.mp4','tutorial-poster.jpg','fonts/title-mplus-rounded.woff2']){
  const bytes=await readFile('dist/'+name);binary['/'+name]=bytes.toString('base64');etags['/'+name]=etag(bytes);
 }
 const engine=(await readFile('dist/judge-options.js','utf8'))+'\n'+(await readFile('dist/engine.js','utf8')).replace(/^import .*;\r?\n/gm,'');

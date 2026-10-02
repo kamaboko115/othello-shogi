@@ -1,0 +1,125 @@
+/* Hallmark · designed-as-app · existing-brand system: hallmark-tokens.css
+ * Same palette, title, spacing and button voice as the approved lobby trial.
+ * Scope: match UI, result UI, dialogs and guides. Game animations remain owned by style.css.
+ * Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V4 */
+html:has(body.hallmark-trial),body.hallmark-trial{overflow-x:clip;background:var(--color-paper);color:var(--color-ink);font-family:var(--font-body)}
+body.hallmark-trial header{height:88px;padding:0 max(var(--space-md),calc((100% - 1500px)/2));gap:var(--space-sm);border-bottom:1px solid var(--color-rule);background:var(--color-paper)}
+body.hallmark-trial header .brand{background:transparent;padding:0;border-radius:0;font-family:var(--font-display);font-size:var(--text-brand);color:var(--color-ink);letter-spacing:.015em}
+body.hallmark-trial header .brand span{color:var(--color-accent)}
+body.hallmark-trial header .local{display:none}
+body.hallmark-trial header .settings-gear{order:2;color:var(--color-ink);width:44px;height:44px;margin:0;background:transparent}
+body.hallmark-trial header .rules-link{order:1;margin-left:auto;min-height:44px;background:transparent;border:0;color:var(--color-ink);font-size:var(--text-small);white-space:nowrap;text-decoration:underline;text-underline-offset:4px}
+body.hallmark-trial .trial-compare{display:block;order:3;margin-left:var(--space-sm);color:var(--color-muted);font-size:var(--text-small);text-underline-offset:4px;white-space:nowrap}
+body.hallmark-trial:has(#tutorial[hidden]) main{max-width:1500px;gap:var(--space-xl);padding:var(--space-lg) var(--space-md) var(--space-xl);grid-template-columns:minmax(0,1fr) minmax(280px,310px)}
+body.hallmark-trial:has(#tutorial[hidden]) aside{min-width:0;padding-top:var(--space-sm)}
+body.hallmark-trial:has(#tutorial[hidden]) .online-panel{padding:0 0 var(--space-md);border:0;border-bottom:1px solid var(--color-rule);border-radius:0;background:transparent;margin:0 0 var(--space-md)}
+body.hallmark-trial:has(#tutorial[hidden]) #matchTitle{font-size:20px;margin:0 0 var(--space-sm);font-family:var(--font-display);color:var(--color-ink)}
+body.hallmark-trial:has(#tutorial[hidden]) .eyebrow{color:var(--color-muted);font-size:11px;letter-spacing:.12em;margin-bottom:var(--space-sm)}
+body.hallmark-trial:has(#tutorial[hidden]) .online-panel p,body.hallmark-trial:has(#tutorial[hidden]) .status p{font-size:var(--text-small);line-height:1.75;color:var(--color-muted)}
+body.hallmark-trial:has(#tutorial[hidden]) #connection{font-weight:600;color:var(--color-ink);margin:var(--space-sm) 0 0}
+body.hallmark-trial:has(#tutorial[hidden]) #matchSettings{color:var(--color-muted)}
+body.hallmark-trial:has(#tutorial[hidden]) #roomTools>.note{font-size:12px;line-height:1.8;margin-top:var(--space-sm)}
+body.hallmark-trial:has(#tutorial[hidden]) .status{border:0;margin:0 0 var(--space-md);padding:0}
+body.hallmark-trial:has(#tutorial[hidden]) .status #count{color:var(--color-muted);font-size:var(--text-small)}
+body.hallmark-trial:has(#tutorial[hidden]) .status h2{font-family:var(--font-display);font-size:26px;font-weight:500;margin:var(--space-xs) 0 var(--space-sm);color:var(--color-ink)}
+body.hallmark-trial:has(#tutorial[hidden]) .status #scores{color:var(--color-ink);font-size:var(--text-small)}
+body.hallmark-trial:has(#tutorial[hidden]) .status #message{min-height:0;color:var(--color-ink);margin:var(--space-xs) 0 0}
+body.hallmark-trial .board-progress{color:var(--color-muted);font-size:var(--text-body);margin-bottom:var(--space-sm)}
+body.hallmark-trial .player strong{color:var(--color-ink);font-size:var(--text-small)}
+body.hallmark-trial .hand-turn{background:var(--color-input);color:var(--color-muted);border:1px solid var(--color-rule);border-radius:var(--radius-input);min-height:44px;font-size:var(--text-small)}
+body.hallmark-trial .hand-turn.my-turn{background:var(--color-accent);color:var(--color-accent-ink);border-color:var(--color-accent)}
+body.hallmark-trial .player-clock{color:var(--color-muted);font-size:20px;padding:var(--space-xs);font-variant-numeric:tabular-nums}
+body.hallmark-trial .player-clock.clock-active{background:var(--color-warm);color:var(--color-warm-ink);border-radius:var(--radius-input)}
+body.hallmark-trial :is(.actions,.end-actions,#resultActions){gap:var(--space-xs);flex-wrap:wrap}
+body.hallmark-trial :is(.actions,.end-actions,#resultActions) button,body.hallmark-trial :is(#undoPanel,#rematchPanel,#roomTools) button{min-height:44px;padding:10px var(--space-sm);background:var(--color-surface);color:var(--color-ink);border:1px solid var(--color-rule);border-radius:var(--radius-input);box-shadow:none;font-size:var(--text-small)}
+body.hallmark-trial #reset{background:transparent;color:var(--color-muted)}
+body.hallmark-trial #resign{color:var(--color-alert)}
+body.hallmark-trial :is(.actions,.end-actions,#roomTools) button:disabled{opacity:.5;cursor:default}
+body.hallmark-trial :is(#undoPanel,#rematchPanel){border:0;border-top:1px solid var(--color-rule);border-bottom:1px solid var(--color-rule);border-radius:0;padding:var(--space-sm) 0;color:var(--color-ink)}
+body.hallmark-trial .record{color:var(--color-muted);border-top:1px solid var(--color-rule);padding-top:var(--space-sm);font-size:var(--text-small)}
+body.hallmark-trial .record:empty{border:0;padding:0}
+body.hallmark-trial .note{color:var(--color-muted);font-size:var(--text-small)}
+body.hallmark-trial #osesho{color:var(--color-ink)}
+body.hallmark-trial #oseshoStatus{font-size:var(--text-small);line-height:1.65}
+body.hallmark-trial #askOsesho{background:var(--color-warm);color:var(--color-warm-ink);border:1px solid var(--color-rule);border-radius:var(--radius-input);padding:12px var(--space-sm);font-size:var(--text-small);min-height:44px}
+body.hallmark-trial #resultHeading{text-align:left;padding:0 0 var(--space-md);margin:0 0 var(--space-md);border-bottom:1px solid var(--color-rule)}
+body.hallmark-trial #resultTitle{font-family:var(--font-display);color:var(--color-ink);font-weight:500;font-size:clamp(32px,4vw,48px);line-height:1.4;margin:0 0 var(--space-xs)}
+body.hallmark-trial #resultReason{font-size:22px;font-weight:600;color:var(--color-accent);margin:0 0 var(--space-xs)}
+body.hallmark-trial #resultDetail{font-size:var(--text-small);color:var(--color-muted);margin:0}
+body.hallmark-trial #closeResult{background:var(--color-accent);color:var(--color-accent-ink);border-color:var(--color-accent);min-width:200px}
+body.hallmark-trial #furigoma{background:var(--color-paper);color:var(--color-ink);border-color:var(--color-rule);box-shadow:0 0 0 100vmax var(--color-backdrop)}
+body.hallmark-trial #closeToss{background:var(--color-accent);color:var(--color-accent-ink);min-height:44px}
+/* Native dialogs keep existing handlers and focus management. */
+body.hallmark-trial dialog,body.hallmark-trial :is(#settingsDialog,#developerDialog,#beginnerGuide){background:var(--color-paper);color:var(--color-ink);border:1px solid var(--color-rule);border-radius:var(--radius-panel);padding:var(--space-lg);max-height:90dvh;box-shadow:0 16px 48px var(--color-shadow)}
+body.hallmark-trial dialog::backdrop{background:var(--color-backdrop)}
+body.hallmark-trial dialog h2{font-family:var(--font-display);font-weight:500;font-size:26px;margin:0 0 var(--space-md);line-height:1.45;overflow-wrap:anywhere;min-width:0}
+body.hallmark-trial dialog h3{color:var(--color-ink);font-size:18px;margin:0 0 var(--space-xs)}
+body.hallmark-trial dialog :is(p,li,label){font-size:var(--text-small);line-height:1.8}
+body.hallmark-trial dialog :is(button:not(.cell),.dev-puzzle-link){background:var(--color-accent);color:var(--color-accent-ink);font-size:var(--text-small);min-height:44px;padding:10px var(--space-sm);border:1px solid var(--color-accent);border-radius:var(--radius-input);margin:4px 4px 4px 0;box-shadow:none}
+body.hallmark-trial dialog button:not(.cell):disabled{opacity:.5;cursor:default}
+body.hallmark-trial dialog :is(select,input[type=password],textarea),body.hallmark-trial #devCode{min-height:44px;background:var(--color-surface);color:var(--color-ink);border:1px solid var(--color-rule);border-radius:var(--radius-input);padding:var(--space-xs);font:inherit;max-width:100%}
+body.hallmark-trial dialog input[type=checkbox]{accent-color:var(--color-accent)}
+body.hallmark-trial dialog :is(ul,summary,.note){color:var(--color-muted)}
+body.hallmark-trial dialog details{border-color:var(--color-rule)}
+body.hallmark-trial dialog summary{min-height:44px;align-content:center;font-size:var(--text-small)}
+body.hallmark-trial :is(#confirmNo,#oseshoNo,#stay,#devAccessCancel,#closeSettings,#closeRules,#closeBeginner,#closeDeveloper,#closeCredits){background:var(--color-surface);color:var(--color-ink);border-color:var(--color-rule)}
+body.hallmark-trial .theme-switch{color:var(--color-ink);font-size:var(--text-body)}
+body.hallmark-trial #settingsDialog{width:min(94vw,480px);overflow:auto}
+body.hallmark-trial #developerTools{margin-top:var(--space-md);padding-top:var(--space-sm)}
+body.hallmark-trial #developerTools>label{display:block;margin:var(--space-sm) 0}
+body.hallmark-trial .settings-pages{gap:var(--space-xs);margin-bottom:var(--space-md)}
+body.hallmark-trial .settings-pages button{margin:0}
+body.hallmark-trial #rulesDialog{width:min(94vw,760px);max-width:760px;padding:var(--space-lg)}
+body.hallmark-trial .rules-heading{gap:var(--space-md);padding-bottom:var(--space-md);border-bottom:1px solid var(--color-rule)}
+body.hallmark-trial .rules-heading h2{margin:0}
+body.hallmark-trial .beginner-links{margin-left:0;justify-content:flex-start;gap:var(--space-xs)}
+body.hallmark-trial .beginner-links button{background:var(--color-surface);color:var(--color-ink);border-color:var(--color-rule)}
+body.hallmark-trial .rules-tagline{color:var(--color-muted);line-height:1.8;margin-top:var(--space-md)}
+body.hallmark-trial .rules-tagline strong{color:var(--color-ink)}
+body.hallmark-trial .rules-tutorial-call{background:var(--color-input);color:var(--color-ink);border:0;border-radius:var(--radius-input);padding:var(--space-sm);gap:var(--space-sm);margin:var(--space-md) 0}
+body.hallmark-trial .rules-card{border:0;border-top:1px solid var(--color-rule);border-radius:0;padding:var(--space-md) 0 0;margin-top:var(--space-md)}
+body.hallmark-trial .rules-card h3{margin:0 0 var(--space-sm);color:var(--color-accent);font-size:20px}
+body.hallmark-trial .rules-warning{color:var(--color-alert)}
+body.hallmark-trial #beginnerGuide{width:min(94vw,920px);max-width:920px;padding:0;overflow:hidden}
+body.hallmark-trial .guide-heading{padding:var(--space-md);background:var(--color-paper);border-color:var(--color-rule)}
+body.hallmark-trial .guide-heading h2{margin:0}
+body.hallmark-trial #beginnerBody{padding:0 var(--space-md) var(--space-md);max-height:calc(90dvh - 128px)}
+body.hallmark-trial .guide-card{background:transparent;border:0;border-top:1px solid var(--color-rule);border-radius:0;padding:var(--space-md) 0 0;margin-top:var(--space-md)}
+body.hallmark-trial .guide-card h3{color:var(--color-accent);font-size:20px}
+body.hallmark-trial .guide-examples figure,body.hallmark-trial .guide-piece{background:var(--color-input);border-radius:var(--radius-input);padding:var(--space-sm);min-width:0}
+body.hallmark-trial .guide-examples figcaption strong,body.hallmark-trial .guide-piece h4{color:var(--color-ink)}
+body.hallmark-trial #developerDialog{padding:var(--space-md);width:min(94vw,760px)}
+body.hallmark-trial :is(.dev-files,.dev-ranks,#devStatus){color:var(--color-muted)}
+body.hallmark-trial .dev-controls label{color:var(--color-ink)}
+body.hallmark-trial #developerDialog .dev-capture-hand button{min-height:44px;padding:var(--space-xs);background:var(--color-warm);color:var(--color-warm-ink);border:1px solid var(--color-rule);border-radius:var(--radius-input)}
+body.hallmark-trial #developerDialog .dev-capture-hand button:disabled{opacity:.5}
+body.hallmark-trial #creditsDialog a{color:var(--color-accent)}
+body.hallmark-trial .credits-kicker{color:var(--color-muted)}
+body.hallmark-trial .credits-you{border-color:var(--color-rule);color:var(--color-ink)}
+body.hallmark-trial :is(button,a,select,input,textarea,summary,[tabindex]):focus-visible{outline:3px solid var(--color-focus);outline-offset:3px}
+body.hallmark-trial dialog button:not(.cell):active,body.hallmark-trial :is(.actions,.end-actions,#roomTools,#resultActions) button:active{transform:translateY(1px)}
+@media(hover:hover){
+ body.hallmark-trial :is(.actions,.end-actions,#roomTools) button:not(:disabled):hover{background:var(--color-input)}
+ body.hallmark-trial dialog button:not(:disabled):not(.cell):hover{filter:brightness(.95)}
+}
+@media(max-width:1200px){body.hallmark-trial:has(#tutorial[hidden]) main{grid-template-columns:minmax(0,1fr);max-width:1050px;gap:var(--space-lg)}body.hallmark-trial:has(#tutorial[hidden]) aside{max-width:950px;width:100%;margin:auto;padding:0}}
+@media(min-width:701px){body.hallmark-trial:not(.game-ended) .tabletop{max-width:min(1024px,calc(100dvh + 100px))}}
+@media(max-width:700px){
+ body.hallmark-trial header{height:80px;padding:0 var(--space-sm);gap:var(--space-xs)}
+ body.hallmark-trial header .brand{font-size:26px}
+ body.hallmark-trial header .rules-link{font-size:12px;padding:var(--space-xs) 0}
+ body.hallmark-trial .trial-compare{display:none}
+ body.hallmark-trial:has(#tutorial[hidden]) main{padding:var(--space-sm);gap:var(--space-md)}
+ body.hallmark-trial dialog,body.hallmark-trial :is(#settingsDialog,#developerDialog,#rulesDialog){padding:var(--space-sm);max-width:calc(100vw - 24px)}
+ body.hallmark-trial dialog h2{font-size:22px}
+ body.hallmark-trial .guide-heading{padding:var(--space-sm)}
+ body.hallmark-trial #beginnerBody{padding:0 var(--space-sm) var(--space-sm)}
+ body.hallmark-trial .guide-pieces{gap:var(--space-xs)}
+ body.hallmark-trial .guide-piece{padding:var(--space-xs)}
+ body.hallmark-trial .beginner-links{display:grid;grid-template-columns:minmax(0,1fr);width:100%}
+ body.hallmark-trial .rules-heading{gap:var(--space-sm)}
+ body.hallmark-trial .rules-heading h2{width:100%}
+ body.hallmark-trial #resultReason{font-size:20px}
+}
+@media(max-width:375px){body.hallmark-trial .tabletop{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-md) var(--space-xs)}body.hallmark-trial .player{width:132px;max-width:100%}body.hallmark-trial .hand{gap:4px;padding:6px}}
+@media(prefers-reduced-motion:reduce){body.hallmark-trial dialog button:active,body.hallmark-trial :is(.actions,.end-actions,#roomTools,#resultActions) button:active{transform:none}}

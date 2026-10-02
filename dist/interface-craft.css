@@ -1,0 +1,45 @@
+/* Existing brand, surgical pass guided by Avoid AI Design.
+ * Hallmark pre-emit critique: P4 H5 E4 S5 R5 V4.
+ * Scope is interface chrome. The board and its authored game effects are unchanged. */
+html[data-design=improved]{
+ --color-control-hover:var(--color-input);
+ --color-stone-black:oklch(18% .005 160);
+ --color-stone-white:oklch(99% .004 95);
+ --color-stone-outline:oklch(68% .015 160);
+}
+.settings-gear svg{display:block;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+html[data-design=improved] body.hallmark-trial :is(.settings-gear,.rules-link){border-radius:var(--radius-input);transition:background-color var(--dur-short) var(--ease-out),color var(--dur-short) var(--ease-out)}
+html[data-design=improved] body.hallmark-trial .settings-gear{display:grid;place-items:center;flex:none}
+html[data-design=improved] body.hallmark-trial:has(#tutorial:not([hidden])) #matchTitle{font-weight:700;font-size:clamp(24px,2.3vw,30px)}
+html[data-design=improved] body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch strong{font-weight:700}
+html[data-design=improved] body.hallmark-trial .tutorial-launch b>span{display:none}
+/* These are the same black/white sides seen around the board, not a stock CTA arrow. */
+html[data-design=improved] body.hallmark-trial .tutorial-launch b::after{content:"";display:block;flex:none;width:22px;height:22px;margin-right:13px;border-radius:50%;background:var(--color-stone-black);box-shadow:13px 0 0 -1px var(--color-stone-white),13px 0 0 0 var(--color-stone-outline)}
+html[data-design=improved] body.hallmark-trial :is(.match-choices button,#createRoom,#joinRoom,dialog button:not(.cell),.actions button,.end-actions button){transition:background-color var(--dur-short) var(--ease-out),border-color var(--dur-short) var(--ease-out),color var(--dur-short) var(--ease-out)}
+html[data-design=improved] body.hallmark-trial:has(#tutorial[hidden]) .eyebrow{display:none}
+html[data-design=improved] body.hallmark-trial:has(#tutorial[hidden]) #count{display:none}
+html[data-design=improved] body.hallmark-trial:has(#tutorial[hidden]) .online-panel{margin-bottom:20px;padding-bottom:12px}
+html[data-design=improved] body.hallmark-trial:has(#tutorial[hidden]) #matchSettings{line-height:1.8;margin:12px 0}
+html[data-design=improved] body.hallmark-trial:has(#tutorial[hidden]) .room-help{margin-top:4px}
+html[data-design=improved] body.hallmark-trial:has(#tutorial[hidden]) .status{margin-bottom:16px}
+html[data-design=improved][data-ui-theme=dark] body.hallmark-trial .stone.black{outline:1px solid var(--color-stone-outline)}
+/* A form uses aligned rows, while related page destinations remain text links. */
+html[data-design=improved] body.hallmark-trial #settingsDialog .settings-pages{gap:8px 20px;margin-bottom:20px}
+html[data-design=improved] body.hallmark-trial #settingsDialog .settings-pages button{border:0;border-radius:0;padding:4px 0;background:transparent;color:var(--color-ink);text-decoration:underline;text-underline-offset:5px}
+html[data-design=improved] body.hallmark-trial #settingsDialog :is(.appearance-settings label,.theme-switch){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,180px);gap:16px;align-items:center;font-size:16px}
+html[data-design=improved] body.hallmark-trial #settingsDialog :is(.appearance-settings select,.theme-switch select){width:100%;max-width:none;font:inherit;min-height:44px;margin:0;padding:8px 12px;background:var(--color-surface);color:var(--color-ink);border:1px solid var(--color-rule);border-radius:var(--radius-input)}
+html[data-design=improved] body.hallmark-trial #settingsDialog .theme-switch{margin:24px 0}
+html[data-design=improved] body.hallmark-trial #settingsDialog #closeSettings{display:block;margin:20px 0 0 auto;min-width:100px}
+html[data-design=improved] body.hallmark-trial :is(.rules-card,.guide-card) h3{color:var(--color-ink);font-weight:700}
+@media(hover:hover){
+ html[data-design=improved] body.hallmark-trial :is(.settings-gear,.rules-link):hover{background:var(--color-control-hover)}
+ html[data-design=improved] body.hallmark-trial .match-choices button:not([aria-pressed=true]):hover{background:var(--color-control-hover);color:var(--color-ink)}
+ html[data-design=improved] body.hallmark-trial #settingsDialog .settings-pages button:hover{color:var(--color-accent);filter:none}
+}
+@media(max-width:700px){
+ html[data-design=improved] body.hallmark-trial #settingsDialog :is(.appearance-settings label,.theme-switch){grid-template-columns:minmax(0,1fr) minmax(0,156px);gap:12px;font-size:15px}
+ html[data-design=improved] body.hallmark-trial #settingsDialog :is(.appearance-settings select,.theme-switch select){font-size:14px;padding:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ html[data-design=improved] body.hallmark-trial :is(.settings-gear,.rules-link,.match-choices button,#createRoom,#joinRoom,dialog button:not(.cell),.actions button,.end-actions button){transition:none}
+}
