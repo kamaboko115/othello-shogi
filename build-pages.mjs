@@ -1,4 +1,4 @@
-import {readFile,mkdir,writeFile,cp} from 'node:fs/promises';
+import {mkdir,writeFile,cp,rm} from 'node:fs/promises';
 import {dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {textAssets,binaryAssets} from './worker/static-assets.js';
@@ -12,8 +12,9 @@ for(const name of [...textAssets,...binaryAssets]){
  await mkdir(dirname(join(out,name)),{recursive:true});
  await cp(join(root,'dist',name),join(out,name));
 }
-const gateway=(await readFile(join(root,'worker/pages-gateway.js'),'utf8')).replace(/^import .*;\r?\n/gm,'');
-await writeFile(join(out,'_worker.js'),'const securityHeaders='+JSON.stringify(securityHeaders)+';\n'+gateway);
+// The API Function lives in pages/functions, so Pages Git integration finds it
+// independently of the static asset output directory.
+await rm(join(out,'_worker.js'),{force:true});
 // Static files do not invoke a Function or the backend Worker.
 await writeFile(join(out,'_routes.json'),JSON.stringify({version:1,include:['/api/*'],exclude:[]},null,2)+'\n');
 await writeFile(join(out,'_headers'),'/*\n'+Object.entries({...securityHeaders,'Cache-Control':'no-cache'}).map(([key,value])=>'  '+key+': '+value).join('\n')+'\n');

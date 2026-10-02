@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {readFile,readdir} from 'node:fs/promises';
 import gateway from '../worker/pages-gateway.js';
+import {onRequest} from '../pages/functions/api/[[path]].js';
 import {securityHeaders} from '../worker/security.js';
 import {textAssets,binaryAssets} from '../worker/static-assets.js';
 
@@ -15,6 +16,7 @@ test('Pages serves the same public assets and keeps preview/server files private
  }
  const files=await readdir(output);
  assert.ok(!files.some(name=>/(preview|comparison|puzzles)\.html$/.test(name)||name==='server'));
+ assert.ok(!files.includes('_worker.js'));
  assert.match(await readFile(new URL('ads.txt',output),'utf8'),/pub-1514816413848325/);
  const headers=await readFile(new URL('_headers',output),'utf8');
  for(const [key,value] of Object.entries(securityHeaders))assert.ok(headers.includes(key+': '+value));
@@ -26,11 +28,11 @@ test('Pages forwards friend requests and 304 responses without rewriting origin,
  for(const method of ['GET','POST']){
   const request=new Request('https://oshogi-games.pages.dev/api/rooms/example',{method,headers:{Origin:'https://oshogi-games.pages.dev',Authorization:'Bearer player-token','CF-Connecting-IP':'192.0.2.3','If-None-Match':'"room-4"',...(method==='POST'?{'Content-Type':'application/json'}:{})},...(method==='POST'?{body:'{"action":"leave"}'}:{})});
   const response=new Response(null,{status:304,headers:{ETag:'"room-4"',...securityHeaders}});
-  const actual=await gateway.fetch(request,{GAME_API:{async fetch(forwarded){
+  const actual=await onRequest({request,env:{GAME_API:{async fetch(forwarded){
    assert.equal(forwarded,request);
    if(method==='POST')assert.equal(await forwarded.text(),'{"action":"leave"}');
    return response;
-  }}});
+  }}}});
   assert.equal(actual,response);
  }
 });
