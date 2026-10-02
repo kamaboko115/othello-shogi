@@ -1,0 +1,8 @@
+body.information-page main{display:block;max-width:760px;margin:48px auto;padding:0 24px;color:var(--color-ink)}
+.information-page article{font-size:16px;line-height:1.9}
+.information-page article h1{font-size:28px;line-height:1.5;color:var(--color-ink)}
+.information-page article h2{font-size:20px;margin:32px 0 8px;color:var(--color-ink)}
+.information-page article a,.site-info-link{color:inherit;text-decoration:underline;text-underline-offset:4px}
+.information-page .updated{color:var(--color-muted);font-size:14px}
+.site-info-link{display:inline-block;padding:8px 0}
+@media(max-width:600px){body.information-page main{margin:24px auto}}
