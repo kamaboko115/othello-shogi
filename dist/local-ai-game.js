@@ -63,12 +63,12 @@ export function createLocalAIStore({storage=()=>globalThis.localStorage,now=Date
    if(['offer-undo','accept-undo','decline-undo'].includes(body.action)){
     if(body.action==='offer-undo')rewind(data,undoIndex(data));
     else if(body.action==='accept-undo')fail('相手の待った申請がありません。',409);
-    else data.undoOffer=null;
+    else{if(!data.undoOffer)return view(record);data.undoOffer=null;}
    }else if(['offer-rematch','accept-rematch','decline-rematch'].includes(body.action)){
     if(!s.result)fail('再試合は対局終了後に申し込めます。',409);
     if(body.action==='offer-rematch')freshRound(data);
     else if(body.action==='accept-rematch')fail('相手からの再試合希望はありません。',409);
-    else data.rematch=null;
+    else{if(data.rematch==null)return view(record);data.rematch=null;}
    }else{
     if(s.result)fail('この対局は終了しています。',409);
     if(body.action==='ai-no-moves'){
@@ -88,7 +88,7 @@ export function createLocalAIStore({storage=()=>globalThis.localStorage,now=Date
     }else if(body.action==='resign'){s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
     else if(body.action==='offer-draw'){s.result='合意による引き分け';}
     else if(body.action==='accept-draw')fail('相手からの引き分け提案はありません。');
-    else if(body.action==='decline-draw')data.offer=null;
+    else if(body.action==='decline-draw'){if(data.offer==null)return view(record);data.offer=null;}
     else fail('操作が正しくありません。');
    }
    record.version++;save(record);return view(record);

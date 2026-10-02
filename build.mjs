@@ -13,17 +13,19 @@ for(const name of ['osesho.png','tutorial.mp4','tutorial-poster.jpg','fonts/titl
 }
 const engine=(await readFile('dist/judge-options.js','utf8'))+'\n'+(await readFile('dist/engine.js','utf8')).replace(/^import .*;\r?\n/gm,'');
 const apiSource=(await readFile('worker/api.js','utf8')).replace(/^import .*;\r?\n/gm,'');
+const limitsSource=(await readFile('worker/room-limits.js','utf8')).replace(/^import .*;\r?\n/gm,'');
+const securitySource=await readFile('worker/security.js','utf8');
 const staticWorker=`
 function matchesETag(value,etag){return value?.split(',').some(tag=>tag.trim()==='*'||tag.trim().replace(/^W\\//,'')===etag);}
 export default {
  async scheduled(controller,env){await cleanupRooms(env);},
  async fetch(request,env){
   const path=new URL(request.url).pathname;
-  if(path.startsWith('/api/'))return api(request,env);
+  if(path.startsWith('/api/'))return api(request,env,{clientIP:request.headers.get('CF-Connecting-IP'),requireBurstLimiter:true,allowServerAI:false});
   const isBinary=binary[path]!==undefined,body=assets[path];
-  if(!isBinary&&body===undefined)return new Response('Not found',{status:404});
+  if(!isBinary&&body===undefined)return new Response('Not found',{status:404,headers:securityHeaders});
   const type=path.endsWith('.png')?'image/png':path.endsWith('.mp4')?'video/mp4':path.endsWith('.woff2')?'font/woff2':path.endsWith('.jpg')?'image/jpeg':path.endsWith('.js')?'text/javascript; charset=utf-8':path.endsWith('.css')?'text/css; charset=utf-8':path.endsWith('.txt')?'text/plain; charset=utf-8':'text/html; charset=utf-8';
-  const headers={'Content-Type':type,'Cache-Control':'no-cache','ETag':etags[path],'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'};
+  const headers={...securityHeaders,'Content-Type':type,'Cache-Control':'no-cache','ETag':etags[path]};
   if(isBinary)headers['Accept-Ranges']='bytes';
   if(['GET','HEAD'].includes(request.method)&&matchesETag(request.headers.get('If-None-Match'),etags[path]))return new Response(null,{status:304,headers});
   if(!isBinary)return new Response(request.method==='HEAD'?null:body,{headers});
@@ -41,7 +43,10 @@ export default {
   return new Response(request.method==='HEAD'?null:bytes.slice(start,end+1),{status,headers});
  }
 };`;
-const worker=engine+'\n'+await readFile('dist/match-options.js','utf8')+'\n'+apiSource+'\nconst assets='+JSON.stringify(assets)+';\nconst binary='+JSON.stringify(binary)+';\nconst etags='+JSON.stringify(etags)+';\n'+staticWorker;
+// Only the default handler is a Workers entrypoint; helper module exports
+// (including numeric constants) must remain internal to the bundled Worker.
+const helpers=[engine,await readFile('dist/match-options.js','utf8'),securitySource,limitsSource,apiSource].join('\n').replace(/^export /gm,'');
+const worker=helpers+'\nconst assets='+JSON.stringify(assets)+';\nconst binary='+JSON.stringify(binary)+';\nconst etags='+JSON.stringify(etags)+';\n'+staticWorker;
 await writeFile(out+'/server/index.js',worker);
 // Also expose the standard entrypoint used by the Sites packaging workflow.
 await mkdir('dist/server',{recursive:true});
