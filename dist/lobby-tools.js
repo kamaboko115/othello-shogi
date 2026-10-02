@@ -1,0 +1,45 @@
+// These tools only use local DOM/browser APIs. They do not fetch room data.
+export function initBoardPreview(document){
+ const select=document.getElementById('boardTheme'),preview=document.getElementById('boardThemePreview'),name=document.getElementById('boardThemePreviewName');
+ const paint=()=>{
+  const theme=select.value==='wood'?'wood':'green',label=theme==='wood'?'木目':'深緑';
+  preview.dataset.theme=theme;preview.setAttribute('aria-label',label+'の将棋盤プレビュー');name.textContent=label+'の表示例';
+ };
+ select.addEventListener('change',paint);
+ document.defaultView?.addEventListener('storage',event=>{if(event.key==='hanten-board-theme-v2')paint();});
+ paint();
+}
+
+export async function shareInvitation(url,{navigator=globalThis.navigator}={}){
+ if(typeof navigator?.share==='function'){
+  try{await navigator.share({title:'オセロ将棋に招待',text:'オセロ将棋で対局しよう！',url});return 'shared';}
+  catch(error){if(error.name==='AbortError')return 'cancelled';}
+ }
+ try{await navigator.clipboard.writeText(url);return 'copied';}catch{return 'select';}
+}
+
+const pageSize=50;
+export function recordPage(logs,page){
+ const pages=Math.max(1,Math.ceil(logs.length/pageSize)),current=Math.max(0,Math.min(pages-1,page)),start=current*pageSize;
+ return {page:current,pages,start,end:Math.min(start+pageSize,logs.length),lines:logs.slice(start,start+pageSize)};
+}
+
+export function initRecordViewer(document,recordLine){
+ const $=id=>document.getElementById(id),dialog=$('recordDialog');
+ let logs=[],page=0,key=null;
+ function paint(){
+  const data=recordPage(logs,page);page=data.page;
+  $('recordList').replaceChildren(...data.lines.map(recordLine));$('recordList').scrollTop=0;
+  $('recordRange').textContent=logs.length?`全${logs.length}手 · ${data.start+1}〜${data.end}手`:'まだ指されていません。';
+  $('recordFirst').disabled=$('recordPrevious').disabled=page===0;
+  $('recordNext').disabled=$('recordLast').disabled=page===data.pages-1;
+ }
+ $('openRecord').addEventListener('click',()=>{page=recordPage(logs,Infinity).pages-1;paint();dialog.showModal();});
+ $('closeRecord').addEventListener('click',()=>dialog.close());
+ for(const [id,target] of [['recordFirst',()=>0],['recordPrevious',()=>page-1],['recordNext',()=>page+1],['recordLast',()=>Infinity]])$(id).addEventListener('click',()=>{page=target();paint();});
+ return {update(next,matchKey){
+  const old=logs;if(matchKey!==key){key=matchKey;page=0;if(dialog.open)dialog.close();}
+  logs=next;$('openRecord').hidden=!logs.length;$('openRecord').textContent=`すべての棋譜（${logs.length}手）`;
+  if(dialog.open&&old!==logs&&(old.length!==logs.length||old.some((line,i)=>line!==logs[i])))paint();
+ }};
+}

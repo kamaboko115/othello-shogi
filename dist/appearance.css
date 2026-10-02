@@ -88,3 +88,21 @@ html[data-ui-theme=dark] .ad-placeholder{background:var(--color-input);color:var
  .appearance-settings label{gap:8px;font-size:15px}
  .appearance-settings select{font-size:14px;max-width:65%}
 }
+/* The mini board uses the same square colors as the full board. */
+.board-theme-sample{display:flex;align-items:center;gap:16px;margin:12px 0 20px}
+.board-theme-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;width:132px;flex:none;padding:5px;background:#735532;border:5px solid #b78a50;border-radius:3px}
+.preview-cell{display:flex;align-items:center;justify-content:center;aspect-ratio:1;background:#e3c28d;min-width:0}
+.preview-cell:nth-child(2n){background:#e0bd85}
+.board-theme-preview .piece{font-size:25px}
+.board-theme-preview[data-theme=green]{background:#10392e;border-color:#174a3c}
+.board-theme-preview[data-theme=green] .preview-cell{background:#27664f}
+.board-theme-preview[data-theme=green] .preview-cell:nth-child(2n){background:#286a52}
+.board-theme-sample figcaption{font-size:13px;color:var(--color-muted,#607068)}
+.invite-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.record-open{margin-top:18px;padding:8px 12px;background:var(--color-surface,#24453f);color:var(--color-ink,#ebeee6);border:1px solid var(--color-rule,#63816b);border-radius:4px;min-height:44px;font-size:14px}
+#recordDialog{width:min(94vw,640px);max-height:90dvh;overflow:auto}
+.record-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.record-pages{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.record-list{max-height:50dvh;overflow:auto;overscroll-behavior:contain;font-size:14px;line-height:1.8;font-variant-numeric:tabular-nums}
+.record-list>div{padding:6px 0;border-bottom:1px solid var(--color-rule,#aaa)}
+.record-list .stone{width:.85em;height:.85em;margin:0 .2em}
