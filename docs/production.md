@@ -1,8 +1,8 @@
 # 本番の運用手順
 
-公開先: https://othello-shogi.oshogi-games.workers.dev/
+公開先: https://oshogi-games.pages.dev/
 
-GitHubの`main`を編集元にし、Cloudflare Workers Buildsで公開します。AI対局は端末内で処理し、友人対局だけD1を使います。通知先の個人メールアドレス・APIトークンは公開ソースへ書きません。
+GitHubの`main`を編集元にし、Cloudflare PagesとWorkers Buildsで公開します。AI対局は端末内で処理し、友人対局だけD1を使います。通知先の個人メールアドレス・APIトークンは公開ソースへ書きません。
 
 ## 更新と確認
 
@@ -76,7 +76,7 @@ Cloudflare Alertsに、Workers・D1の基盤障害をメールで知らせる`�
 
 ## 広告接続の進捗
 
-2026年10月2日にGoogle AdSenseアカウントを作成し、本人操作による受取人情報の送信が受け付けられました。サイトの登録と審査・H5 Games Adsの申請は未完了です。現行の`othello-shogi.oshogi-games.workers.dev`は、AdSenseの登録・サイト追加画面の両方でサブドメインとして拒否されました。無料のPages URLで登録を試す構成を用意しています。別URLへの移行ではAI対局のブラウザ保存や友人対局の参加情報が自動では引き継がれないため、旧URLを急に止めないでください。
+2026年10月2日にGoogle AdSenseアカウントを作成し、本人操作による受取人情報の送信が受け付けられました。無料の`oshogi-games.pages.dev`はサイト追加で受け付けられました。所有確認と審査・H5 Games Adsの申請は未完了です。旧`othello-shogi.oshogi-games.workers.dev`は登録・サイト追加画面の両方でサブドメインとして拒否されました。別URLへの移行ではAI対局のブラウザ保存や友人対局の参加情報が自動では引き継がれないため、旧URLを急に止めないでください。
 
 `index.html`の所有確認メタタグと`/ads.txt`は作成したアカウントの公開Publisher IDを使います。これは審査の準備であり、広告配信の開始・審査通過を意味しません。Googleの広告スクリプトは未追加なので、今は広告通信を行いません。
 
