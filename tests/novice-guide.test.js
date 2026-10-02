@@ -76,6 +76,6 @@ test('guide opens above the existing rules, resets each topic, and uses native d
  assert.equal(get('beginnerGuide').oncancel,undefined);
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
  assert.match(app,/initBeginnerGuide\(document,guideHTML\)/);
- const build=readFileSync(new URL('../build.mjs',import.meta.url),'utf8');
- assert.match(build,/'novice-guide.js'/);
+ const assets=readFileSync(new URL('../worker/static-assets.js',import.meta.url),'utf8');
+ assert.match(assets,/'novice-guide.js'/);
 });

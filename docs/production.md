@@ -16,6 +16,24 @@ GitHubの`main`を編集元にし、Cloudflare Workers Buildsで公開します�
 
 ## Cloudflare設定
 
+### 無料Pages URL
+
+AdSenseに登録できるURLを試すため、画面の配信をCloudflare Pagesにも対応させています。WorkersのURLは`Worker名.アカウント名.workers.dev`のため、名前だけ変えてもサブドメインの階層は変わりません。Pagesでは`プロジェクト名.pages.dev`になります。URLの登録可否と広告審査は別なので、登録できても広告配信の承認は保証されません。
+
+- Pagesプロジェクト名: `oshogi-games`
+- GitHub: `kamaboko115/othello-shogi`、本番ブランチ`main`
+- ルートディレクトリ: `pages`
+- ビルドコマンド: `cd .. && npm test && npm run build:pages`
+- 出力ディレクトリ: `../.sites-runtime/pages`
+- 設定ファイル: `pages/wrangler.jsonc`
+- Service binding: `GAME_API` → 既存Worker `othello-shogi`
+
+`npm run build:pages`は公開用のファイルだけを出力します。比較・開発用HTMLやサーバーのソースは配信しません。`_routes.json`により`/api/*`だけがPages Functionsを通り、それ以外は静的配信です。AIの探索は引き続き端末内で行います。友人対局のAPIはService bindingで元のRequestを既存Workerへ渡し、認証・Origin・IP制限・D1・清掃処理を維持します。
+
+公開後は新しいURLでも`SITE_URL`を指定して`npm run smoke:production`を実行し、友人対局の作成から終了まで検証します。URLが変わるとローカル保存と参加者情報は自動では引き継がれません。旧Workers URLは既存の対局と参加リンクのため残します。
+
+### 既存Worker
+
 - Worker: `othello-shogi`
 - D1: `othello-shogi-db`、バインディング名`DB`
 - 短時間の作成制限: `ROOM_CREATE_BURST`
@@ -56,7 +74,7 @@ Cloudflare Alertsに、Workers・D1の基盤障害をメールで知らせる`�
 
 ## 広告接続の進捗
 
-2026年10月2日にGoogle AdSenseアカウントを作成しました。本人の受取人情報の登録・サイトの登録と審査・H5 Games Adsの申請は未完了です。現行の`othello-shogi.oshogi-games.workers.dev`は、AdSenseの登録・サイト追加画面の両方でサブドメインとして拒否されました。登録可能な公開URLを先に用意します。別URLへの移行ではAI対局のブラウザ保存や友人対局の参加情報が自動では引き継がれないため、旧URLを急に止めないでください。
+2026年10月2日にGoogle AdSenseアカウントを作成し、本人操作による受取人情報の送信が受け付けられました。サイトの登録と審査・H5 Games Adsの申請は未完了です。現行の`othello-shogi.oshogi-games.workers.dev`は、AdSenseの登録・サイト追加画面の両方でサブドメインとして拒否されました。無料のPages URLで登録を試す構成を用意しています。別URLへの移行ではAI対局のブラウザ保存や友人対局の参加情報が自動では引き継がれないため、旧URLを急に止めないでください。
 
 `index.html`の所有確認メタタグと`/ads.txt`は作成したアカウントの公開Publisher IDを使います。これは審査の準備であり、広告配信の開始・審査通過を意味しません。Googleの広告スクリプトは未追加なので、今は広告通信を行いません。
 
