@@ -54,6 +54,19 @@ Cloudflare Alertsに、Workers・D1の基盤障害をメールで知らせる`�
 
 仮広告の箱はlocalhost・127.0.0.1・IPv6ループバックだけで表示します。実広告は未接続です。保存期間と外部サービスは設定から開ける`privacy.html`に記載しています。広告サービスを接続するときは案内とCSPの許可先を更新してください。
 
+## 広告接続の進捗
+
+2026年10月2日にGoogle AdSenseアカウントを作成しました。本人の受取人情報の登録・サイトの登録と審査・H5 Games Adsの申請は未完了です。現行の`othello-shogi.oshogi-games.workers.dev`は、AdSenseの登録・サイト追加画面の両方でサブドメインとして拒否されました。登録可能な公開URLを先に用意します。別URLへの移行ではAI対局のブラウザ保存や友人対局の参加情報が自動では引き継がれないため、旧URLを急に止めないでください。
+
+`index.html`の所有確認メタタグと`/ads.txt`は作成したアカウントの公開Publisher IDを使います。これは審査の準備であり、広告配信の開始・審査通過を意味しません。Googleの広告スクリプトは未追加なので、今は広告通信を行いません。
+
+- 左右のバナー: サイトの承認後に広告ユニットを作成し、十分な横幅がある画面だけで表示します。隠れた広告枠への配信や自動更新は行いません。
+- 2勝ごとの広告: 現在の勝利カウンターは維持し、H5 Games Ads承認後に対局間のinterstitialへ接続します。表示の有無や閉じられる時間はGoogle側が決定します。
+- 無限オセショ様: 任意のrewarded広告を最後まで見たときだけ次のAI対局で有効にします。広告がない場合や途中で閉じた場合に報酬を渡しません。現在は広告なしの試作のままです。
+- 広告導入時はCookie等の説明・同意設定も更新します。AdSenseはnonce方式のCSPを案内しているため、現行CSPを無条件に削除する対応は避けます。広告配信時のCSP変更と通信量は、公式テスト広告で検証してから公開します。
+
+公式資料: [H5 Games Adsの申請](https://developers.google.com/ad-placement/docs/signup)、[AdSenseへ追加できるサイト](https://support.google.com/adsense/answer/12170421)、[AdSenseのCSP](https://support.google.com/adsense/answer/16283098)。
+
 ## 公式資料
 
 - [Workersの制限](https://developers.cloudflare.com/workers/platform/limits/)
