@@ -23,12 +23,14 @@ AdSenseに登録できるURLを試すため、画面の配信をCloudflare Pages
 - Pagesプロジェクト名: `oshogi-games`
 - GitHub: `kamaboko115/othello-shogi`、本番ブランチ`main`
 - ルートディレクトリ: `pages`
-- ビルドコマンド: `cd .. && npm test && npm run build:pages`
+- ビルドコマンド: `npm --prefix .. test && npm --prefix .. run build:pages`
 - 出力ディレクトリ: `.sites-runtime/pages`（Pagesのルート`pages`内）
 - 設定ファイル: `pages/wrangler.jsonc`
 - Service binding: `GAME_API` → 既存Worker `othello-shogi`
 
 `npm run build:pages`は公開用のファイルだけを出力します。比較・開発用HTMLやサーバーのソースは配信しません。`_routes.json`により`/api/*`だけがPages Functionsを通り、それ以外は静的配信です。AIの探索は引き続き端末内で行います。友人対局のAPIはService bindingで元のRequestを既存Workerへ渡し、認証・Origin・IP制限・D1・清掃処理を維持します。
+
+Pagesのビルド中に`cd ..`すると、続くFunctions検出がルートの`functions`を見てしまいます。`npm --prefix ..`で親のテスト・ビルドだけを実行し、Pagesの作業ディレクトリを維持してください。APIのエントリーポイントは`pages/functions/api/[[path]].js`です。
 
 公開後は新しいURLでも`SITE_URL`を指定して`npm run smoke:production`を実行し、友人対局の作成から終了まで検証します。URLが変わるとローカル保存と参加者情報は自動では引き継がれません。旧Workers URLは既存の対局と参加リンクのため残します。
 
