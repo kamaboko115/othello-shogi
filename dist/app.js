@@ -156,10 +156,6 @@ function render(){
  if(homeNotice)$('matchTitle').after(statusPanel);
  else if(statusPanel.parentElement!==statusParent)statusParent.insertBefore(statusPanel,statusNext);
  for(const selector of ['.actions','.end-actions','.record'])document.querySelector(selector).hidden=showTutorial;
- const video=$('tutorialVideo');
- if(!showTutorial)video.pause();
- else if(video.dataset.active==='false'&&video.closest('details').open&&!matchMedia('(prefers-reduced-motion: reduce)').matches)video.play().catch(()=>{});
- video.dataset.active=String(showTutorial);
 
  const perspective=online?.side??0;
  const ending=!!online&&!!state.result&&!collapseEffect&&!comboPreparing;
@@ -377,14 +373,6 @@ async function restore(){
  if(invite&&/^[a-f0-9]{64}$/.test(invite)){try{const preview=await request('/'+room+'/preview',freshToken(),{invite});if(version!==routeVersion)return;inviteRoom={room,invite,settings:preview.settings};}catch(e){if(version===routeVersion){message=e.message;render();}return;}message='「この対局に参加」を押すと、振り駒で先手・後手を決めます。';}
  else message='参加情報がありません。元の招待リンクを開くか、参加したブラウザで開いてください。';render();
 }
-if(matchMedia('(prefers-reduced-motion: reduce)').matches){$('tutorialVideo').autoplay=false;$('tutorialVideo').pause();}
-const tutorialVideo=$('tutorialVideo'),tutorialDetails=tutorialVideo.closest('details');
-tutorialDetails.addEventListener('toggle',()=>{
- if(!tutorialDetails.open||online){tutorialVideo.pause();return;}
- const source=tutorialVideo.querySelector('source');
- if(!source.getAttribute('src')){source.src=source.dataset.src;tutorialVideo.load();}
- if(!matchMedia('(prefers-reduced-motion: reduce)').matches)tutorialVideo.play().catch(()=>{});
-});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){roomPoller.stop();schedulePolling();}else if(!busy)void poll();});
 window.addEventListener('online',()=>{if(!busy)void poll();});
 document.addEventListener('click',event=>{if(event.target.closest?.('#chooseAI,#chooseFriend,#chooseRules,#openRulesAlways,#openSettings,#closeSettings,#closeRules,#copyInvite'))playArcadeCue('tap');});

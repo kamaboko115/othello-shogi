@@ -13,7 +13,7 @@ const requesting=section('async function request(','function adopt(');
 const sending=section('async function sendAction(','function enter(');
 const entering=section('function enter(','for(const [value,name]');
 const creating=section("$('createRoom').onclick=", "$('joinRoom').onclick=");
-const restoring=section('async function restore()','if(matchMedia(');
+const restoring=section('async function restore()',"document.addEventListener('visibilitychange'");
 const polling=section('const roomPoller=createRoomPoller(','async function sendAction(');
 const diagnostics=section('function paintNetworkUsage()','let autoHelperAttempt=');
 const thinking=section('function syncAI()','let lastTossKey=');

@@ -1,0 +1,45 @@
+/* Local trial tokens: existing rounded title and green brand retained. */
+:root {
+ --color-paper: oklch(97% .012 95);
+ --color-surface: oklch(99% .006 95);
+ --color-ink: oklch(24% .016 160);
+ --color-muted: oklch(46% .014 160);
+ --color-rule: oklch(81% .014 160);
+ --color-input: oklch(94% .012 95);
+ --color-accent: oklch(39% .065 160);
+ --color-accent-hover: oklch(32% .055 160);
+ --color-accent-ink: oklch(97% .012 95);
+ --color-focus: oklch(49% .13 165);
+ --color-board: oklch(36% .058 160);
+ --color-board-cell: oklch(43% .063 160);
+ --color-board-rule: oklch(55% .05 160);
+ --color-piece: oklch(87% .07 85);
+ --color-piece-ink: oklch(25% .018 80);
+ --color-tutorial-ink: oklch(97% .012 95);
+ --color-board-label: oklch(87% .048 100);
+ --color-board-focus: oklch(88% .09 90);
+ --color-light-rule: oklch(68% .04 160);
+ --color-alert: oklch(45% .14 28);
+ --color-warm: oklch(91% .045 85);
+ --color-warm-ink: oklch(39% .075 85);
+ --color-backdrop: oklch(22% .022 160 / .65);
+ --color-shadow: oklch(24% .016 160 / .12);
+ --font-display: 'Title M Plus Rounded','Hiragino Maru Gothic ProN',Meiryo,sans-serif;
+ --font-body: 'Yu Gothic UI','Meiryo',sans-serif;
+ --space-xs: 8px;
+ --space-sm: 16px;
+ --space-md: 24px;
+ --space-lg: 32px;
+ --space-xl: 48px;
+ --space-2xl: 64px;
+ --text-small: 14px;
+ --text-body: 16px;
+ --text-title: clamp(24px,2.5vw,32px);
+ --text-brand: clamp(26px,3vw,36px);
+ --ease-out: cubic-bezier(.16,1,.3,1);
+ --ease-in: cubic-bezier(.7,0,.84,0);
+ --ease-in-out: cubic-bezier(.65,0,.35,1);
+ --dur-short: 150ms;
+ --radius-input: 4px;
+ --radius-panel: 12px;
+}

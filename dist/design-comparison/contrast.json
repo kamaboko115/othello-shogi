@@ -1,0 +1,52 @@
+[
+  {
+    "theme": "light",
+    "pairs": [
+      {
+        "pair": "ink/paper",
+        "ratio": 15.01
+      },
+      {
+        "pair": "muted/paper",
+        "ratio": 8.38
+      },
+      {
+        "pair": "accent-ink/accent",
+        "ratio": 8.53
+      },
+      {
+        "pair": "focus/paper",
+        "ratio": 5.19
+      },
+      {
+        "pair": "board-label/board",
+        "ratio": 7.16
+      }
+    ]
+  },
+  {
+    "theme": "dark",
+    "pairs": [
+      {
+        "pair": "ink/paper",
+        "ratio": 15.27
+      },
+      {
+        "pair": "muted/paper",
+        "ratio": 9.52
+      },
+      {
+        "pair": "accent-ink/accent",
+        "ratio": 8.16
+      },
+      {
+        "pair": "focus/paper",
+        "ratio": 10.39
+      },
+      {
+        "pair": "board-label/board",
+        "ratio": 7.16
+      }
+    ]
+  }
+]

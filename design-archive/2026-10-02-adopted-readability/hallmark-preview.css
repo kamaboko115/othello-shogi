@@ -1,0 +1,102 @@
+/* Hallmark · macrostructure: Split Diptych (functional lobby) · tone: friendly, tactile · anchor hue: green
+ * Brand-preserving adaptation, not a catalog-theme conformance claim. Nav N9 adapted; footer Ft2.
+ * Hallmark · pre-emit critique: P4 H4 E4 S5 R4 V4 */
+@import url('hallmark-tokens.css');
+html:has(body.hallmark-trial #tutorial:not([hidden])),body.hallmark-trial:has(#tutorial:not([hidden])){overflow-x:clip;background:var(--color-paper);color:var(--color-ink);font-family:var(--font-body)}
+.trial-compare{display:none}
+body.hallmark-trial:has(#tutorial:not([hidden])) header{height:88px;padding:0 max(var(--space-md),calc((100% - 1120px)/2));gap:var(--space-sm);border-bottom:0;background:var(--color-paper)}
+body.hallmark-trial:has(#tutorial:not([hidden])) header .brand{background:transparent;padding:0;border-radius:0;font-family:var(--font-display);font-size:var(--text-brand);color:var(--color-ink);letter-spacing:.015em}
+body.hallmark-trial:has(#tutorial:not([hidden])) header .brand span{color:var(--color-accent)}
+body.hallmark-trial:has(#tutorial:not([hidden])) header .local{display:none}
+body.hallmark-trial:has(#tutorial:not([hidden])) .trial-compare{display:block;order:3;margin-left:var(--space-sm);color:var(--color-muted);font-size:var(--text-small);text-underline-offset:4px;white-space:nowrap}
+body.hallmark-trial:has(#tutorial:not([hidden])) .settings-gear{order:2;color:var(--color-ink);width:44px;height:44px;margin:0;background:transparent}
+body.hallmark-trial:has(#tutorial:not([hidden])) .rules-link{order:1;margin-left:auto;min-height:44px;background:transparent;border:0;color:var(--color-ink);font-size:var(--text-small);white-space:nowrap;text-decoration:underline;text-underline-offset:5px}
+body.hallmark-trial:has(#tutorial:not([hidden])) main{max-width:1120px;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);align-items:start;gap:var(--space-2xl);padding:var(--space-md) var(--space-md) var(--space-xl)}
+body.hallmark-trial:has(#tutorial:not([hidden])) #tutorial{max-width:none;width:100%}
+body.hallmark-trial:has(#tutorial:not([hidden])) main aside{width:100%;max-width:none;margin:0;padding:0;min-width:0}
+body.hallmark-trial:has(#tutorial:not([hidden])) .online-panel{margin:0;border:0;padding:0;background:transparent;border-radius:0}
+body.hallmark-trial:has(#tutorial:not([hidden])) #matchTitle{font-family:var(--font-display);font-weight:500;font-size:var(--text-title);line-height:1.4;margin:0 0 var(--space-sm);color:var(--color-ink)}
+body.hallmark-trial:has(#tutorial:not([hidden])) #matchTitle rt{color:var(--color-muted)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .match-choices{display:flex;gap:0;margin-bottom:var(--space-sm);border-bottom:1px solid var(--color-rule);background:transparent}
+body.hallmark-trial:has(#tutorial:not([hidden])) .match-choices button{min-height:52px;flex:1;padding:var(--space-xs) 4px 12px;margin:0;background:transparent;color:var(--color-muted);border:0;border-bottom:3px solid transparent;border-radius:0;font-size:var(--text-body);font-weight:400;white-space:nowrap}
+body.hallmark-trial:has(#tutorial:not([hidden])) .match-choices button[aria-pressed=true]{background:transparent;border-bottom-color:var(--color-accent);color:var(--color-ink);font-weight:700}
+body.hallmark-trial:has(#tutorial:not([hidden])) .setting-row{font-size:var(--text-body);gap:var(--space-sm);margin:var(--space-sm) 0;color:var(--color-ink)}
+body.hallmark-trial:has(#tutorial:not([hidden])) select{min-height:44px;min-width:0;background:var(--color-surface);color:var(--color-ink);border:1px solid var(--color-rule);border-radius:var(--radius-input);padding:var(--space-xs) 12px;max-width:60%;font-size:var(--text-body)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .ai-settings-inline{margin:var(--space-md) 0;gap:var(--space-md)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .ai-settings-inline .setting-row{margin:0;gap:var(--space-xs);font-size:var(--text-small)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .ai-settings-inline select{font-size:var(--text-small);padding:var(--space-xs)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .ai-handicap-row select{max-width:100%}
+body.hallmark-trial:has(#tutorial:not([hidden])) #helperUnlimited{display:inline-block;width:18px;height:18px;margin:0 var(--space-xs) 0 0;vertical-align:middle}
+body.hallmark-trial:has(#tutorial:not([hidden])) #matchTitle{overflow-wrap:anywhere;min-width:0}
+body.hallmark-trial:has(#tutorial:not([hidden])) #matchSetup button:active{transform:translateY(1px)}
+body.hallmark-trial:has(#tutorial:not([hidden])) #matchSetup button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+body.hallmark-trial:has(#tutorial:not([hidden])) .time-sliders{margin:var(--space-sm) 0 var(--space-xs)}
+body.hallmark-trial:has(#tutorial:not([hidden])) #friendSettings .setting-row{margin:var(--space-xs) 0}
+body.hallmark-trial:has(#tutorial:not([hidden])) .time-sliders legend{color:var(--color-ink);font-size:var(--text-body);font-weight:700;margin-bottom:var(--space-sm)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .time-sliders label{color:var(--color-ink);font-size:var(--text-small)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .time-sliders output{color:var(--color-ink);font-weight:700}
+body.hallmark-trial:has(#tutorial:not([hidden])) input[type=range]{accent-color:var(--color-accent);height:28px;margin:0 0 var(--space-xs);min-width:0}
+body.hallmark-trial:has(#tutorial:not([hidden])) input[type=checkbox]{accent-color:var(--color-accent)}
+body.hallmark-trial:has(#tutorial:not([hidden])) #advancedSettings{border-top:1px solid var(--color-rule);margin:var(--space-sm) 0 var(--space-sm);padding-top:var(--space-xs)}
+body.hallmark-trial:has(#tutorial:not([hidden])) summary{min-height:44px;display:list-item;align-content:center;font-size:var(--text-small);color:var(--color-muted)}
+body.hallmark-trial:has(#tutorial:not([hidden])) #advancedSettings summary{padding:var(--space-xs) 0;min-height:44px}
+body.hallmark-trial:has(#tutorial:not([hidden])) p.note,body.hallmark-trial:has(#tutorial:not([hidden])) .note{color:var(--color-muted);font-size:var(--text-small);line-height:1.7}
+body.hallmark-trial:has(#tutorial:not([hidden])) #timeHelp{min-height:1.7em;margin:var(--space-xs) 0;color:var(--color-muted)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .online-panel #createRoom,body.hallmark-trial:has(#tutorial:not([hidden])) .online-panel #joinRoom{width:100%;min-height:64px;margin:var(--space-sm) 0 0;padding:var(--space-sm);background:var(--color-accent);color:var(--color-accent-ink);font-size:20px;font-weight:700;border:0;border-radius:var(--radius-input);box-shadow:none;white-space:nowrap;transition:transform var(--dur-short) var(--ease-out)}
+body.hallmark-trial:has(#tutorial:not([hidden])) #createRoom:active{transform:translateY(2px)}
+body.hallmark-trial:has(#tutorial:not([hidden])) #createRoom:disabled{opacity:.55;cursor:wait;transform:none}
+body.hallmark-trial:has(#tutorial:not([hidden])) #connection:empty{margin:0}
+body.hallmark-trial:has(#tutorial:not([hidden])) aside>.note:last-child{border-top:1px solid var(--color-rule);margin-top:var(--space-lg);padding-top:var(--space-sm);font-size:var(--text-small)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch{padding:var(--space-lg);min-height:400px;border:0;border-radius:var(--radius-panel);background:var(--color-board);color:var(--color-accent-ink);align-items:stretch;justify-content:space-between;text-align:left;gap:var(--space-md);box-shadow:none}
+body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch strong{font-family:var(--font-display);font-weight:500;font-size:24px;line-height:1.4;white-space:nowrap}
+body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch .trial-explanation{font-family:var(--font-body);font-size:var(--text-small);line-height:1.7}
+body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch b{display:flex;justify-content:space-between;align-items:center;font-size:18px;border-top:1px solid var(--color-light-rule);padding-top:var(--space-md)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch b span{font-size:24px;transition:transform var(--dur-short) var(--ease-out)}
+.trial-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid var(--color-board-rule);width:100%;max-width:320px;align-self:center}
+.trial-square{display:grid;place-items:center;aspect-ratio:1;background:var(--color-board-cell);border-right:1px solid var(--color-board-rule)}
+.trial-square:last-child{border:0}
+.trial-piece{display:grid;place-items:center;clip-path:polygon(50% 0,86% 18%,100% 100%,0 100%,14% 18%);width:62%;height:75%;padding-top:8%;background:var(--color-piece);color:var(--color-piece-ink);font-family:var(--font-display);font-size:clamp(30px,3vw,44px);font-style:normal;line-height:1}
+.trial-enemy{transform:rotate(180deg)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-video{border-top:0;margin:var(--space-xs) 0 0;padding:0 var(--space-xs)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-video video{border-color:var(--color-rule)}
+body.hallmark-trial:has(#tutorial:not([hidden])) .rule-tooltip{background:var(--color-surface);color:var(--color-ink);border-color:var(--color-rule);max-width:min(330px,calc(100vw - 40px));box-shadow:none}
+body.hallmark-trial:has(#tutorial:not([hidden])) #helperUnlimitedRow{padding:0;border:0;border-radius:0;background:transparent;color:var(--color-ink)}
+body.hallmark-trial:has(#tutorial:not([hidden])) #helperUnlimitedRow small{color:var(--color-muted)}
+body.hallmark-trial:has(#tutorial:not([hidden])) #helperAd{background:var(--color-input);color:var(--color-ink);border:1px solid var(--color-rule);min-height:44px}
+body.hallmark-trial:has(#tutorial:not([hidden])) :is(button,a,select,input,summary,[tabindex]):focus-visible{outline:3px solid var(--color-focus);outline-offset:4px}
+body.hallmark-trial:has(#tutorial:not([hidden])) #openTutorial:focus-visible{outline-color:var(--color-accent)}
+@media(hover:hover){
+ body.hallmark-trial:has(#tutorial:not([hidden])) #createRoom:hover{background:var(--color-accent-hover)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch:hover{background:var(--color-accent-hover)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch:hover b span{transform:translateX(4px)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) select:hover{background:var(--color-input)}
+}
+@media(max-width:820px){
+ body.hallmark-trial:has(#tutorial:not([hidden])) input[type=range]{height:44px}
+ body.hallmark-trial:has(#tutorial:not([hidden])) main{max-width:620px;grid-template-columns:minmax(0,1fr);gap:var(--space-lg);padding:var(--space-sm) var(--space-md) var(--space-lg)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) header{height:88px;padding:0 var(--space-md)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) #tutorial{max-width:none}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch{min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:var(--space-sm) var(--space-md);padding:var(--space-md)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch strong{white-space:normal;font-size:22px;align-self:end}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .trial-board{grid-column:2;grid-row:1/3;align-self:center;max-width:140px}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .trial-piece{font-size:24px}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch b{grid-column:1/-1;padding-top:var(--space-sm)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .trial-compare{display:none}
+}
+@media(max-width:440px){
+ body.hallmark-trial:has(#tutorial:not([hidden])) header{gap:var(--space-xs);padding:0 var(--space-sm);height:80px}
+ body.hallmark-trial:has(#tutorial:not([hidden])) header .brand{font-size:26px}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .settings-gear{width:40px;flex-shrink:0}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .rules-link{padding:var(--space-xs) 0;font-size:12px}
+ body.hallmark-trial:has(#tutorial:not([hidden])) main{padding:var(--space-sm);gap:var(--space-md)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch{grid-template-columns:minmax(0,1fr);padding:var(--space-md);gap:var(--space-sm)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch strong{font-size:21px;white-space:nowrap}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .trial-board{grid-column:1;grid-row:2;max-width:216px;width:100%;justify-self:start}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .trial-piece{font-size:30px}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch b{padding-top:var(--space-sm)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .ai-settings-inline{gap:var(--space-xs)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .ai-settings-inline .setting-row{gap:4px}
+ body.hallmark-trial:has(#tutorial:not([hidden])) .match-choices button{font-size:var(--text-small)}
+ body.hallmark-trial:has(#tutorial:not([hidden])) #createRoom{font-size:18px}
+}
+@media(prefers-reduced-motion:reduce){body.hallmark-trial:has(#tutorial:not([hidden])) *{transition:none!important}body.hallmark-trial:has(#tutorial:not([hidden])) .tutorial-launch:hover b span,body.hallmark-trial:has(#tutorial:not([hidden])) #createRoom:active{transform:none}}

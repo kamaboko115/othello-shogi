@@ -361,3 +361,5 @@ html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 .interstitial-test>p:first-child{font-size:11px;letter-spacing:.15em}
 .interstitial-test h2{margin:65px 0 16px}
 .interstitial-test button{margin-top:40px;min-width:210px}
+
+.dev-puzzle-link{display:inline-block;padding:10px 22px;background:#194e40;color:#fff;text-decoration:none;border-radius:4px;margin:4px 8px 0 0}
