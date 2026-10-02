@@ -17,6 +17,7 @@ import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js'
 import {startAI} from './ai-client.js';
 import {createLocalAIStore} from './local-ai-game.js';
 import {createRoomTransport,createRoomPoller} from './room-network.js';
+import {initBoardPreview,shareInvitation,initRecordViewer} from './lobby-tools.js';
 import {createClockWarning} from './clock-warning.js';
 import {playClockWarning} from './sound.js';
 import {playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
@@ -103,6 +104,8 @@ $('openSettings').onclick=()=>{paintNetworkUsage();$('settingsDialog').showModal
 $('closeSettings').onclick=()=>{$('settingsDialog').close();syncAI();};
 initCredits(document);
 createDevAccess({document}).guardDeveloperTools();
+initBoardPreview(document);
+const recordViewer=initRecordViewer(document,recordLine);
 $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
 function syncDebugCollapseOption(){
  const enabled=$('debugCollapseOption').checked,option=$('paradoxAt').querySelector('option[value="2"]');
@@ -162,6 +165,8 @@ function render(){
  if(resultInfo){$('resultTitle').textContent=resultInfo.title;$('resultReason').textContent=resultInfo.reason;$('resultDetail').textContent=resultInfo.detail;}
  const rematchHome=ending?$('resultActions'):document.querySelector('aside');
  if($('rematchPanel').parentElement!==rematchHome)rematchHome.prepend($('rematchPanel'));
+ const recordHome=ending?$('resultActions'):$('record').parentElement;
+ if($('openRecord').parentElement!==recordHome){if(ending)recordHome.append($('openRecord'));else recordHome.insertBefore($('openRecord'),$('record'));}
 
  const moveKey=online?online.room+':'+(online.round||1)+':'+state.ply:'';
  const elapsed=performance.now()-animationStarted;
@@ -197,6 +202,7 @@ function render(){
  $('resign').disabled=!online||!!state.result||busy||!online.joined||!connected;
  $('draw').disabled=$('resign').disabled;$('draw').textContent='引き分けを提案';
  $('record').replaceChildren(...logs.slice(-12).reverse().map(recordLine));
+ recordViewer.update(logs,online?online.room+':'+(online.round||1):null);
  $('createRoom').hidden=!!online||!!inviteRoom;$('createRoom').disabled=busy;
  $('joinRoom').hidden=!inviteRoom||!!online;$('joinRoom').disabled=busy;
  $('roomTools').hidden=!online;
@@ -352,6 +358,14 @@ $('createRoom').onclick=async()=>{
 };
 $('joinRoom').onclick=async()=>{if(!inviteRoom)return;busy=true;render();try{const saved=storage.get('hanten-room-'+inviteRoom.room)||{token:freshToken()};storage.set('hanten-room-'+inviteRoom.room,saved);const data=await request('/'+inviteRoom.room+'/join',saved.token,{invite:inviteRoom.invite});enter(data,saved.token);}catch(e){message=e.message;}finally{busy=false;render();}};
 $('copyInvite').onclick=async()=>{try{await navigator.clipboard.writeText($('inviteLink').value);$('copyInvite').textContent='コピーしました';}catch{$('inviteLink').select();message='招待リンクを選択しました。コピーして相手に送ってください。';render();}};
+$('shareInvite').onclick=async()=>{
+ const button=$('shareInvite');button.disabled=true;
+ try{
+  const result=await shareInvitation($('inviteLink').value);
+  if(result==='copied')button.textContent='リンクをコピーしました';
+  if(result==='select'){$('inviteLink').focus();$('inviteLink').select();message='共有に対応していないため、招待リンクを選択しました。コピーして相手に送ってください。';render();}
+ }finally{button.disabled=false;}
+};
 async function rematchWithAd(action){
  if(busy||!online)return;const room=online.room,round=online.round;busy=true;render();
  await winAds.betweenMatches();busy=false;render();
@@ -376,7 +390,7 @@ async function restore(){
 }
 document.addEventListener('visibilitychange',()=>{if(document.hidden){roomPoller.stop();schedulePolling();}else if(!busy)void poll();});
 window.addEventListener('online',()=>{if(!busy)void poll();});
-document.addEventListener('click',event=>{if(event.target.closest?.('#chooseAI,#chooseFriend,#chooseRules,#openRulesAlways,#openSettings,#closeSettings,#closeRules,#copyInvite'))playArcadeCue('tap');});
+document.addEventListener('click',event=>{if(event.target.closest?.('#chooseAI,#chooseFriend,#chooseRules,#openRulesAlways,#openSettings,#closeSettings,#closeRules,#copyInvite,#shareInvite,#openRecord'))playArcadeCue('tap');});
 window.addEventListener('hashchange',restore);
 render();restore();
 
