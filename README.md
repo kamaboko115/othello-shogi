@@ -2,9 +2,11 @@
 
 将棋に「挟むと敵駒が味方になる」ルールを加えたWebゲーム。
 
-[ゲームを遊ぶ](https://othello-shogi.oshogi-games.workers.dev/)
+[ゲームを遊ぶ](https://oshogi-games.pages.dev/)
 
 このリンクは公開版です。`main`へのマージ後、Cloudflareのデプロイが成功すると更新されます。作業ブランチへのマージだけでは公開版は変わりません。未公開の変更はローカルプレビューで確認してください。
+
+画面はCloudflare Pages、友人対局のAPIは既存のWorkers・D1を使います。[旧URL](https://othello-shogi.oshogi-games.workers.dev/)も既存の参加リンクや保存したAI対局のため継続しています。ブラウザ内の保存と参加情報は新URLへ自動では引き継がれません。
 
 ## ルール
 - 移動・駒打ちの直後、縦横斜め8方向で隙間なく挟んだ敵駒を反転。成りと位置を維持します。

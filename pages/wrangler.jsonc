@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/wrangler.json",
   "name": "oshogi-games",
-  "pages_build_output_dir": "../.sites-runtime/pages",
+  "pages_build_output_dir": ".sites-runtime/pages",
   "compatibility_date": "2026-09-29",
   "services": [
     { "binding": "GAME_API", "service": "othello-shogi" }

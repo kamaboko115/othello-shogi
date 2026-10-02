@@ -3,7 +3,7 @@ import {randomBytes} from 'node:crypto';
 import {moves} from '../dist/engine.js';
 
 // Explicit manual check only. Never schedule room creation or print room tokens.
-const origin=new URL(process.env.SITE_URL||'https://othello-shogi.oshogi-games.workers.dev').origin;
+const origin=new URL(process.env.SITE_URL||'https://oshogi-games.pages.dev').origin;
 const token=()=>randomBytes(32).toString('hex');
 const host=token(),guest=token(),invite=token();
 let room=null,snapshot=null;
