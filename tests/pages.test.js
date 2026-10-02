@@ -7,7 +7,7 @@ import {securityHeaders} from '../worker/security.js';
 import {textAssets,binaryAssets} from '../worker/static-assets.js';
 
 execFileSync(process.execPath,['build-pages.mjs'],{cwd:new URL('..',import.meta.url),stdio:'pipe'});
-const output=new URL('../.sites-runtime/pages/',import.meta.url);
+const output=new URL('../pages/.sites-runtime/pages/',import.meta.url);
 
 test('Pages serves the same public assets and keeps preview/server files private',async()=>{
  for(const name of [...textAssets,...binaryAssets]){

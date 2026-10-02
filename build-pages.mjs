@@ -5,7 +5,8 @@ import {textAssets,binaryAssets} from './worker/static-assets.js';
 import {securityHeaders} from './worker/security.js';
 
 const root=dirname(fileURLToPath(import.meta.url));
-const out=join(root,'.sites-runtime/pages');
+// Pages checks that the output stays within its configured project root.
+const out=join(root,'pages/.sites-runtime/pages');
 await mkdir(out,{recursive:true});
 for(const name of [...textAssets,...binaryAssets]){
  await mkdir(dirname(join(out,name)),{recursive:true});

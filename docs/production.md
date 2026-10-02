@@ -24,7 +24,7 @@ AdSenseに登録できるURLを試すため、画面の配信をCloudflare Pages
 - GitHub: `kamaboko115/othello-shogi`、本番ブランチ`main`
 - ルートディレクトリ: `pages`
 - ビルドコマンド: `cd .. && npm test && npm run build:pages`
-- 出力ディレクトリ: `.sites-runtime/pages`（PagesのGitビルドではリポジトリ基準）
+- 出力ディレクトリ: `.sites-runtime/pages`（Pagesのルート`pages`内）
 - 設定ファイル: `pages/wrangler.jsonc`
 - Service binding: `GAME_API` → 既存Worker `othello-shogi`
 
