@@ -30,7 +30,8 @@ export default {
   if(isBinary)headers['Accept-Ranges']='bytes';
   if(['GET','HEAD'].includes(request.method)&&matchesETag(request.headers.get('If-None-Match'),etags[path]))return new Response(null,{status:304,headers});
   if(!isBinary)return new Response(request.method==='HEAD'?null:body,{headers});
-  const bytes=Uint8Array.from(atob(binary[path]),c=>c.charCodeAt(0));
+  const decoded=atob(binary[path]),bytes=new Uint8Array(decoded.length);
+  for(let i=0;i<decoded.length;i++)bytes[i]=decoded.charCodeAt(i);
   let start=0,end=bytes.length-1,status=200;
   const range=request.headers.get('Range');
   if(range){

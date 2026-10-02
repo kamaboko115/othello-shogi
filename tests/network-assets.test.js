@@ -25,6 +25,12 @@ test('compiled worker serves the developer UI lock module',async()=>{
  assert.equal((await request('/dev-access.js')).status,200);
 });
 
+test('opt-in music is served as cacheable MP3 and supports partial audio reads',async()=>{
+ const path='/music/electrodoodle.mp3',bytes=await readFile(new URL('../dist'+path,import.meta.url));
+ const partial=await request(path,{headers:{Range:'bytes=100-199'}});assert.equal(partial.status,206);assert.equal(partial.headers.get('Content-Type'),'audio/mpeg');assert.equal(partial.headers.get('Content-Range'),`bytes 100-199/${bytes.length}`);assert.deepEqual(Buffer.from(await partial.arrayBuffer()),bytes.subarray(100,200));
+ const cached=await request(path,{headers:{'If-None-Match':partial.headers.get('ETag')}});assert.equal(cached.status,304);assert.equal(await cached.text(),'');
+});
+
 test('AdSenseの所有確認タグとads.txtを配信し、実広告スクリプトはまだ読み込まない',async()=>{
  const page=await (await request('/')).text();
  assert.match(page,/<meta name="google-adsense-account" content="ca-pub-1514816413848325">/);
