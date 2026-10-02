@@ -24,3 +24,12 @@ test('compiled worker retains binary byte ranges, HEAD and unsatisfiable range b
 test('compiled worker serves the developer UI lock module',async()=>{
  assert.equal((await request('/dev-access.js')).status,200);
 });
+
+test('AdSenseの所有確認タグとads.txtを配信し、実広告スクリプトはまだ読み込まない',async()=>{
+ const page=await (await request('/')).text();
+ assert.match(page,/<meta name="google-adsense-account" content="ca-pub-1514816413848325">/);
+ assert.doesNotMatch(page,/src="https:\/\/pagead2\.googlesyndication\.com/);
+ const text=await request('/ads.txt');
+ assert.equal(text.status,200);assert.match(text.headers.get('Content-Type'),/^text\/plain/);
+ assert.equal((await text.text()).trim(),'google.com, pub-1514816413848325, DIRECT, f08c47fec0942fa0');
+});
