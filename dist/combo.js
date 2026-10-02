@@ -191,7 +191,7 @@ export async function runCombo(state,root,perspective,signal){
   }
  }
  const pieces=order.map(i=>root.querySelector('[data-square="'+i+'"] .piece'));
- pieces.forEach((el,j)=>{if(!el)return;el.classList.toggle('enemy',(state.board[order[j]]?.side??1-state.turn)===perspective);el.getAnimations().forEach(a=>a.cancel());el.style.transform=(state.board[order[j]]?.side??1-state.turn)===perspective?'rotate(180deg)':'rotate(0deg)';});
+ pieces.forEach((el,j)=>{if(!el)return;el.dataset.side=1-(state.board[order[j]]?.side??1-state.turn);el.classList.toggle('enemy',(state.board[order[j]]?.side??1-state.turn)===perspective);el.getAnimations().forEach(a=>a.cancel());el.style.transform=(state.board[order[j]]?.side??1-state.turn)===perspective?'rotate(180deg)':'rotate(0deg)';});
  const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);signal?.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);signal?.addEventListener('abort',done,{once:true});if(signal?.aborted)done();});
  try{for(let j=0;j<order.length;j++){
   if(signal?.aborted)return;
@@ -199,7 +199,7 @@ export async function runCombo(state,root,perspective,signal){
   if(timing.pause){quietComboSounds();await wait(timing.pause);if(signal?.aborted)return;}
   const el=pieces[j],enemy=(state.board[order[j]]?.side??1-state.turn)!==perspective,start=enemy?0:180;
   notice.className='combo-notice '+comboTier(j+1);notice.style.fontSize=`calc(clamp(32px,5vw,58px) * ${1.04**j})`;notice.textContent=order.length===1?'1combo':(j+1)+' combo';playComboSound(j+1);
-  if(el){el.classList.toggle('enemy',enemy);el.style.transform='rotate('+(start+540)+'deg)';if(!reduced)track(el.animate([{transform:'rotate('+start+'deg) scale(1)'},{offset:.5,transform:'rotate('+(start+270)+'deg) scale(1.2)'},{transform:'rotate('+(start+540)+'deg) scale(1)'}],{duration:timing.duration,easing:'ease-in-out'}));}
+  if(el){el.dataset.side=state.board[order[j]]?.side??1-state.turn;el.classList.toggle('enemy',enemy);el.style.transform='rotate('+(start+540)+'deg)';if(!reduced)track(el.animate([{transform:'rotate('+start+'deg) scale(1)'},{offset:.5,transform:'rotate('+(start+270)+'deg) scale(1.2)'},{transform:'rotate('+(start+540)+'deg) scale(1)'}],{duration:timing.duration,easing:'ease-in-out'}));}
   await wait(timing.duration);if(signal?.aborted)return;
   gather(el);
   if(j===order.length-1&&flipNeedsShake(state))track(shakeScreen(root,signal,order.length>=4));

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {lessons,lessonState,collapseReply} from '../dist/tutorial-lessons.js';
+import {lessons,lessonState,collapseReply,collapseLesson} from '../dist/tutorial-lessons.js';
 import {play,moves,collapseAfterMove} from '../dist/engine.js';
 globalThis.window={addEventListener(){}};
 globalThis.matchMedia=()=>({matches:false});
@@ -19,13 +19,15 @@ test('全レッスンの案内手が合法で、説明どおり反転・勝利�
 test('崩壊レッスンは穴熊を段階的に壊し、相手の応手後も王を初回で壊さない',()=>{
  const index=lessons.findIndex(lesson=>lesson.collapse),lesson=lessons[index];let s=lessonState(index);
  assert.equal(s.board[lesson.enemyKing].type,'K');assert.equal(s.board[lesson.enemyKing].side,1);
- const collapse=step=>{const choices=s.board.flatMap((p,i)=>p?[i]:[]),pick=choices.indexOf(lesson.collapseSequence[step]);s=collapseAfterMove(s,()=>pick);return s.destroyed;};
+ const collapse=step=>{s=collapseLesson(s,step);return s.destroyed;};
  s=collapseAfterMove(play(s,lesson.move),()=>{throw Error('activation must not select a victim');});assert.equal(s.paradoxStarted,true);
- for(let step=0;step<6;step++){
+ for(let step=0;step<7;step++){
   const move=step%2===1?{from:49-Math.floor(step/2)*9,to:40-Math.floor(step/2)*9,prom:false}:collapseReply(s,lesson.collapseSequence.slice(step));
   assert.ok(move,'応手が存在する');assert.ok(moves(s,move.from).some(m=>m.to===move.to));s=play(s,move);
-  const destroyed=collapse(step);assert.equal(destroyed.square,lesson.collapseSequence[step]);
-  if(step<5)assert.equal(s.result,'');else assert.match(s.result,/先手の勝ち.*王が崩壊/);
+  const destroyed=collapse(step);
+  if(step===5){assert.equal(destroyed,null);assert.equal(s.spawned.piece.prom,true);assert.ok(['R','B'].includes(s.spawned.piece.type));}
+  else assert.equal(destroyed.square,lesson.collapseSequence[step]);
+  if(step<6)assert.equal(s.result,'');else assert.match(s.result,/先手の勝ち.*王が崩壊/);
  }
 });
 test('直接の王取りだけ検出し、王反転・再受信・投了では発動しない',()=>{

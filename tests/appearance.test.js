@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const source=readFileSync(new URL('../dist/appearance.js',import.meta.url),'utf8');
 function browser({theme='light',board='green',url='https://oshogi-games.pages.dev/?theme=dark#room=shared'}={}){
  const values=new Map([['othello-shogi-appearance-v1',JSON.stringify({design:'improved',theme})],['hanten-board-theme-v2',JSON.stringify(board)]]),listeners={},elements={};
- for(const id of ['designMode','uiTheme','boardTheme'])elements[id]={value:'',events:{},addEventListener(name,callback){this.events[name]=callback;}};
+ for(const id of ['designMode','uiTheme','boardTheme','pieceSkin'])elements[id]={value:'',events:{},addEventListener(name,callback){this.events[name]=callback;}};
  const root={dataset:{},style:{}},document={readyState:'complete',documentElement:root,body:{classList:{toggle(){}}},querySelector(){return null;},querySelectorAll(){return [];},getElementById:id=>elements[id]};
  const context={document,location:new URL(url),URL,URLSearchParams,localStorage:{getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)},history:{replaceState(){}},addEventListener:(name,callback)=>listeners[name]=callback};
  vm.runInNewContext(source,context);
@@ -40,4 +40,11 @@ test('preferences sync between a user’s tabs through local storage, including 
  user.listeners.storage({key:'hanten-board-theme-v2',newValue:'"wood"'});
  assert.equal(user.root.dataset.uiTheme,'dark');assert.equal(user.elements.uiTheme.value,'dark');
  assert.equal(user.root.dataset.boardTheme,'wood');assert.equal(user.elements.boardTheme.value,'wood');
+});
+
+test('the Othello piece skin is a separate local preference and syncs without room settings',()=>{
+ const host=browser(),guest=browser();host.change('pieceSkin','stones');
+ assert.equal(host.root.dataset.pieceSkin,'stones');assert.equal(host.values.get('othello-shogi-piece-skin-v1'),'stones');assert.equal(guest.root.dataset.pieceSkin,'wood');
+ guest.listeners.storage({key:'othello-shogi-piece-skin-v1',newValue:'stones'});assert.equal(guest.root.dataset.pieceSkin,'stones');assert.equal(guest.elements.pieceSkin.value,'stones');
+ guest.listeners.storage({key:'othello-shogi-piece-skin-v1',newValue:null});assert.equal(guest.root.dataset.pieceSkin,'wood');
 });

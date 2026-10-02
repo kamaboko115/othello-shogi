@@ -3,6 +3,7 @@ import {normalizeTime,timeOptions,handicapOptions,applyHandicap,startClock,clock
 import {initial,play,collapseAfterMove,label,names,moves} from '../dist/engine.js';
 import {roomLimitSchema,roomLimitResponse,insertLimitedFriendRoom} from './room-limits.js';
 import {securityHeaders,readLimitedRequestBody} from './security.js';
+import {rememberReplay,appendReplay,rewindReplay,replayRecord} from '../dist/replay-code.js';
 
 export const schema=`CREATE TABLE IF NOT EXISTS rooms (id TEXT PRIMARY KEY, host_hash TEXT NOT NULL, guest_hash TEXT, invite_hash TEXT NOT NULL, data TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS rooms_expires ON rooms(expires);`+roomLimitSchema;
 export const activeHostRoomQuery='SELECT * FROM rooms WHERE host_hash = ? AND expires > ? LIMIT 1';
@@ -20,10 +21,10 @@ const notation=(s,m)=>`${s.ply+1}. ${s.turn===0?'▲':'▽'}${9-m.to%9}${'一二
 export function furigoma(){const coins=Array.from(crypto.getRandomValues(new Uint8Array(5)),n=>n%2);return {coins,hostSide:coins.reduce((a,b)=>a+b,0)>=3?0:1};}
 function matchToss(settings){const toss=furigoma();if(settings?.aiLevel!=='osesho'||toss.hostSide===1)return toss;return {coins:[0,0,0,0,0],originalCoins:toss.coins,hostSide:1,intervened:true};}
 function setupState(settings){const state=initial(true);state.noDrops=!!settings?.noDrops;state.moveLimit=normalizeMoveLimit(settings?.moveLimit,60);state.paradoxAt=settings?.paradoxAt??150;return state;}
-function remember(data){data.takebacks||=[];data.takebacks.push({state:structuredClone(data.state),logs:[...data.logs]});if(data.takebacks.length>128)data.takebacks.shift();data.undoOffer=null;}
+function remember(data){rememberReplay(data);data.takebacks||=[];data.takebacks.push({state:structuredClone(data.state),logs:[...data.logs]});if(data.takebacks.length>128)data.takebacks.shift();data.undoOffer=null;}
 function undoIndex(data,side){return (data.takebacks||[]).findLastIndex(x=>x.state.turn===side);}
-function rewind(data,index){const snapshot=data.takebacks?.[index];if(!snapshot)fail('戻せる手がありません。',409);data.state=snapshot.state;data.logs=snapshot.logs;data.takebacks=data.takebacks.slice(0,index);data.undoOffer=null;data.offer=null;data.rematch=null;}
-const view=(row,seat)=>{const data=JSON.parse(row.data);const playerSide=seat===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0);const canUndo=undoIndex(data,playerSide)>=0;delete data.takebacks;return {serverNow:Date.now(),canUndo,room:row.id,seat,side:seat===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0),version:row.version,joined:!!row.guest_hash,expires:row.expires,...data};};
+function rewind(data,index){const snapshot=data.takebacks?.[index];if(!snapshot)fail('戻せる手がありません。',409);data.state=snapshot.state;data.logs=snapshot.logs;rewindReplay(data);data.takebacks=data.takebacks.slice(0,index);data.undoOffer=null;data.offer=null;data.rematch=null;}
+const view=(row,seat)=>{const data=JSON.parse(row.data);const playerSide=seat===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0);const canUndo=undoIndex(data,playerSide)>=0;delete data.takebacks;delete data.replay;return {serverNow:Date.now(),canUndo,room:row.id,seat,side:seat===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0),version:row.version,joined:!!row.guest_hash,expires:row.expires,...data};};
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status});};
 // Entrypoints supply a trusted IP: CF-Connecting-IP in Workers, socket IP locally.
 // The default is for in-process callers; production requires its burst binding.
@@ -81,7 +82,7 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
    if(side!==null)return json(view(row,side));
    if(!validToken(body.invite)||await hash(body.invite)!==row.invite_hash)fail('招待リンクが正しくありません。',403);
    if(row.guest_hash)fail('この対局にはすでに2人が参加しています。',409);
-   const fresh=JSON.parse(row.data);fresh.toss=fresh.kind==='ai'?matchToss(fresh.settings):furigoma();fresh.round=1;fresh.rematch=null;applyHandicap(fresh.state,fresh.toss.hostSide,fresh.settings?.handicap);startClock(fresh,now);
+   const fresh=JSON.parse(row.data);delete fresh.replay;fresh.toss=fresh.kind==='ai'?matchToss(fresh.settings):furigoma();fresh.round=1;fresh.rematch=null;applyHandicap(fresh.state,fresh.toss.hostSide,fresh.settings?.handicap);startClock(fresh,now);rememberReplay(fresh);
    const updated=await env.DB.prepare('UPDATE rooms SET guest_hash = ?, data = ?, version = version + 1 WHERE id = ? AND guest_hash IS NULL').bind(tokenHash,JSON.stringify(fresh),id).run();
    if(!updated.meta.changes)fail('この対局にはすでに2人が参加しています。',409);
    row=await env.DB.prepare('SELECT * FROM rooms WHERE id = ?').bind(id).first();return json(view(row,1));
@@ -93,6 +94,7 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
    await env.DB.prepare('UPDATE rooms SET data = ?, version = version + 1 WHERE id = ? AND version = ?').bind(JSON.stringify(timed),id,row.version).run();
    row=await env.DB.prepare('SELECT * FROM rooms WHERE id = ?').bind(id).first();return json(view(row,side));
   }
+  if(request.method==='GET'&&action==='replay'){if(!timed.state.result)fail('棋譜の再生は対局終了後に利用できます。',409);return json(replayRecord(timed));}
   if(request.method==='GET'&&!action){
    // Authorize and settle expired clocks before considering the client's version.
    // Room versions include offers, joins, undo, rematches and closure, not just moves.
@@ -131,9 +133,9 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
   }else if(['offer-rematch','accept-rematch','decline-rematch'].includes(body.action)){
 
    if(!s.result)fail('再試合は対局終了後に申し込めます。',409);
-   if(body.action==='offer-rematch'&&data.kind==='ai'){data.state=setupState(data.settings);data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=matchToss(data.settings);data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
+   if(body.action==='offer-rematch'&&data.kind==='ai'){data.state=setupState(data.settings);data.replay=null;data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=matchToss(data.settings);data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
    else if(body.action==='offer-rematch'){if(data.rematch===1-side)fail('相手の再試合希望を承諾してください。',409);data.rematch=side;}
-   else if(body.action==='accept-rematch'){if(data.rematch!==1-side)fail('相手からの再試合希望はありません。',409);data.state=setupState(data.settings);data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=data.kind==='ai'?matchToss(data.settings):furigoma();data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
+   else if(body.action==='accept-rematch'){if(data.rematch!==1-side)fail('相手からの再試合希望はありません。',409);data.state=setupState(data.settings);data.replay=null;data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=data.kind==='ai'?matchToss(data.settings):furigoma();data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
    else{if(data.rematch==null)return json(view(row,side));data.rematch=null;}
   }else{
   if(s.result)fail('この対局は終了しています。',409);
@@ -151,7 +153,7 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
    let normalized;
    if(m.drop){if(!['R','B','G','S','N','L','P'].includes(m.drop))fail('指せない手です。');normalized={drop:m.drop,to:m.to};}
    else{if(!Number.isInteger(m.from)||m.from<0||m.from>80||typeof m.prom!=='boolean')fail('指せない手です。');normalized={from:m.from,to:m.to,prom:m.prom};}
-   try{const next=collapseAfterMove(play(s,normalized));remember(data);chargeClock(data,now);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?` ／ ${sideName(next.spawned.piece.side)}の${label(next.spawned.piece)}が降臨`:''));data.state=next;if(body.action==='helper-move')data.helperUsedRound=data.round||1;finishClockMove(data,s.turn,now);data.offer=null;}catch{fail('指せない手です。');}
+   try{const next=collapseAfterMove(play(s,normalized));remember(data);chargeClock(data,now);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?` ／ ${sideName(next.spawned.piece.side)}の${label(next.spawned.piece)}が降臨`:''));data.state=next;appendReplay(data);if(body.action==='helper-move')data.helperUsedRound=data.round||1;finishClockMove(data,s.turn,now);data.offer=null;}catch{fail('指せない手です。');}
   }else if(body.action==='resign'){chargeClock(data,now);s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
   else if(body.action==='offer-draw'){if(data.kind==='ai'){chargeClock(data,now);s.result='合意による引き分け';}else data.offer=side;}
   else if(body.action==='accept-draw'){if(data.offer!==1-side)fail('相手からの引き分け提案はありません。');chargeClock(data,now);s.result='合意による引き分け';data.offer=null;}
