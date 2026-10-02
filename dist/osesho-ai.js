@@ -161,6 +161,13 @@ function evaluate(p){
  return Math.round(scores[p.turn]-scores[1-p.turn])+10;
 }
 
+// Replay analysis uses the same static evaluator, without running a search.
+export function evaluateOsesho(state,side=0){
+ const position=new SearchPosition(state);
+ if(position.kings[side]<0)return -WIN;
+ if(position.kings[1-side]<0)return WIN;
+ const score=evaluate(position);return position.turn===side?score:-score;
+}
 export function chooseOsesho(state,thinkMs=5000,onBest=()=>{},onStats=()=>{}){
  if(!state.mode)throw new Error('Osesho search requires othello-shogi mode');
  if(state.result)return null;

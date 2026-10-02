@@ -1,5 +1,5 @@
 import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
-import {lessons,lessonState,collapseReply,tutorialMoves} from './tutorial-lessons.js';
+import {lessons,lessonState,collapseReply,tutorialMoves,collapseLesson} from './tutorial-lessons.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {paradoxSound} from './paradox.js';
 import {encodeBoard,decodeBoard} from './board-code.js';
@@ -30,9 +30,9 @@ export function initDeveloper(getCurrent){
    if(guided())slot.disabled||=state.ply!==0||side!==0||type!==lessons[lesson].move.drop;
    slot.onclick=()=>{if(slot.disabled)return;selected=type;draw();};tray.append(slot);
   }}
-  $('lessonProgress').hidden=!tutorial||!lessons[lesson].collapse;$('lessonProgress').textContent='崩壊 '+collapseTrial+' / '+(lessons[lesson].collapseSequence?.length||0);
+  $('lessonProgress').hidden=true;$('lessonProgress').textContent='';
   const board=$('devBoard');board.replaceChildren();updateTutorialArrow=()=>{};const legal=selected===null?[]:availableMoves(selected),guide=guided()&&!working&&state.ply===0?lessons[lesson].move:null;
-  for(let i=0;i<81;i++){const b=document.createElement('button'),p=state.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(guide&&i===(guide.from??guide.to))b.classList.add('tutorial-hint');if(guide&&i===guide.to)b.classList.add('tutorial-target');b.dataset.square=i;b.disabled=working||(guided()&&(state.ply!==0||(i!==lessons[lesson].move.from&&!legal.some(m=>m.to===i))));b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き')+(guide&&i===guide.to?' 移動先':guide&&i===guide.from?' この駒を動かす':''));if(p){const el=document.createElement('span');el.className='piece'+((working&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'');el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
+  for(let i=0;i<81;i++){const b=document.createElement('button'),p=state.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(guide&&i===(guide.from??guide.to))b.classList.add('tutorial-hint');if(guide&&i===guide.to)b.classList.add('tutorial-target');b.dataset.square=i;b.disabled=working||(guided()&&(state.ply!==0||(i!==lessons[lesson].move.from&&!legal.some(m=>m.to===i))));b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き')+(guide&&i===guide.to?' 移動先':guide&&i===guide.from?' この駒を動かす':''));if(p){const el=document.createElement('span');el.className='piece'+((working&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'');el.dataset.side=working&&state.flipped.includes(i)?1-p.side:p.side;el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
   if(guide){
    const arrow=document.createElement('div');arrow.className='tutorial-arrow';arrow.setAttribute('aria-hidden','true');
    board.append(arrow);
@@ -73,10 +73,10 @@ export function initDeveloper(getCurrent){
   if(tutorial&&lessons[lesson].collapse||!tutorial&&$('devCollapseEarly').checked){
    const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);current.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);current.signal.addEventListener('abort',done,{once:true});if(current.signal.aborted)done();});
    const collapse=async()=>{
-    if(tutorial){const choices=state.board.flatMap((p,i)=>p?[i]:[]),preferred=lessons[lesson].collapseSequence?.[collapseTrial],picked=choices.indexOf(preferred);collapseAfterMove(state,()=>picked>=0?picked:0);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state);
+    if(tutorial){collapseLesson(state,collapseTrial);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state);
     if(!state.paradoxStarted&&!state.destroyed&&!state.spawned)return;
     collapsePhase='waiting';draw();
-    const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':state.spawned?label(state.spawned.piece)+'が降臨！':tutorial?'穴熊の守りから1枚壊れます':'盤上の駒が1枚壊れます';$('devBoard').append(note);
+    const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':state.spawned?label(state.spawned.piece)+'が降臨！ この手では盤面崩壊による破壊はありません。':'盤上の駒が1枚壊れます';$('devBoard').append(note);
     try{
      if(state.paradoxStarted){paradoxSound(true);await wait(3000);return;}else if(state.destroyed)await wait(collapseStrikeDelay);
      if(current.signal.aborted)return;

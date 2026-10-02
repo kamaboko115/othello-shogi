@@ -1,6 +1,7 @@
 import {normalizeMoveLimit} from './judge-options.js';
 import {normalizeTime,handicapOptions,applyHandicap} from './match-options.js';
 import {initial,play,collapseAfterMove,label,names,moves} from './engine.js';
+import {rememberReplay,appendReplay,rewindReplay,replayRecord} from './replay-code.js';
 
 const lifetime=7*86400000;
 const validId=id=>typeof id==='string'&&/^[a-f0-9]{32}$/.test(id);
@@ -17,8 +18,8 @@ function normalizeSettings(input={}){
 }
 function setupState(settings){const s=initial(true);s.noDrops=!!settings.noDrops;s.moveLimit=normalizeMoveLimit(settings.moveLimit,60);s.paradoxAt=settings.paradoxAt;return s;}
 function undoIndex(data){return (data.takebacks||[]).findLastIndex(x=>x.state.turn===data.toss.hostSide);}
-function remember(data){data.takebacks||=[];data.takebacks.push({state:structuredClone(data.state),logs:[...data.logs]});if(data.takebacks.length>128)data.takebacks.shift();data.undoOffer=null;}
-function rewind(data,index){const saved=data.takebacks?.[index];if(!saved)fail('戻せる手がありません。',409);data.state=saved.state;data.logs=saved.logs;data.takebacks=data.takebacks.slice(0,index);data.undoOffer=null;data.offer=null;data.rematch=null;}
+function remember(data){rememberReplay(data);data.takebacks||=[];data.takebacks.push({state:structuredClone(data.state),logs:[...data.logs]});if(data.takebacks.length>128)data.takebacks.shift();data.undoOffer=null;}
+function rewind(data,index){const saved=data.takebacks?.[index];if(!saved)fail('戻せる手がありません。',409);data.state=saved.state;data.logs=saved.logs;rewindReplay(data);data.takebacks=data.takebacks.slice(0,index);data.undoOffer=null;data.offer=null;data.rematch=null;}
 
 // This owns only the match state. AI search still runs through ai-client.js and
 // every move uses the same engine and collapse rules as online matches.
@@ -38,13 +39,14 @@ export function createLocalAIStore({storage=()=>globalThis.localStorage,now=Date
   if(record.data.state.mode===false)fail('通常将棋モードは終了しました。新しい対局を作成してください。',410);
   return structuredClone(record);
  }
- function view(record){const data=structuredClone(record.data),canUndo=undoIndex(data)>=0;delete data.takebacks;return {serverNow:now(),canUndo,room:record.room,seat:0,side:data.toss.hostSide,version:record.version,joined:true,expires:record.expires,...data,local:true,storageWarning:warning};}
+ function view(record){const data=structuredClone(record.data),canUndo=undoIndex(data)>=0;delete data.takebacks;delete data.replay;return {serverNow:now(),canUndo,room:record.room,seat:0,side:data.toss.hostSide,version:record.version,joined:true,expires:record.expires,...data,local:true,storageWarning:warning};}
  function toss(settings){const coins=Array.from(random(new Uint8Array(5)),n=>n%2),hostSide=coins.reduce((a,b)=>a+b,0)>=3?0:1;if(settings.aiLevel==='osesho'&&hostSide===0)return {coins:[0,0,0,0,0],originalCoins:coins,hostSide:1,intervened:true};return {coins,hostSide};}
- function freshRound(data){data.state=setupState(data.settings);data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=toss(data.settings);data.round=(data.round||0)+1;applyHandicap(data.state,data.settings.handicapSide==='human'?data.toss.hostSide:1-data.toss.hostSide,data.settings.handicap);}
+ function freshRound(data){data.state=setupState(data.settings);data.replay=null;data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=toss(data.settings);data.round=(data.round||0)+1;applyHandicap(data.state,data.settings.handicapSide==='human'?data.toss.hostSide:1-data.toss.hostSide,data.settings.handicap);rememberReplay(data);}
  return {
   get warning(){return warning;},
   create(input){const settings=normalizeSettings(input),id=Array.from(random(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join(''),data={kind:'ai',settings};freshRound(data);const record={schema:1,room:id,version:0,expires:now()+lifetime,data};save(record);return view(record);},
   read(id){return view(readRecord(id));},
+  replay(id){return replayRecord(readRecord(id).data);},
   // Legacy GET responses do not contain takebacks. Start a new undo history at
   // the imported position, retaining the board, logs, round and helper usage.
   import(viewData){
@@ -84,7 +86,7 @@ export function createLocalAIStore({storage=()=>globalThis.localStorage,now=Date
      let normalized;
      if(m.drop){if(!['R','B','G','S','N','L','P'].includes(m.drop))fail('指せない手です。');normalized={drop:m.drop,to:m.to};}
      else{if(!Number.isInteger(m.from)||m.from<0||m.from>80||typeof m.prom!=='boolean')fail('指せない手です。');normalized={from:m.from,to:m.to,prom:m.prom};}
-     try{const next=collapseAfterMove(play(s,normalized));remember(data);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?` ／ ${sideName(next.spawned.piece.side)}の${label(next.spawned.piece)}が降臨`:''));data.state=next;if(body.action==='helper-move')data.helperUsedRound=data.round||1;data.offer=null;}catch{fail('指せない手です。');}
+     try{const next=collapseAfterMove(play(s,normalized));remember(data);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?` ／ ${sideName(next.spawned.piece.side)}の${label(next.spawned.piece)}が降臨`:''));data.state=next;appendReplay(data);if(body.action==='helper-move')data.helperUsedRound=data.round||1;data.offer=null;}catch{fail('指せない手です。');}
     }else if(body.action==='resign'){s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
     else if(body.action==='offer-draw'){s.result='合意による引き分け';}
     else if(body.action==='accept-draw')fail('相手からの引き分け提案はありません。');

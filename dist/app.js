@@ -1,3 +1,6 @@
+import {initMusic} from './music.js';
+import {initReplayViewer} from './replay-view.js';
+import {createRewardAds} from './reward-ad.js';
 import {createWinAdBreak} from './ad-break.js';
 import {guideHTML,initBeginnerGuide} from './novice-guide.js';
 import {initCredits} from './credits.js';
@@ -25,6 +28,8 @@ import {initial,moves,label,names,points} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const localAI=createLocalAIStore();
 const winAds=createWinAdBreak();
+const music=initMusic(document);
+const rewardAds=createRewardAds({pause:()=>music.pause(),resume:()=>music.resume()});
 const statusPanel=document.querySelector('.status'),statusParent=statusPanel.parentElement,statusNext=statusPanel.nextSibling;
 let comboActive=false,comboPreparing=false,comboController=null;
 function cancelCombo(){comboController?.abort();comboController=null;comboActive=false;comboPreparing=false;cancelEffects();}
@@ -106,6 +111,7 @@ initCredits(document);
 createDevAccess({document}).guardDeveloperTools();
 initBoardPreview(document);
 const recordViewer=initRecordViewer(document,recordLine);
+const replayViewer=initReplayViewer(document,async()=>{if(!online)throw Error('対局がありません。');return online.local?localAI.replay(online.room):request('/'+online.room+'/replay',online.token);});
 $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
 function syncDebugCollapseOption(){
  const enabled=$('debugCollapseOption').checked,option=$('paradoxAt').querySelector('option[value="2"]');
@@ -135,7 +141,7 @@ function renderHand(n){
   btn.setAttribute('aria-pressed',String(count>0&&n===state.turn&&selected===type));
   const glyph=document.createElement('span');glyph.className=count?'piece':'slot-label';glyph.textContent=names[type];btn.append(glyph);
   if(count){const quantity=document.createElement('span');quantity.className='hand-count';quantity.textContent=`×${count}`;btn.append(quantity);}
-  btn.onclick=()=>select(type);h.append(btn);
+  glyph.dataset.side=n;btn.onclick=()=>select(type);h.append(btn);
  }
 }
 function render(){
@@ -165,6 +171,7 @@ function render(){
  if(resultInfo){$('resultTitle').textContent=resultInfo.title;$('resultReason').textContent=resultInfo.reason;$('resultDetail').textContent=resultInfo.detail;}
  const rematchHome=ending?$('resultActions'):document.querySelector('aside');
  if($('rematchPanel').parentElement!==rematchHome)rematchHome.prepend($('rematchPanel'));
+ const replayHome=ending?$('resultActions'):$('recordDialog');if($('openReplay').parentElement!==replayHome)replayHome.append($('openReplay'));
  const recordHome=ending?$('resultActions'):$('record').parentElement;
  if($('openRecord').parentElement!==recordHome){if(ending)recordHome.append($('openRecord'));else recordHome.insertBefore($('openRecord'),$('record'));}
 
@@ -179,7 +186,7 @@ function render(){
   el.className='cell'+(selected===i?' selected':'')+(legal.some(m=>m.to===i)?' legal':'')+(state.last.includes(i)?' last':'')+(state.flipped.includes(i)?' flipped':'');
   if(resultInfo?.square===i)el.classList.add('decisive');
   el.setAttribute('aria-label',`${coord(i)} ${p?side(p.side)+' '+label(p):'空き'}`);el.dataset.square=i;
-  if(p){const span=document.createElement('span');span.className='piece'+((comboPreparing&&state.flipped.includes(i)?1-p.side:p.side)!==perspective?' enemy':'')+(p.prom?' prom':'')+(label(p).length>1?' long':'');span.textContent=label(p);if(animate&&state.flipped.includes(i)&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const multi=state.flipped.length>=2,start=p.side!==perspective?0:180,end=start+180;const anim=span.animate(multi?[{transform:'translateY(0) scale(1) rotate('+start+'deg)'},{offset:.38,transform:'translateY(-8px) scale(1.13) rotate('+(start+70)+'deg)'},{offset:.75,transform:'translateY(-3px) scale(1.06) rotate('+end+'deg)'},{transform:'translateY(0) scale(1) rotate('+end+'deg)'}]:[{transform:'rotate('+start+'deg)'},{transform:'rotate('+end+'deg)'}],{duration:multi?900:650,easing:'ease-in-out'});anim.currentTime=elapsed;if(multi)el.classList.add('multi-flip');animateFlipLight(el,p.side,multi?900:650,elapsed);}el.append(span);}
+  if(p){const span=document.createElement('span');span.className='piece'+((comboPreparing&&state.flipped.includes(i)?1-p.side:p.side)!==perspective?' enemy':'')+(p.prom?' prom':'')+(label(p).length>1?' long':'');span.dataset.side=comboPreparing&&state.flipped.includes(i)?1-p.side:p.side;span.textContent=label(p);if(animate&&state.flipped.includes(i)&&!matchMedia('(prefers-reduced-motion: reduce)').matches){const multi=state.flipped.length>=2,start=p.side!==perspective?0:180,end=start+180;const anim=span.animate(multi?[{transform:'translateY(0) scale(1) rotate('+start+'deg)'},{offset:.38,transform:'translateY(-8px) scale(1.13) rotate('+(start+70)+'deg)'},{offset:.75,transform:'translateY(-3px) scale(1.06) rotate('+end+'deg)'},{transform:'translateY(0) scale(1) rotate('+end+'deg)'}]:[{transform:'rotate('+start+'deg)'},{transform:'rotate('+end+'deg)'}],{duration:multi?900:650,easing:'ease-in-out'});anim.currentTime=elapsed;if(multi)el.classList.add('multi-flip');animateFlipLight(el,p.side,multi?900:650,elapsed);}el.append(span);}
   el.disabled=!canAct();el.onclick=()=>click(i);board.append(el);
  }
  for(let n=0;n<2;n++)renderHand(n);
@@ -202,6 +209,7 @@ function render(){
  $('resign').disabled=!online||!!state.result||busy||!online.joined||!connected;
  $('draw').disabled=$('resign').disabled;$('draw').textContent='引き分けを提案';
  $('record').replaceChildren(...logs.slice(-12).reverse().map(recordLine));
+ replayViewer.update(online?online.room+':'+(online.round||1):null,!!state.result);
  recordViewer.update(logs,online?online.room+':'+(online.round||1):null);
  $('createRoom').hidden=!!online||!!inviteRoom;$('createRoom').disabled=busy;
  $('joinRoom').hidden=!inviteRoom||!!online;$('joinRoom').disabled=busy;
@@ -425,6 +433,6 @@ async function useHelper(){
  finally{if(helperJob===task){helperJob=null;helperIdea=false;helperGreeting=false;if(helperVisiting){helperVisiting=false;helperTravelPending=true;}}if(online?.room===room){busy=false;render();}}
 };
 
-$('helperAd').onclick=()=>{$('helperUnlimited').checked=true;$('helperAdNote').textContent='無限を有効にしました。現在は広告なしで利用できます。';};
+$('helperAd').onclick=async()=>{const button=$('helperAd'),note=$('helperAdNote');button.disabled=true;try{const result=await rewardAds.watch();if(result.rewarded){$('helperUnlimited').checked=true;note.textContent='視聴完了。次のAI対局で無限オセショ様を利用できます。';}else note.textContent=result.reason==='not-configured'?'広告は配信準備中です。現在はチェックを入れるだけで利用できます。':'視聴を完了しなかったため、設定は変えていません。';}finally{button.disabled=false;}};
 
 $('rulesTutorial').onclick=()=>{$('rulesDialog').close();$('openTutorial').click();};
