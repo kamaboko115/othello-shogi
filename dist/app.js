@@ -169,6 +169,8 @@ function render(){
  if(resultInfo){$('resultTitle').textContent=resultInfo.title;$('resultReason').textContent=resultInfo.reason;$('resultDetail').textContent=resultInfo.detail;}
  const rematchHome=ending?$('resultActions'):document.querySelector('aside');
  if($('rematchPanel').parentElement!==rematchHome)rematchHome.prepend($('rematchPanel'));
+ const recordHome=ending?$('resultActions'):$('record').parentElement;
+ if($('openRecord').parentElement!==recordHome){if(ending)recordHome.append($('openRecord'));else recordHome.insertBefore($('openRecord'),$('record'));}
 
  const moveKey=online?online.room+':'+(online.round||1)+':'+state.ply:'';
  const elapsed=performance.now()-animationStarted;

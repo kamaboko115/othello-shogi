@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import {initBoardPreview,shareInvitation,recordPage,initRecordViewer} from '../dist/lobby-tools.js';
 
 function documentUI(){
@@ -49,4 +51,13 @@ test('record dialog browses the first and latest pages, refreshes after undo, an
  $('recordNext').events.click();assert.equal($('recordList').children[0].text,'51. 手');
  $('recordLast').events.click();viewer.update(logs.slice(0,25),'game1');assert.equal($('recordList').children.length,25);assert.equal($('recordRange').textContent,'全25手 · 1〜25手');
  viewer.update([],'game2');assert.equal($('recordDialog').open,false);assert.equal($('openRecord').hidden,true);
+});
+
+test('the app moves the record button out of the hidden sidebar after a result and restores it for the next game',()=>{
+ const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),start=source.indexOf(' const recordHome=ending?'),end=source.indexOf('\n\n',start),code=source.slice(start,end);
+ const sidebar={insertBefore(node,before){assert.equal(before,record);node.parentElement=this;}},results={append(node){node.parentElement=this;}},record={parentElement:sidebar},button={parentElement:sidebar};
+ for(const ending of [true,false,true,false]){
+  vm.runInNewContext(code,{ending,$:id=>({record,resultActions:results,openRecord:button})[id]});
+  assert.equal(button.parentElement,ending?results:sidebar);
+ }
 });
