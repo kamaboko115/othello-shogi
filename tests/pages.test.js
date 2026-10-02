@@ -51,6 +51,7 @@ test('Pages service points at the existing Worker with its DB, limiter and clean
  const pages=JSON.parse(await readFile(new URL('../pages/wrangler.jsonc',import.meta.url),'utf8'));
  const worker=JSON.parse(await readFile(new URL('../wrangler.jsonc',import.meta.url),'utf8'));
  assert.equal(pages.services[0].service,worker.name);
+ assert.equal(pages.pages_build_output_dir,'.sites-runtime/pages');
  assert.equal(pages.services[0].binding,'GAME_API');
  assert.equal(worker.d1_databases[0].binding,'DB');
  assert.equal(worker.ratelimits[0].name,'ROOM_CREATE_BURST');
