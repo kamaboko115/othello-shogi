@@ -36,9 +36,10 @@ export function applyHandicap(state,hostSide,key){
 }
 export function startClock(data,now){
  const rule=clockRule(data.settings?.timeControl);
- data.clock=data.kind==='friend'&&rule.mode!=='none'?{remaining:[rule.base,rule.base],since:now+5000}:null;
+ data.clock=(data.kind==='friend'||data.kind==='ai'&&data.settings?.aiLevel==='osesho')&&rule.mode!=='none'?{remaining:[rule.base,rule.base],since:now+5000}:null;
 }
 export function clockBudget(data,side,now){
+ if(data.kind==='ai'&&side!==data.toss?.hostSide)return Infinity;
  const c=data.clock,r=clockRule(data.settings?.timeControl);if(!c||!r)return Infinity;
  const elapsed=!data.state.result&&side===data.state.turn?Math.max(0,now-c.since):0;
  return c.remaining[side]+(r.mode==='byoyomi'?r.extra:r.byoyomi||0)-elapsed;
@@ -52,15 +53,26 @@ export function finishClockMove(data,mover,now){
  if(r.mode==='custom')data.clock.remaining[mover]+=r.increment;
  if(r.mode==='fischer')data.clock.remaining[mover]+=r.extra;
  if(r.mode==='turn')data.clock.remaining[mover]=r.base;
- // A shared animation allowance protects both players while controls are locked.
- const n=data.state.flipped.length;let delay=n?Array.from({length:n},(_,i)=>Math.max(140,360-i*32)+20).reduce((a,b)=>a+b,0)+225:330;
- if(n>=4)delay+=3400;else if(n>=2)delay+=1000;else delay+=1000;
- if(data.state.paradoxStarted)delay+=3000;
- else if(data.state.destroyed)delay+=1700; // 500ms wait + 1200ms lightning
- else if(data.state.paradoxEvent)delay+=120+paradoxEventTiming(data.state.paradoxEvent).totalMs;
- else if(data.state.spawned)delay+=1320; // 120ms wait + 1200ms arrival
- const played=beforeParadox(data.state);
- const to=data.state.last?.[1],from=data.state.last?.[0],previous=data.takebacks?.at(-1)?.state;
- if(to!==undefined&&played.board[to]?.prom&&!previous?.board[from]?.prom&&['R','B'].includes(played.board[to]?.type))delay+=1500;
- data.clock.since=now+delay+500;
+ data.clock.since=now+movePresentationAllowance(data.takebacks?.at(-1)?.state,data.state)+(data.kind==='friend'?2500:0); // covers the normal 2-second peer poll
+}
+// Sequential presentation stages must all finish before the next clock runs.
+// These are conservative upper bounds, shared by the server and local AI store.
+export function movePresentationAllowance(previous,next){
+ const played=beforeParadox(next),[from,to]=next.last||[],piece=played.board[to],old=previous?.board[from];
+ const drop=from===null||from===-1||from===undefined;
+ let delay=drop?(piece&&['R','B'].includes(piece.type)?650:280):560;
+ if(!drop&&piece?.prom&&!old?.prom)delay+=['R','B'].includes(piece.type)?980:400;
+ const victim=previous?.board[to];
+ if(!drop&&victim&&victim.side!==piece?.side)delay+=victim.type==='K'?530:330;
+ const n=next.flipped?.length||0;
+ if(n)delay+=Array.from({length:n},(_,i)=>Math.max(140,360-i*32)).reduce((a,b)=>a+b,0)+20*(n-1)+245;
+ // The flip finish can be followed by the check banner, rather than replacing it.
+ if(n>=4)delay+=2400;
+ else if(n)delay+=1000;
+ delay+=1000;
+ if(next.paradoxStarted)delay+=3000;
+ else if(next.destroyed)delay+=1700;
+ else if(next.paradoxEvent)delay+=120+paradoxEventTiming(next.paradoxEvent).totalMs;
+ else if(next.spawned)delay+=1320;
+ return delay+250;
 }

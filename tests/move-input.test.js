@@ -1,3 +1,4 @@
+import {isOseshoChallenge,helperRemaining} from '../dist/challenge-options.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -42,7 +43,7 @@ test('代打の確認文は共通で、対オセショ様の画像タップは�
  const code=source.slice(source.indexOf('const askOsesho=()=>'),source.indexOf("$('oseshoNo').onclick"));
  for(const challenge of [false,true]){
   const elements={oseshoDialog:{querySelector:()=>elements.copy,showModal(){elements.open=true;}},copy:{},skipHelperConfirm:{},askOsesho:{},osesho:{}};
-  const context={$:id=>elements[id],helperAvailable:()=>true,helperConfirmKey:()=>'',storage:{get:()=>false},online:{settings:{aiLevel:challenge?'osesho':'expert',helperUnlimited:false}}};
+  const context={isOseshoChallenge,helperRemaining,$:id=>elements[id],helperAvailable:()=>true,helperConfirmKey:()=>'',storage:{get:()=>false},online:{settings:{aiLevel:challenge?'osesho':'expert',helperUnlimited:false}}};
   vm.createContext(context);vm.runInContext(code+'askOsesho();',context);
   assert.equal(elements.open,true);assert.equal(elements.copy.textContent.includes('仕方ない'),false);
   elements.open=false;elements.osesho.onclick();assert.equal(elements.open,!challenge);

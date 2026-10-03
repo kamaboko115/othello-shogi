@@ -43,3 +43,19 @@ html[data-design=improved] body.hallmark-trial :is(.rules-card,.guide-card) h3{c
 @media(prefers-reduced-motion:reduce){
  html[data-design=improved] body.hallmark-trial :is(.settings-gear,.rules-link,.match-choices button,#createRoom,#joinRoom,dialog button:not(.cell),.actions button,.end-actions button){transition:none}
 }
+
+/* A rare opponent, with an explicit fixed-rules challenge. */
+.osesho-level{color:#d44747!important;font-weight:700}
+#oseshoChallengeWarning{color:var(--color-ink,#342626);border-left:3px solid #d44747;padding:10px 14px;line-height:1.8}
+.challenge-wins{display:block;color:#d44747;font-weight:700;animation:challenge-sway 3s ease-in-out infinite;transform-origin:left center}
+#challengeVictory{color:#805b08;font-weight:800;font-size:clamp(1.1rem,3vw,1.7rem)}
+@keyframes challenge-sway{0%,100%{transform:rotate(-1deg)}50%{transform:rotate(1deg)}}
+@media(prefers-reduced-motion:reduce){.challenge-wins{animation:none}}
+
+.game-intro{font-size:.95rem;line-height:1.8;margin:0 0 18px}.game-intro a{display:block;text-underline-offset:4px}
+
+#challengeVictory.challenge-crowned{animation:challenge-crown 1.4s ease-out both}
+@keyframes challenge-crown{0%{transform:scale(.9);opacity:0;text-shadow:0 0 32px #ffd75e}45%{transform:scale(1.04);opacity:1;text-shadow:0 0 15px #ffd75e}100%{transform:scale(1);opacity:1;text-shadow:none}}
+@media(prefers-reduced-motion:reduce){#challengeVictory.challenge-crowned{animation:none}}
+
+html[data-ui-theme=dark] #challengeVictory{color:#f3cf6a}

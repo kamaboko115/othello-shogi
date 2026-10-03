@@ -27,15 +27,15 @@ test('スライダーは全8選択肢を表示し、既存の真偽値設定と�
  assert.equal(normalizeMoveLimit(),false);assert.equal(normalizeMoveLimit(true),60);assert.throws(()=>normalizeMoveLimit(90));assert.throws(()=>normalizeMoveLimit('80'));
  let handler;const input={value:'7',addEventListener:(event,fn)=>{assert.equal(event,'input');handler=fn;},setAttribute:(key,val)=>{input[key]=val;}},output={};initJudgeSlider(input,output);assert.equal(output.textContent,'無制限');
  judgeSteps.forEach((limit,i)=>{input.value=String(i);handler();assert.equal(output.textContent,limit===false?'無制限':limit+'手');assert.equal(input['aria-valuetext'],output.textContent);});
- const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');assert.match(html,/id="moveLimit" type="range"[^>]*value="7"/);
+ const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');assert.doesNotMatch(html,/id="moveLimit"|オセロジャッジ/);
 });
 
-test('AI・対人の作成、招待、再接続、再試合で全判定手数が保持され、不正な手数は拒否する',async()=>{
+test('AI・対人の作成、招待、再接続、再試合で旧判定設定を指定しても新規対局では無効になり、不正な手数は拒否する',async()=>{
  const token='a'.repeat(64),invite='b'.repeat(64),guest='c'.repeat(64);
  for(const kind of ['ai','friend'])for(const limit of [...judgeSteps,true]){
   const db=localDB();try{
    const call=async(path,body,auth=token)=>{const r=await api(new Request('https://test.local/api/rooms'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+auth,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}),{DB:db});assert.ok(r.ok);return r.json();};
-   let d=await call('',{invite,kind,settings:{moveLimit:limit}}),expected=limit===true?60:limit;const path='/'+d.room;
+   let d=await call('',{invite,kind,settings:{moveLimit:limit}}),expected=false;const path='/'+d.room;
    assert.equal(d.state.moveLimit,expected);assert.equal((await call(path)).settings.moveLimit,expected);assert.equal((await call(path+'/preview',{invite},guest)).settings.moveLimit,expected);
    if(kind==='friend')await call(path+'/join',{invite},guest);
    d=await call(path);d=await call(path+'/action',{action:'resign',version:d.version});d=await call(path+'/action',{action:'offer-rematch',version:d.version});

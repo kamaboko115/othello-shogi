@@ -1,3 +1,5 @@
+import {createChallengeWins} from './challenge-wins.js';
+import {challengeSettings,helperRemaining,isOseshoChallenge} from './challenge-options.js';
 import {runParadoxEvent} from './paradox-event.js';
 import {initMusic} from './music.js';
 import {initReplayViewer} from './replay-view.js';
@@ -8,7 +10,7 @@ import {initCredits} from './credits.js';
 import {placeHelper} from './helper-visit.js';
 import {createDevAccess} from './dev-access.js';
 import {presentToss,createTossHistory} from './toss.js';
-import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
+import {adjudicationLimit} from './judge-options.js';
 import {paintCollapse,paintArrival,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget,clockSecondsLabel,timeHelp} from './match-options.js';
@@ -28,6 +30,16 @@ import {playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound
 import {initial,moves,movementTargets,label,names,points,beforeParadox} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const localAI=createLocalAIStore();
+const challengeWins=createChallengeWins();
+let challengeCountShown=false,challengeReportKey='';
+function showChallengeCount(){if(challengeCountShown)return;challengeCountShown=true;challengeWins.count().then(total=>{$('challengeWins').textContent=`オセショ様への通算勝利：${total}局`;} ).catch(()=>{$('challengeWins').textContent='通算勝利数は現在確認できません';});}
+function showChallengeVictory(data){
+ const el=$('challengeVictory'),eligible=challengeWins.eligible(data);el.hidden=!eligible;if(!eligible){el.classList.remove('challenge-crowned');return;}
+ const key=data.room+':'+data.round;if(challengeReportKey===key)return;challengeReportKey=key;
+ el.textContent='オセショ様に勝利！ 通算勝利数を集計しています…';$('retryChallengeWin').hidden=true;
+ challengeWins.report(data).then(({ordinal})=>{if(challengeReportKey===key){el.textContent=`オセショ様への通算${ordinal}勝目！`;el.classList.add('challenge-crowned');}}).catch(()=>{if(challengeReportKey===key){el.textContent='オセショ様に勝利！ 集計に接続できませんでした。';$('retryChallengeWin').hidden=false;}});
+}
+$('retryChallengeWin').onclick=()=>{challengeReportKey='';showChallengeVictory(online);};
 const winAds=createWinAdBreak();
 const music=initMusic(document);
 const rewardAds=createRewardAds({pause:()=>music.pause(),resume:()=>music.resume()});
@@ -133,7 +145,7 @@ syncDebugCollapseOption();
 const tutorialTools=initDeveloper(()=>({state,side:online?.side??0}));
 function stone(side){const el=document.createElement('span');el.className='stone '+(side===0?'black':'white');el.setAttribute('aria-hidden','true');return el;}
 function recordLine(text){const el=document.createElement('div');for(const part of text.split(/([▲▽])/)){if(part==='▲'||part==='▽'){const mark=stone(part==='▲'?0:1);mark.removeAttribute('aria-hidden');mark.setAttribute('aria-label',part==='▲'?'先手':'後手');el.append(mark);}else el.append(document.createTextNode(part));}return el;}
-const selectedSettings=()=>({timeControl:selectedKind==='friend'&&Number($('mainTime').value)<minuteSteps.length?{minutes:minuteSteps[Number($('mainTime').value)],increment:Number($('incrementTime').value),byoyomi:byoyomiSteps[Number($('byoyomiTime').value)]}:'none',handicap:selectedKind==='friend'?$('handicap').value:$('aiHandicap').value,paradoxAt:$('paradoxAt').value==='none'?false:Number($('paradoxAt').value),moveLimit:judgeSteps[Number($('moveLimit').value)],noDrops:$('allowDrops').value==='no',...(selectedKind==='ai'?{helperUnlimited:$('helperUnlimited').checked,handicapSide:$('aiHandicapSide').value,aiLevel:$('aiLevel').value,thinkMs:Number($('thinkTime').value)}:{})});
+const selectedSettings=()=>challengeSettings({timeControl:selectedKind==='friend'&&Number($('mainTime').value)<minuteSteps.length?{minutes:minuteSteps[Number($('mainTime').value)],increment:Number($('incrementTime').value),byoyomi:byoyomiSteps[Number($('byoyomiTime').value)]}:'none',handicap:selectedKind==='friend'?$('handicap').value:$('aiHandicap').value,paradoxAt:$('paradoxAt').value==='none'?false:Number($('paradoxAt').value),moveLimit:false,noDrops:$('allowDrops').value==='no',...(selectedKind==='ai'?{helperUnlimited:$('helperUnlimited').checked,handicapSide:$('aiHandicapSide').value,aiLevel:$('aiLevel').value,thinkMs:Number($('thinkTime').value)}:{})},selectedKind);
 // A collapse can change ownership/positions after the move animation. Do not
 // allow moves or helper searches against that temporary presentation board.
 const canAct=()=>!state.result&&!busy&&!!online&&connected&&online.joined&&online.side===state.turn&&!collapseEffect&&!((comboActive||comboPreparing)&&(online.state?.paradoxEvent||online.state?.destroyed||online.state?.spawned||online.state?.paradoxStarted));
@@ -158,11 +170,11 @@ function renderHand(n){
 }
 function render(){
  const oseshoMatch=online?.kind==='ai'&&online.settings?.aiLevel==='osesho';
- const helperVisible=online?.kind==='ai'&&online.joined&&((!state.result&&(online.settings?.helperUnlimited||online.helperUsedRound!==(online.round||1)))||helperLingering||helperIdea);
+ const helperVisible=online?.kind==='ai'&&online.joined&&((!state.result&&helperRemaining(online)>0)||helperLingering||helperIdea);
  $('askOsesho').hidden=!oseshoMatch||!helperVisible;$('askOsesho').disabled=!helperAvailable();$('osesho').hidden=!(oseshoMatch||helperVisible);$('tagline').hidden=!!online;
  $('osesho').disabled=oseshoMatch||!canAct()||!!helperJob||helperLingering;
  $('osesho').classList.toggle('idea',helperIdea);$('osesho').classList.toggle('thinking',!!helperJob);$('osesho').classList.toggle('departing',helperDeparting);
- $('oseshoStatus').textContent=helperGreeting?'仕方ないなぁ…':helperIdea?'ひらめいた！':helperFarewell?'じゃあの':oseshoMatch&&!helperJob&&!helperLingering?'対局中のオセショ様':helperLingering?'':helperJob?'オセショ様が考えています…':state.turn!==online?.side?'あなたの手番で頼めます':online?.settings?.helperUnlimited?'無限オセショ様':'オセショ様 · 1局1回';
+ $('oseshoStatus').textContent=helperGreeting?'仕方ないなぁ…':helperIdea?'ひらめいた！':helperFarewell?'じゃあの':oseshoMatch&&!helperJob&&!helperLingering?'対局中のオセショ様':helperLingering?'':helperJob?'オセショ様が考えています…':state.turn!==online?.side?'あなたの手番で頼めます':isOseshoChallenge(online?.settings)?`オセショ様 · 残り${helperRemaining(online)}回`:online?.settings?.helperUnlimited?'無限オセショ様':'オセショ様 · 1局1回';
  if(comboActive)return;
  const showTutorial=!online;
  const homeNotice=showTutorial&&message!==homeMessage;
@@ -179,7 +191,7 @@ function render(){
  document.body.classList.toggle('game-ended',ending);
  $('resultHeading').hidden=$('resultActions').hidden=!ending;
  const resultInfo=ending?resultView(state,perspective):null;
- if(ending)winAds.counter.record({...online,state});
+ if(ending){winAds.counter.record({...online,state});showChallengeVictory({...online,state});}else{$('challengeVictory').hidden=true;$('retryChallengeWin').hidden=true;}
  if(resultInfo){$('resultTitle').textContent=resultInfo.title;$('resultReason').textContent=resultInfo.reason;$('resultDetail').textContent=resultInfo.detail;}
  const rematchHome=ending?$('resultActions'):document.querySelector('aside');
  if($('rematchPanel').parentElement!==rematchHome)rematchHome.prepend($('rematchPanel'));
@@ -247,11 +259,11 @@ function render(){
  $('chooseAI').setAttribute('aria-pressed',selectedKind==='ai');$('chooseFriend').setAttribute('aria-pressed',selectedKind==='friend');
  $('helperUnlimitedRow').hidden=selectedKind!=='ai';$('aiHandicapRow').hidden=selectedKind!=='ai';$('friendSettings').hidden=selectedKind!=='friend';$('aiLevelRow').hidden=selectedKind!=='ai';$('thinkTimeRow').hidden=selectedKind!=='ai';$('aiSettingsRow').hidden=selectedKind!=='ai';
  const oseshoChallenge=selectedKind==='ai'&&$('aiLevel').value==='osesho';
- $('oseshoChallengeWarning').hidden=!oseshoChallenge;
+ $('oseshoChallengeWarning').hidden=!oseshoChallenge;if(oseshoChallenge)showChallengeCount();
  $('createRoom').textContent=oseshoChallenge?'オセショ様に挑戦する':selectedKind==='ai'?'AIと対局を始める':'対局を作って招待する';
  const settings=online?.settings||inviteRoom?.settings||selectedSettings();
  $('matchSettings').hidden=!online&&!inviteRoom;
- $('matchSettings').textContent='オセロジャッジ：'+judgeLabel(adjudicationLimit(settings))+' ／ チェスモード：'+(settings.noDrops?'あり':'なし')+(online?.kind==='ai'?' ／ AI：'+({weak:'弱い',normal:'普通',strong:'強い',expert:'最強',osesho:'オセショ様（人間が勝てる保証なし）'}[settings.aiLevel]||'普通')+('（最大'+((settings.thinkMs||1000)/1000)+'秒）'):'');
+ $('matchSettings').textContent='チェスモード：'+(settings.noDrops?'あり':'なし')+(online?.kind==='ai'?' ／ AI：'+({weak:'弱い',normal:'普通',strong:'強い',expert:'最強',osesho:'オセショ様（人間が勝てる保証なし）'}[settings.aiLevel]||'普通')+('（最大'+((settings.thinkMs||1000)/1000)+'秒）'):'');
  $('matchSettings').textContent+=' ／ 盤面崩壊：'+(settings.paradoxAt===false?'無制限':(settings.paradoxAt??150)+'手から');
  if(online?.kind==='ai')$('matchSettings').textContent+=' ／ '+(settings.handicapSide==='human'?'人間側':'AI側')+'：'+(handicapOptions[settings.handicap]||'平手');
  if(online?.kind!=='ai')$('matchSettings').textContent+=' ／ 時間：'+(clockRule(settings.timeControl).label)+' ／ 作成者：'+(handicapOptions[settings.handicap]||'平手');
@@ -373,20 +385,26 @@ for(const id of ['chooseRules','openRulesAlways','openRulesSettings'])$(id).oncl
 const warnClock=createClockWarning(playClockWarning);
 setInterval(()=>{
  const now=Date.now()+clockOffset;
- for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock;if(el.hidden)continue;const ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}
- warnClock({turnKey:online?`${online.room}:${online.round}:${state.ply}:${state.turn}`:null,remaining:online?.clock?clockBudget(online,online.side,now):Infinity,active:!!online?.clock&&online.kind==='friend'&&online.joined&&!online.closed&&!state.result&&state.turn===online.side&&now>=online.clock.since&&$('furigoma').hidden,audible:!document.hidden});
+ if(online?.local&&online.clock&&!busy&&!state.result&&clockBudget(online,state.turn,now)<=0){adopt(localAI.read(online.room));}
+ for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock||online.kind==='ai'&&n!==online.side;if(el.hidden)continue;const ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+(Number.isFinite(secs)?Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0'):'制限なし')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}
+ warnClock({turnKey:online?`${online.room}:${online.round}:${state.ply}:${state.turn}`:null,remaining:online?.clock?clockBudget(online,online.side,now):Infinity,active:!!online?.clock&&online.joined&&!online.closed&&!state.result&&state.turn===online.side&&now>=online.clock.since&&$('furigoma').hidden,audible:!document.hidden});
 },100);
 const advancedOpen={ai:false,friend:false};
-function selectKind(kind){advancedOpen[selectedKind]=$('advancedSettings').open;selectedKind=kind;$('advancedSettings').open=advancedOpen[kind];render();}
-$('chooseAI').onclick=()=>selectKind('ai');$('chooseFriend').onclick=()=>selectKind('friend');initJudgeSlider($('moveLimit'),$('moveLimitValue'));$('moveLimit').onchange=render;$('allowDrops').onchange=render;$('aiLevel').onchange=render;$('thinkTime').onchange=render;
-function syncOseshoChallenge(){
- const enabled=$('challengeOsesho').checked,option=$('aiLevel').querySelector('option[value="osesho"]');
- option.hidden=option.disabled=!enabled;
- if(!enabled&&$('aiLevel').value==='osesho')$('aiLevel').value='expert';
+function selectKind(kind){advancedOpen[selectedKind]=$('advancedSettings').open;selectedKind=kind;$('advancedSettings').open=advancedOpen[kind];syncChallengeControls();render();}
+$('chooseAI').onclick=()=>selectKind('ai');$('chooseFriend').onclick=()=>selectKind('friend');$('allowDrops').onchange=render;$('aiLevel').onchange=render;$('thinkTime').onchange=render;
+let normalAIControls=null;
+function syncChallengeControls(){
+ const challenge=selectedKind==='ai'&&$('aiLevel').value==='osesho';
+ const ids=['thinkTime','paradoxAt','allowDrops','aiHandicap','aiHandicapSide'];
+ if(challenge&&!normalAIControls)normalAIControls=Object.fromEntries(ids.map(id=>[id,$(id).value]));
+ if(challenge){$('thinkTime').value='5000';$('paradoxAt').value='200';$('allowDrops').value='yes';$('aiHandicap').value='none';}
+ else if(normalAIControls){for(const [id,value] of Object.entries(normalAIControls))$(id).value=value;normalAIControls=null;}
+ for(const id of ids)$(id).disabled=challenge;
+ $('aiLevel').classList.toggle('osesho-level',challenge);
+ $('helperUnlimitedLabel').textContent=challenge?'オセショ様に3回頼む':'オセショ様を無限に';
+ $('helperUnlimitedHelp').textContent=challenge?'次のオセショ様対局で代打を3回まで頼めます。オフなら1回です。':'次のAI対局のオセショ様が帰らずにいっぱいうってくれます';
 }
-$('challengeOsesho').checked=storage.get('hanten-osesho-challenge')===true;
-syncOseshoChallenge();
-$('challengeOsesho').onchange=()=>{try{storage.set('hanten-osesho-challenge',$('challengeOsesho').checked);}catch{}syncOseshoChallenge();render();};
+$('aiLevel').onchange=()=>{syncChallengeControls();render();};
 $('createRoom').onclick=async()=>{
  if(!$('paradoxAt').reportValidity())return;
  if(state.ply&&!window.confirm(selectedKind==='ai'?'現在の盤面から離れ、新しいAI対局を作成しますか？':'現在の盤面から離れ、新しいオンライン対局を作成しますか？'))return;
@@ -438,10 +456,10 @@ render();restore();
 
 
 
-function helperAvailable(){return canAct()&&online?.kind==='ai'&&!helperJob&&!helperLingering&&(online.settings?.helperUnlimited||online.helperUsedRound!==(online.round||1));}
+function helperAvailable(){return canAct()&&online?.kind==='ai'&&!helperJob&&!helperLingering&&helperRemaining(online)>0;}
 const helperConfirmKey=()=>online?'skip-helper-confirm-'+online.room+'-'+(online.round||1):null;
 $('skipHelperConfirm').onchange=()=>{const key=helperConfirmKey();if(key)storage.set(key,$('skipHelperConfirm').checked);};
-const askOsesho=()=>{if(helperAvailable()){if(storage.get(helperConfirmKey())===true){useHelper();return;}$('skipHelperConfirm').checked=false;$('oseshoDialog').querySelector('p').textContent=(online.settings?.helperUnlimited?'オセロ将棋の神 オセショ様が何度でも代わりに打ってくれます':'オセロ将棋の神 オセショ様がゲーム中に1回だけ代わりに打ってくれます')+'。';$('oseshoDialog').showModal();}};$('askOsesho').onclick=askOsesho;$('osesho').onclick=()=>{if(online?.settings?.aiLevel!=='osesho')askOsesho();};
+const askOsesho=()=>{if(helperAvailable()){if(storage.get(helperConfirmKey())===true){useHelper();return;}$('skipHelperConfirm').checked=false;$('oseshoDialog').querySelector('p').textContent=(isOseshoChallenge(online.settings)?`オセロ将棋の神 オセショ様が代わりに打ってくれます（残り${helperRemaining(online)}回）`:online.settings?.helperUnlimited?'オセロ将棋の神 オセショ様が何度でも代わりに打ってくれます':'オセロ将棋の神 オセショ様がゲーム中に1回だけ代わりに打ってくれます')+'。';$('oseshoDialog').showModal();}};$('askOsesho').onclick=askOsesho;$('osesho').onclick=()=>{if(online?.settings?.aiLevel!=='osesho')askOsesho();};
 $('oseshoNo').onclick=()=>$('oseshoDialog').close();
 $('oseshoYes').onclick=()=>useHelper();
 async function useHelper(){
@@ -467,6 +485,6 @@ async function useHelper(){
  finally{if(helperJob===task){helperJob=null;helperIdea=false;helperGreeting=false;if(helperVisiting){helperVisiting=false;helperTravelPending=true;}}if(online?.room===room){busy=false;render();}}
 };
 
-$('helperAd').onclick=async()=>{const button=$('helperAd'),note=$('helperAdNote');button.disabled=true;try{const result=await rewardAds.watch();if(result.rewarded){$('helperUnlimited').checked=true;note.textContent='視聴完了。次のAI対局で無限オセショ様を利用できます。';}else note.textContent=result.reason==='not-configured'?'広告は配信準備中です。現在はチェックを入れるだけで利用できます。':'視聴を完了しなかったため、設定は変えていません。';}finally{button.disabled=false;}};
+$('helperAd').onclick=async()=>{const button=$('helperAd'),note=$('helperAdNote');button.disabled=true;try{const result=await rewardAds.watch();if(result.rewarded){$('helperUnlimited').checked=true;note.textContent=$('aiLevel').value==='osesho'?'視聴完了。次のオセショ様対局で代打を3回利用できます。':'視聴完了。次のAI対局で無限オセショ様を利用できます。';}else note.textContent=result.reason==='not-configured'?'広告は配信準備中です。現在はチェックを入れるだけで利用できます。':'視聴を完了しなかったため、設定は変えていません。';}finally{button.disabled=false;}};
 
 $('rulesTutorial').onclick=()=>{$('rulesDialog').close();$('openTutorial').click();};
