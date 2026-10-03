@@ -12,7 +12,7 @@ function client(){
  const snapshot={room:'room',token:'token',kind:'friend',side:0,joined:true,version:3,state:{ply:2,turn:0,result:''},logs:[],round:1};
  const c={online:structuredClone(snapshot),state:structuredClone(snapshot.state),busy:false,connected:true,clockOffset:0,routeVersion:0,document:{hidden:false},Date,
   clockBudget,location:{pathname:'/'},history:{replaceState(){}},storage:{set(){}},$:id=>elements[id]??={},
-  interruptMoveEffects(){},cancelCombo(){},cancelCollapse(){},stopAI(){},render(){},paintNetworkUsage(){},
+  clearInspection(){},interruptMoveEffects(){},cancelCombo(){},cancelCollapse(){},stopAI(){},render(){},paintNetworkUsage(){},
   createRoomPoller:options=>createRoomPoller({...options,setTimer:(fn,ms)=>{timers.set(++nextId,{fn,ms});return nextId;},clearTimer:id=>timers.delete(id),random:()=>0.5}),
   adopt(data){adoptions.push(data);c.online={...c.online,...data};c.state=data.state;},
   fetch:async(url,options)=>{calls.push({url,options});return options.method==='GET'?new Response(null,{status:304,headers:{'X-Room-Server-Now':String(Date.now())}}):Response.json({...snapshot,version:4,state:{ply:3,turn:1,result:''}});}

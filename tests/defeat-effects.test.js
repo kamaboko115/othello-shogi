@@ -18,7 +18,7 @@ test('先手・後手のどちらでも勝敗の音を表示と同じ視点で�
 const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
 function view(){
  const events=[],state=empty(),c={online:{room:'r',version:0,round:1},state,connected:true,logs:[],selected:null,legal:[],animationKey:'',
-  stopAI(){},cancelCombo(){},cancelCollapse(){},render(){},paintLastCollapse(){},syncAI(){},$:()=>({open:false}),
+  clearInspection(){},stopAI(){},cancelCombo(){},cancelCollapse(){},render(){},paintLastCollapse(){},syncAI(){},$:()=>({open:false}),
   slidingMove:()=>null,capturedPiece:()=>null,kingCaptureSquare:()=>null,
   presentEffects:s=>events.push(s.result),performance:{now:()=>0}};
  vm.createContext(c);vm.runInContext(app.slice(app.indexOf('function adopt('),app.indexOf('const roomPoller=')),c);
