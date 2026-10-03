@@ -34,7 +34,7 @@ export function initDeveloper(getCurrent){
   $('lessonProgress').hidden=true;$('lessonProgress').textContent='';
   const board=$('devBoard');board.replaceChildren();updateTutorialArrow=()=>{};const legal=selected===null?[]:availableMoves(selected),guide=guided()&&!working&&state.ply===0?lessons[lesson].move:null;
   const visible=collapsePhase==='waiting'?beforeParadox(state):state;
-  for(let i=0;i<81;i++){const b=document.createElement('button'),p=visible.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(guide&&i===(guide.from??guide.to))b.classList.add('tutorial-hint');if(guide&&i===guide.to)b.classList.add('tutorial-target');b.dataset.square=i;b.disabled=working||(guided()&&(state.ply!==0||(i!==lessons[lesson].move.from&&!legal.some(m=>m.to===i))));b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き')+(guide&&i===guide.to?' 移動先':guide&&i===guide.from?' この駒を動かす':''));if(p){const el=document.createElement('span');el.className='piece'+((working&&!state.paradoxEvent&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'');el.dataset.side=working&&!state.paradoxEvent&&state.flipped.includes(i)?1-p.side:p.side;el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
+  for(let i=0;i<81;i++){const b=document.createElement('button'),p=visible.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(guide&&i===(guide.from??guide.to))b.classList.add('tutorial-hint');if(guide&&i===guide.to)b.classList.add('tutorial-target');b.dataset.square=i;b.disabled=working||(guided()&&(state.ply!==0||(i!==lessons[lesson].move.from&&!legal.some(m=>m.to===i))));b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き')+(guide&&i===guide.to?' 移動先':guide&&i===guide.from?' この駒を動かす':''));if(p){const el=document.createElement('span');el.className='piece'+((working&&!state.paradoxEvent&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'')+(p.wings?' has-wings':'');el.dataset.side=working&&!state.paradoxEvent&&state.flipped.includes(i)?1-p.side:p.side;el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
   if(guide){
    const arrow=document.createElement('div');arrow.className='tutorial-arrow';arrow.setAttribute('aria-hidden','true');
    board.append(arrow);
@@ -61,7 +61,7 @@ export function initDeveloper(getCurrent){
   if(state.result){$('devStatus').textContent=tutorial?'「もう一度」で練習できます。':'手番を選び直すと続けられます。';return;}
   const options=selected===null?[]:availableMoves(selected).filter(m=>m.to===i);
   if(!options.length){if(guided()&&(state.ply!==0||i!==lessons[lesson].move.from))return;selected=state.board[i]?.side===state.turn?i:null;draw();return;}
-  history.push(structuredClone(state));const before=state,mover=state.turn,chosen=options.find(m=>!m.prom)||options[0],expected=lessons[lesson].move,completed=tutorial&&!lessons[lesson].collapse&&before.ply===0&&chosen.from===expected.from&&chosen.to===expected.to&&chosen.drop===expected.drop;state=play(state,chosen);const slide=slidingMove(before,state),capture=capturedPiece(before,state),kingImpact=kingCaptureSquare(before,state),effects=moveEffects(state).filter(e=>!(tutorial&&e.kind==='check'&&before.board[state.last.at(-1)]?.type==='K'&&before.board[state.last.at(-1)]?.side!==mover));if(!(tutorial&&lessons[lesson].collapse))state.turn=mover;selected=null;working=true;draw();controller=new AbortController();const current=controller;
+  history.push(structuredClone(state));const before=state,mover=state.turn,chosen=options.find(m=>!m.prom)||options[0],expected=lessons[lesson].move,completed=tutorial&&!lessons[lesson].collapse&&before.ply===0&&chosen.from===expected.from&&chosen.to===expected.to&&chosen.drop===expected.drop;state=play(state,chosen);const played=beforeParadox(state),slide=slidingMove(before,played),capture=capturedPiece(before,played),kingImpact=kingCaptureSquare(before,played),effects=moveEffects(state).filter(e=>!(tutorial&&e.kind==='check'&&before.board[state.last.at(-1)]?.type==='K'&&before.board[state.last.at(-1)]?.side!==mover));if(!(tutorial&&lessons[lesson].collapse))state.turn=mover;selected=null;working=true;if(state.paradoxEvent?.kind==='rebirth')collapsePhase='waiting';draw();controller=new AbortController();const current=controller;
   if(!before.board[state.last[0]]?.prom&&state.board[state.last[1]]?.prom&&!state.result)playArcadeCue('promote');
   if(slide)await runSlide(slide,$('devBoard'),current.signal,playMoveSound);
   if(current.signal.aborted)return;
@@ -69,10 +69,11 @@ export function initDeveloper(getCurrent){
   if(current.signal.aborted)return;
   if(capture)await runCapture(capture,current.signal,{moveSound:!slide,shake:!flipNeedsShake(state),board:$('devBoard'),hand:$('devHand'+mover),overlay:$('developerDialog')});
   if(current.signal.aborted)return;
-  if(state.flipped.length>=1)await runCombo(state,$('devBoard'),0,current.signal);
+  if(state.flipped.length>=1)await runCombo(played,$('devBoard'),0,current.signal);
   else if(!slide&&!capture&&!state.result)playMoveSound();
   if(current.signal.aborted)return;
-  if(tutorial&&lessons[lesson].collapse||!tutorial&&$('devCollapseEarly').checked){
+  if(state.paradoxEvent?.kind==='rebirth'){await runParadoxEvent($('devBoard'),state,0,current.signal);collapsePhase='ash';draw();}
+  else if(tutorial&&lessons[lesson].collapse||!tutorial&&$('devCollapseEarly').checked){
    const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);current.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);current.signal.addEventListener('abort',done,{once:true});if(current.signal.aborted)done();});
    const collapse=async()=>{
     if(tutorial){collapseLesson(state,collapseTrial);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state,undefined,undefined,mover);

@@ -18,7 +18,7 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
  const place=(el,square)=>{const r=rects.get(square);if(r)Object.assign(el.style,{left:r.x+'%',top:r.y+'%',width:r.w+'%',height:r.h+'%'});};
  for(let i=0;i<81;i++){
   const p=old.board[i];if(!p)continue;const wrap=document.createElement('span');wrap.className='paradox-token';place(wrap,i);
-  const piece=document.createElement('span');piece.className='piece'+(p.side!==perspective?' enemy':'')+(p.prom?' prom':'');piece.dataset.side=p.side;piece.textContent=label(p);
+  const piece=document.createElement('span');piece.className='piece'+(p.side!==perspective?' enemy':'')+(p.prom?' prom':'')+(p.wings?' has-wings':'');piece.dataset.side=p.side;piece.textContent=label(p);
   const source=board.querySelector('[data-square="'+i+'"] .piece');if(source)piece.style.fontSize=getComputedStyle(source).fontSize;
   wrap.append(piece);field.append(wrap);tokens.set(i,{wrap,piece});
  }
@@ -36,11 +36,29 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
    await wait(timing.cutinMs);band.remove();
   }
   if(signal?.aborted)return;
-  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote','supply','extra','annihilate','dragons'].includes(event.kind)?' rainbow':'');
+  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth'].includes(event.kind)?' rainbow':'');
    caption.textContent=event.kind==='shuffle'&&!event.skipped?'すべての駒がシャッフルする':event.kind==='invert'?'すべての駒が反転する':paradoxSummary(state);
   layer.append(caption);await wait(timing.noticeMs);if(signal?.aborted)return;
   caption.classList.add('during');
-  if(['extra','annihilate','dragons'].includes(event.kind)){
+  if(event.kind==='wings'){
+   const stop=playParadoxRareSound('wings');if(stop)sounds.push(stop);
+   const token=tokens.get(event.square);if(token){token.piece.classList.add('has-wings');token.wrap.classList.add('rebirth-halo');animate(token.wrap,[{transform:'scale(.8)',filter:'brightness(3)'},{offset:.5,transform:'scale(1.35)',filter:'brightness(1.5)'},{transform:'scale(1)',filter:'brightness(1)'}],{duration:1500,fill:'both',easing:'ease-out'});}
+   await wait(timing.motionMs);
+  }else if(event.kind==='rebirth'){
+   const stop=playParadoxRareSound('rebirth');if(stop)sounds.push(stop);
+   await Promise.all(event.entries.map(async r=>{
+    const oldToken=tokens.get(r.square);
+    if(oldToken){oldToken.wrap.classList.add('rebirth-explosion');animate(oldToken.piece,[{opacity:1,filter:'brightness(5)'},{opacity:0,transform:'scale(2) rotate(35deg)'}],{duration:450,fill:'both'});}
+    const burst=document.createElement('span');burst.className='paradox-token rebirth-burst';place(burst,r.square);field.append(burst);
+    animate(burst,[{opacity:0,transform:'scale(.2)'},{offset:.15,opacity:1},{opacity:0,transform:'scale(2.6)'}],{duration:750,fill:'both'});
+    await wait(450);if(signal?.aborted)return;if(oldToken)oldToken.wrap.style.visibility='hidden';
+    const wrap=document.createElement('span');wrap.className='paradox-token rebirth-halo';place(wrap,r.square);
+    const piece=document.createElement('span');piece.className='piece has-wings'+(r.side!==perspective?' enemy':'');piece.dataset.side=r.side;piece.textContent='玉';wrap.append(piece);field.append(wrap);
+    const source=rects.get(r.from),target=rects.get(r.square),dx=source&&target?(source.x-target.x)/target.w*100:0,dy=source&&target?(source.y-target.y)/target.h*100:-65;
+    animate(wrap,[{opacity:0,transform:`translate(${dx}%,${dy}%) scale(.4)`,filter:'brightness(4)'},{offset:.7,opacity:1,transform:'translate(0,0) scale(1.25)',filter:'brightness(2)'},{opacity:1,transform:'translate(0,0) scale(1)',filter:'brightness(1)'}],{duration:1000,fill:'both',easing:'ease-out'});
+    await wait(1000);if(signal?.aborted)return;piece.classList.remove('has-wings');await wait(350);
+   }));
+  }else if(['extra','annihilate','dragons'].includes(event.kind)){
    const stop=playParadoxRareSound(event.kind);if(stop)sounds.push(stop);
    if(event.kind==='extra'){
     field.classList.add('paradox-extra-turn');await wait(timing.motionMs);
