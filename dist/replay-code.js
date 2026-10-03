@@ -35,8 +35,8 @@ export function unpackReplayState(frame){
    if(e.kind==='warp'){
     if(e.moves.length>1)bad();
     if(e.moves.length){const m=e.moves[0];if(s.board[m.from]||s.board[m.to].type!=='K'||e.side!==s.board[m.to].side)bad();}
-   }else if(e.moves.length!==s.board.filter(Boolean).length)bad();
-   s.paradoxEvent={kind:e.kind,...(e.moves.length&&e.kind==='warp'?{side:e.side}:{}),moves:e.moves.map(m=>({from:m.from,to:m.to}))};
+   }else if(e.skipped===true?e.moves.length!==0:e.moves.length!==s.board.filter(Boolean).length)bad();
+   s.paradoxEvent={kind:e.kind,...(e.moves.length&&e.kind==='warp'?{side:e.side}:{}),...(e.kind==='shuffle'&&e.skipped===true?{skipped:true}:{}),moves:e.moves.map(m=>({from:m.from,to:m.to}))};
   }else{
    if(!Array.isArray(e.squares)||e.squares.length>81||new Set(e.squares).size!==e.squares.length||e.squares.some(i=>!validSquare(i)||!s.board[i]))bad();
    if(e.kind==='flip'&&(e.squares.length>5||e.squares.some(i=>s.board[i].type==='K')))bad();

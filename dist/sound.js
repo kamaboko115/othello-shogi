@@ -64,7 +64,8 @@ export function playTossCutInSound(){
   gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(volume,start+.004);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
   osc.connect(gain);gain.connect(output);osc.start(start);osc.stop(start+duration+.01);nodes.push(osc,gain);last=osc;
  }
- last.onended=()=>{for(const node of nodes)node.disconnect();output.disconnect();};
+ let stopped=false;const stop=()=>{if(stopped)return;stopped=true;for(const node of nodes){try{node.stop?.();}catch{}node.disconnect();}output.disconnect();};
+ last.onended=stop;return stop;
 }
 export function playSwordSound(signal){
  prepare();if(!context||context.state!=='running'||signal?.aborted)return ()=>{};
@@ -203,4 +204,26 @@ export function playParadoxArrival(){
    oscillator.connect(gain);gain.connect(context.destination);oscillator.start(start);oscillator.stop(start+1.25);
   }
  });
+}
+
+// Locally synthesized sweeps and a low, pulsing stone rumble; no sound download.
+let paradoxNoise;
+export function playParadoxMotionSound(kind,durationMs=180,index=0){
+ prepare();if(!context||context.state!=='running')return ()=>{};
+ if(!paradoxNoise){paradoxNoise=context.createBuffer(1,context.sampleRate,context.sampleRate);const a=paradoxNoise.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;}
+ const duration=Math.max(.055,durationMs/1000),at=context.currentTime,rumble=kind==='rumble',source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
+ source.buffer=paradoxNoise;source.loop=true;filter.type=rumble?'lowpass':'bandpass';filter.Q.value=rumble?.7:1.2;
+ filter.frequency.setValueAtTime(rumble?230:kind==='flip'?700+index*120:1700,at);filter.frequency.exponentialRampToValueAtTime(rumble?90:400,at+duration);
+ gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(rumble?.48:kind==='flip'?.18:.2,at+Math.min(.06,duration*.15));gain.gain.setValueAtTime(rumble?.38:.11,at+duration*.65);gain.gain.linearRampToValueAtTime(0,at+duration);
+ source.connect(filter);filter.connect(gain);gain.connect(context.destination);source.start(at);source.stop(at+duration+.02);
+ const nodes=[source,filter,gain],sources=[source];
+ if(rumble){
+  const osc=context.createOscillator(),bass=context.createGain(),pulse=context.createOscillator(),depth=context.createGain();
+  osc.type='triangle';osc.frequency.value=48;bass.gain.value=.08;pulse.frequency.value=8;depth.gain.value=.06;
+  pulse.connect(depth);depth.connect(bass.gain);osc.connect(bass);bass.connect(gain);osc.start(at);pulse.start(at);osc.stop(at+duration);pulse.stop(at+duration);
+  nodes.push(osc,bass,pulse,depth);sources.push(osc,pulse);
+  const tremolo=context.createOscillator(),amount=context.createGain();tremolo.frequency.value=12;amount.gain.value=.12;tremolo.connect(amount);amount.connect(gain.gain);tremolo.start(at);tremolo.stop(at+duration);nodes.push(tremolo,amount);sources.push(tremolo);
+ }
+ let stopped=false;const stop=()=>{if(stopped)return;stopped=true;for(const s of sources)try{s.stop();}catch{}for(const n of nodes)n.disconnect();};
+ source.onended=stop;return stop;
 }

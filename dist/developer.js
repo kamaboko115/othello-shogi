@@ -1,4 +1,5 @@
-import {paintCollapse,paintArrival,paintParadoxEvent,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
+import {runParadoxEvent} from './paradox-event.js';
+import {paintCollapse,paintArrival,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {lessons,lessonState,collapseReply,tutorialMoves,collapseLesson} from './tutorial-lessons.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {paradoxSound} from './paradox.js';
@@ -52,7 +53,6 @@ export function initDeveloper(getCurrent){
   }
   paintCollapse(board,state.destroyed,{phase:collapsePhase,eventKey:state.ply});
   if(state.spawned&&working)paintArrival(board,state,collapsePhase==='breaking');
-  paintParadoxEvent(board,working&&collapsePhase==='breaking'?state:null);
   if(!tutorial&&$('devCollapseEarly').checked)$('devStatus').textContent=(state.result||'デバッグ：'+state.ply+'手目 ／ 2手目に予告・3手目から盤面崩壊')+(state.destroyed?' ／ '+label(state.destroyed.piece)+'が崩壊':state.spawned?' ／ '+arrivalSummary(state):state.paradoxEvent?' ／ '+paradoxSummary(state):'');
  }
  async function click(i){
@@ -78,6 +78,7 @@ export function initDeveloper(getCurrent){
     if(tutorial){collapseLesson(state,collapseTrial);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state);
     if(!state.paradoxStarted&&!state.destroyed&&!state.spawned&&!state.paradoxEvent)return;
     collapsePhase='waiting';draw();
+    if(state.paradoxEvent){await wait(120);if(current.signal.aborted)return;await runParadoxEvent($('devBoard'),state,0,current.signal);collapsePhase='ash';draw();return;}
     const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':state.spawned?arrivalSummary(state)+'！ この手では盤面崩壊による破壊はありません。':state.paradoxEvent?paradoxSummary(state):'盤上の駒が1枚壊れます';$('devBoard').append(note);
     try{
      if(state.paradoxStarted){paradoxSound(true);await wait(3000);return;}else if(state.destroyed)await wait(collapseStrikeDelay);

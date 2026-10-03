@@ -55,9 +55,9 @@ export function demo(){const s=empty(true);for(const [i,type,side,prom] of [[76,
 
 // Evaluate the opponent's next legal move, including drops and simultaneous flips.
 // Read hypothetical occupancy instead of cloning the entire state per candidate.
-export function safeArrivalSquares(s,piece){
+export function safeArrivalSquares(s,piece,candidates=Array.from({length:81},(_,i)=>i)){
  const enemy=1-piece.side,trial={...s,board:s.board.slice(),turn:enemy,result:''},safe=[];
- for(let square=0;square<81;square++){
+ for(const square of candidates){
   if(trial.board[square])continue;
   trial.board[square]=piece;
   const threatened=move=>{
@@ -91,13 +91,21 @@ export const arrivalSummary=s=>arrivals(s).map(d=>(d.piece.side?'後手':'先手
 export const collapseTargets=s=>s.board.flatMap((p,i)=>!p?[]:Array(p.type==='K'?1:10).fill(i));
 // Relative weights: total 120. Change probabilities here, for both local/server games.
 export const paradoxWeights=Object.freeze({arrival:10,warp:10,flip:6,shuffle:2,invert:1,destroy:91});
+// Shared with the clock: presentation never consumes a player's thinking time.
+export function paradoxEventTiming(event){
+ const kind=event?.kind,cutins=kind==='invert'?['middle','upper','lower']:kind==='shuffle'?['middle']:[];
+ const cutinMs=650,noticeMs=kind==='invert'||kind==='shuffle'?1600:kind==='flip'?500:200;
+ const flipMs=kind==='invert'?4000:1100,staggerMs=280,tailMs=kind==='warp'?200:350;
+ const motionMs=kind==='shuffle'?2800:kind==='invert'?4000:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
+ return {cutins,cutinMs,noticeMs,flipMs,staggerMs,motionMs,tailMs,totalMs:cutins.length*cutinMs+noticeMs+motionMs+tailMs};
+}
 export function chooseParadoxEvent(pick){let roll=pick(Object.values(paradoxWeights).reduce((a,b)=>a+b,0));if(!Number.isInteger(roll)||roll<0)throw Error('Invalid paradox roll');for(const [kind,weight]of Object.entries(paradoxWeights)){if(roll<weight)return kind;roll-=weight;}throw Error('Invalid paradox roll');}
 const shuffle=(items,pick)=>{for(let i=items.length-1;i>0;i--){const j=pick(i+1);[items[i],items[j]]=[items[j],items[i]];}return items;};
 export function paradoxSummary(s){
  const e=s.paradoxEvent;if(!e)return '';
- if(e.kind==='warp')return e.moves.length?(e.side?'後手':'先手')+'の玉が安全なマスへワープ':'玉のワープは不発（安全な空きマスなし）';
+ if(e.kind==='warp')return e.moves.length?(e.side?'後手':'先手')+'の玉がワープ':'玉のワープは不発';
  if(e.kind==='flip')return '王以外の'+e.squares.length+'枚が反転';
- return e.kind==='shuffle'?'全駒の位置がシャッフル':'盤上の全駒が反転';
+ return e.kind==='shuffle'?(e.skipped?'シャッフルは不発':'全駒の位置がシャッフル'):'盤上の全駒が反転';
 }
 // Reconstruct the just-played position for move animations, before the random event.
 export function beforeParadox(s){
@@ -118,8 +126,25 @@ export function applyParadoxEvent(s,kind,pick){
   s.paradoxEvent={kind,moves:[]};return s;
  }
  if(kind==='shuffle'){
-  const destinations=shuffle(Array.from({length:81},(_,i)=>i),pick),old=s.board;s.board=Array(81).fill(null);
-  const changes=[];old.forEach((piece,from)=>{if(!piece)return;const to=destinations[from];s.board[to]=piece;changes.push({from,to});});s.paradoxEvent={kind,moves:changes};return s;
+  const old=s.board,kings=old.flatMap((piece,from)=>piece?.type==='K'?[{piece,from}]:[]);
+  // Bounded retries keep dense positions responsive. Commit only if every king
+  // survives every enemy move/drop, including sandwich captures, on the final board.
+  for(let attempt=0;attempt<16;attempt++){
+   const destinations=shuffle(Array.from({length:81},(_,i)=>i),pick),trial={...s,board:Array(81).fill(null)},changes=[];
+   old.forEach((piece,from)=>{if(!piece||piece.type==='K')return;const to=destinations[from];trial.board[to]=piece;changes.push({from,to});});
+   let valid=true;
+   for(const {piece,from}of shuffle([...kings],pick)){
+    const safe=safeArrivalSquares(trial,piece);if(!safe.length){valid=false;break;}
+    const to=safe[pick(safe.length)];trial.board[to]=piece;changes.push({from,to});
+   }
+   if(!valid)continue;
+   for(const {from,to}of changes){
+    if(old[from].type!=='K')continue;const piece=trial.board[to];trial.board[to]=null;
+    const safe=safeArrivalSquares(trial,piece,[to]).length>0;trial.board[to]=piece;if(!safe){valid=false;break;}
+   }
+   if(valid){s.board=trial.board;s.paradoxEvent={kind,moves:changes};return s;}
+  }
+  s.paradoxEvent={kind,moves:[],skipped:true};return s;
  }
  const squares=s.board.flatMap((p,i)=>p&&(kind==='invert'||p.type!=='K')?[i]:[]);
  if(kind==='flip'){shuffle(squares,pick);squares.splice(5);}
