@@ -89,14 +89,14 @@ export const arrivals=s=>s.spawned?[s.spawned,...(s.spawned.additional||[])]:[];
 export const arrivalSummary=s=>arrivals(s).map(d=>(d.piece.side?'後手':'先手')+'の'+label(d.piece)).join('・')+'が降臨';
 // One ticket per king; ten tickets per other piece.
 export const collapseTargets=s=>s.board.flatMap((p,i)=>!p?[]:Array(p.type==='K'?1:10).fill(i));
-// Relative weights: total 120. Change probabilities here, for both local/server games.
-export const paradoxWeights=Object.freeze({arrival:10,warp:10,flip:6,shuffle:2,invert:1,destroy:91});
+// Total 9240 (=120*77): preserve existing special odds and allocate 1/77 to promotion.
+export const paradoxWeights=Object.freeze({arrival:770,warp:770,flip:462,shuffle:154,invert:77,promote:120,destroy:6887});
 // Shared with the clock: presentation never consumes a player's thinking time.
 export function paradoxEventTiming(event){
  const kind=event?.kind,cutins=kind==='invert'?['middle','upper','lower']:kind==='shuffle'?['middle']:[];
- const cutinMs=650,noticeMs=kind==='invert'||kind==='shuffle'?1600:kind==='flip'?500:200;
- const flipMs=kind==='invert'?4000:1100,staggerMs=280,tailMs=kind==='warp'?200:350;
- const motionMs=kind==='shuffle'?2800:kind==='invert'?4000:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
+ const cutinMs=650,noticeMs=kind==='invert'||kind==='shuffle'?1600:kind==='promote'?800:kind==='flip'?500:200;
+ const flipMs=kind==='invert'?4000:kind==='promote'?1200:1100,staggerMs=280,tailMs=kind==='warp'?1400:350;
+ const motionMs=kind==='shuffle'?2800:kind==='invert'?4000:kind==='promote'?flipMs:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
  return {cutins,cutinMs,noticeMs,flipMs,staggerMs,motionMs,tailMs,totalMs:cutins.length*cutinMs+noticeMs+motionMs+tailMs};
 }
 export function chooseParadoxEvent(pick){let roll=pick(Object.values(paradoxWeights).reduce((a,b)=>a+b,0));if(!Number.isInteger(roll)||roll<0)throw Error('Invalid paradox roll');for(const [kind,weight]of Object.entries(paradoxWeights)){if(roll<weight)return kind;roll-=weight;}throw Error('Invalid paradox roll');}
@@ -105,18 +105,23 @@ export function paradoxSummary(s){
  const e=s.paradoxEvent;if(!e)return '';
  if(e.kind==='warp')return e.moves.length?(e.side?'後手':'先手')+'の玉がワープ':'玉のワープは不発';
  if(e.kind==='flip')return '王以外の'+e.squares.length+'枚が反転';
+ if(e.kind==='promote')return e.squares.length?'盤上の全駒が成る':'全駒成りは不発（成れる駒なし）';
  return e.kind==='shuffle'?(e.skipped?'シャッフルは不発':'全駒の位置がシャッフル'):'盤上の全駒が反転';
 }
 // Reconstruct the just-played position for move animations, before the random event.
 export function beforeParadox(s){
  const e=s.paradoxEvent;if(!e)return s;const n={...s,board:s.board.slice()};delete n.paradoxEvent;
  if(e.moves){for(const m of e.moves)n.board[m.to]=null;for(const m of e.moves)n.board[m.from]=s.board[m.to];}
- if(e.squares)for(const i of e.squares)n.board[i]={...n.board[i],side:1-n.board[i].side};
+ if(e.squares)for(const i of e.squares)n.board[i]=e.kind==='promote'?{...n.board[i],prom:false}:{...n.board[i],side:1-n.board[i].side};
  return n;
 }
 export function applyParadoxEvent(s,kind,pick){
- if(!['warp','flip','shuffle','invert'].includes(kind))throw Error('Invalid paradox event');
+ if(!['warp','flip','shuffle','invert','promote'].includes(kind))throw Error('Invalid paradox event');
  s.destroyed=null;s.spawned=null;
+ if(kind==='promote'){
+  const squares=s.board.flatMap((p,i)=>p&&!p.prom&&['P','L','N','S','B','R'].includes(p.type)?[i]:[]);
+  for(const i of squares)s.board[i]={...s.board[i],prom:true};s.paradoxEvent={kind,squares};return s;
+ }
  if(kind==='warp'){
   const kings=shuffle(s.board.flatMap((p,i)=>p?.type==='K'?[i]:[]),pick);
   for(const from of kings){const piece=s.board[from],trial={...s,board:s.board.slice()};trial.board[from]=null;

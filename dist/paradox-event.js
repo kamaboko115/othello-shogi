@@ -36,7 +36,7 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
    await wait(timing.cutinMs);band.remove();
   }
   if(signal?.aborted)return;
-  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert'].includes(event.kind)?' rainbow':'');
+  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote'].includes(event.kind)?' rainbow':'');
    caption.textContent=event.kind==='shuffle'&&!event.skipped?'すべての駒がシャッフルする':event.kind==='invert'?'すべての駒が反転する':paradoxSummary(state);
   layer.append(caption);await wait(timing.noticeMs);if(signal?.aborted)return;
   caption.classList.add('during');
@@ -46,25 +46,34 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
     if(signal?.aborted)return;const {from,to}=moving[i],token=tokens.get(from),a=rects.get(from),b=rects.get(to);if(!token||!a||!b)continue;
     const duration=Math.max(0,(i+1)*timing.motionMs/Math.max(1,moving.length)-(performance.now()-waveStart)),dx=(b.x-a.x)*field.clientWidth/100,dy=(b.y-a.y)*field.clientHeight/100;
     token.wrap.style.zIndex='3';token.wrap.classList.add('paradox-token-travel');sound(event.kind,duration,i);
+    let target;
+    if(event.kind==='warp'){
+     target=document.createElement('span');target.className='paradox-warp-target';place(target,to);field.append(target);
+     token.wrap.classList.add('paradox-warp-king');
+    }
     animate(token.wrap,[{transform:'translate(0,0) scale(1)',filter:'brightness(1)'},{offset:.35,transform:`translate(${dx*.3}px,${dy*.3}px) scale(.45)`,filter:'brightness(2.5)'},{offset:.8,transform:`translate(${dx}px,${dy}px) scale(1.3)`,filter:'brightness(2)'},{transform:`translate(${dx}px,${dy}px) scale(1)`,filter:'brightness(1)'}],{duration,fill:'none',easing:'ease-in-out'});
-    await wait(duration);place(token.wrap,to);token.wrap.classList.remove('paradox-token-travel');token.wrap.style.zIndex='';
+    await wait(duration);if(signal?.aborted)return;place(token.wrap,to);token.wrap.classList.remove('paradox-token-travel');
+    if(target){target.classList.add('arrived');token.wrap.classList.add('paradox-warp-arrived');}else token.wrap.style.zIndex='';
    }
    if(!moving.length)await wait(timing.motionMs);
   }else{
    if(event.kind==='invert')sound('rumble',timing.motionMs);
+   if(event.kind==='promote'&&event.squares.length)sound('flip',timing.motionMs,4);
    const flipOne=async(square,index)=>{
     const token=tokens.get(square);if(!token)return;
     const delay=event.kind==='flip'?index*timing.staggerMs:0;await wait(delay);if(signal?.aborted)return;
     if(event.kind==='flip')sound('flip',timing.flipMs,index);
     token.wrap.classList.add('paradox-token-flipping');
-    const start=old.board[square].side===perspective?0:180,end=start+540;
-    animate(token.piece,[{transform:`rotate(${start}deg) scale(1)`},{offset:.5,transform:`rotate(${start+270}deg) scale(1.15)`,filter:'brightness(1.5)'},{transform:`rotate(${end}deg) scale(1)`,filter:'brightness(1)'}],{duration:timing.flipMs,easing:'ease-in-out',fill:'both'});
+    const start=old.board[square].side===perspective?0:180,rotation=event.kind==='promote'?360:540,end=start+rotation;
+    animate(token.piece,[{transform:`rotate(${start}deg) scale(1)`},{offset:.5,transform:`rotate(${start+rotation/2}deg) scale(1.15)`,filter:'brightness(1.5)'},{transform:`rotate(${end}deg) scale(1)`,filter:'brightness(1)'}],{duration:timing.flipMs,easing:'ease-in-out',fill:'both'});
     await wait(timing.flipMs/2);if(signal?.aborted)return;
     token.piece.dataset.side=state.board[square].side;
+    if(event.kind==='promote'){token.piece.classList.add('prom');token.piece.textContent=label(state.board[square]);}
     await wait(timing.flipMs/2);if(signal?.aborted)return;
     token.piece.classList.toggle('enemy',state.board[square].side!==perspective);token.wrap.classList.remove('paradox-token-flipping');
    };
    await Promise.all(event.squares.map(flipOne));
+   if(!event.squares.length)await wait(timing.motionMs);
   }
   if(!signal?.aborted)await wait(timing.tailMs);
  }finally{
