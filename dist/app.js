@@ -2,7 +2,7 @@ import {initMusic} from './music.js';
 import {initReplayViewer} from './replay-view.js';
 import {createRewardAds} from './reward-ad.js';
 import {createWinAdBreak} from './ad-break.js';
-import {guideHTML,initBeginnerGuide} from './novice-guide.js';
+import {guideHTML,initBeginnerGuide,initTutorialMenu} from './novice-guide.js';
 import {initCredits} from './credits.js';
 import {placeHelper} from './helper-visit.js';
 import {createDevAccess} from './dev-access.js';
@@ -123,7 +123,7 @@ function syncDebugCollapseOption(){
 $('debugCollapseOption').onchange=()=>{syncDebugCollapseOption();render();};
 syncDebugCollapseOption();
 
-initDeveloper(()=>({state,side:online?.side??0}));
+const tutorialTools=initDeveloper(()=>({state,side:online?.side??0}));
 function stone(side){const el=document.createElement('span');el.className='stone '+(side===0?'black':'white');el.setAttribute('aria-hidden','true');return el;}
 function recordLine(text){const el=document.createElement('div');for(const part of text.split(/([▲▽])/)){if(part==='▲'||part==='▽'){const mark=stone(part==='▲'?0:1);mark.removeAttribute('aria-hidden');mark.setAttribute('aria-label',part==='▲'?'先手':'後手');el.append(mark);}else el.append(document.createTextNode(part));}return el;}
 const selectedSettings=()=>({timeControl:selectedKind==='friend'&&Number($('mainTime').value)<minuteSteps.length?{minutes:minuteSteps[Number($('mainTime').value)],increment:Number($('incrementTime').value),byoyomi:byoyomiSteps[Number($('byoyomiTime').value)]}:'none',handicap:selectedKind==='friend'?$('handicap').value:$('aiHandicap').value,paradoxAt:$('paradoxAt').value==='none'?false:Number($('paradoxAt').value),moveLimit:judgeSteps[Number($('moveLimit').value)],noDrops:$('allowDrops').value==='no',...(selectedKind==='ai'?{helperUnlimited:$('helperUnlimited').checked,handicapSide:$('aiHandicapSide').value,aiLevel:$('aiLevel').value,thinkMs:Number($('thinkTime').value)}:{})});
@@ -351,7 +351,8 @@ function enter(data,token,invite){
 for(const [value,name] of Object.entries(handicapOptions)){const option=document.createElement('option');option.value=value;option.textContent=name;$('handicap').append(option);$('aiHandicap').append(option.cloneNode(true));}
 const explainTime=()=>{const unlimited=Number($('mainTime').value)===minuteSteps.length;$('incrementTime').disabled=$('byoyomiTime').disabled=unlimited;const minutes=minuteSteps[Number($('mainTime').value)],increment=Number($('incrementTime').value),byoyomi=byoyomiSteps[Number($('byoyomiTime').value)];for(const [id,out,value,unit] of [['mainTime','mainTimeValue',minutes,'分'],['incrementTime','incrementValue',increment,'秒'],['byoyomiTime','byoyomiValue',byoyomi,'秒']]){const text=id==='mainTime'?(unlimited?'無限':value+unit):(unlimited?'なし':clockSecondsLabel(value));$(out).textContent=text;$(id).setAttribute('aria-valuetext',text);}$('timeHelp').textContent=unlimited?'時間無制限':timeHelp({minutes,increment,byoyomi});};
 for(const id of ['mainTime','incrementTime','byoyomiTime'])$(id).oninput=explainTime;explainTime();
-initBeginnerGuide(document,guideHTML);
+const beginnerGuide=initBeginnerGuide(document,guideHTML);
+initTutorialMenu(document,beginnerGuide,tutorialTools.startTutorial);
 for(const id of ['chooseRules','openRulesAlways','openRulesSettings'])$(id).onclick=()=>$('rulesDialog').showModal();for(const id of ['closeRules','closeRulesTop'])$(id).onclick=()=>$('rulesDialog').close();
 const warnClock=createClockWarning(playClockWarning);
 setInterval(()=>{

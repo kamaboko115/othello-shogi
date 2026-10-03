@@ -47,15 +47,28 @@ export function guideHTML(topic){
 
 export function initBeginnerGuide(document,render=guideHTML){
  const get=id=>document.getElementById(id),dialog=get('beginnerGuide');
- for(const [id,topic,title] of [['openOthelloBasics','othello','オセロの基本'],['openShogiBasics','shogi','将棋の基本']]){
-  get(id).onclick=()=>{
-   get('beginnerTitle').textContent=title;
+ const topics=[['openOthelloBasics','othello','オセロの基本'],['openShogiBasics','shogi','将棋の基本']];
+ const open=(topic,practice=false)=>{
+   const title=topics.find(item=>item[1]===topic)?.[2];
    get('beginnerBody').innerHTML=render(topic);
-   dialog.showModal();
-   get('beginnerTitle').focus();
-   get('beginnerBody').scrollTop=0;
-  };
- }
+   get('beginnerTitle').textContent=title;
+   get('beginnerTutorial').hidden=!practice;
+   get('closeBeginner').textContent=practice?'入口に戻る':'ルールに戻る';
+   dialog.showModal();get('beginnerTitle').focus();get('beginnerBody').scrollTop=0;
+ };
+ for(const [id,topic] of topics)get(id).onclick=()=>open(topic);
  get('closeBeginner').onclick=()=>dialog.close();
  // Native dialog Escape closes only the top modal and restores opener focus.
+ return {open,close:()=>dialog.close()};
+}
+
+export function initTutorialMenu(document,guide,startTutorial){
+ const get=id=>document.getElementById(id),dialog=get('tutorialMenu');
+ get('openTutorial').onclick=()=>dialog.showModal();
+ get('tutorialShogi').onclick=()=>guide.open('shogi',true);
+ get('tutorialOthello').onclick=()=>guide.open('othello',true);
+ const practice=()=>{guide.close();dialog.close();startTutorial();};
+ get('tutorialKnown').onclick=practice;
+ get('beginnerTutorial').onclick=practice;
+ get('closeTutorialMenu').onclick=()=>dialog.close();
 }

@@ -62,7 +62,7 @@ body.hallmark-trial dialog input[type=checkbox]{accent-color:var(--color-accent)
 body.hallmark-trial dialog :is(ul,summary,.note){color:var(--color-muted)}
 body.hallmark-trial dialog details{border-color:var(--color-rule)}
 body.hallmark-trial dialog summary{min-height:44px;align-content:center;font-size:var(--text-small)}
-body.hallmark-trial :is(#confirmNo,#oseshoNo,#stay,#devAccessCancel,#closeSettings,#closeRules,#closeRulesTop,#closeBeginner,#closeDeveloper,#closeCredits){background:var(--color-surface);color:var(--color-ink);border-color:var(--color-rule)}
+body.hallmark-trial :is(#confirmNo,#oseshoNo,#stay,#devAccessCancel,#closeSettings,#closeRules,#closeRulesTop,#closeTutorialMenu,#closeBeginner,#closeDeveloper,#closeCredits){background:var(--color-surface);color:var(--color-ink);border-color:var(--color-rule)}
 body.hallmark-trial .theme-switch{color:var(--color-ink);font-size:var(--text-body)}
 body.hallmark-trial #settingsDialog{width:min(94vw,480px);overflow:auto}
 body.hallmark-trial #developerTools{margin-top:var(--space-md);padding-top:var(--space-sm)}

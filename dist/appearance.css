@@ -139,3 +139,7 @@ html[data-piece-skin="stones"] #replayBoard .piece {height:auto;aspect-ratio:1;}
 #replayStatus {font-size:13px;line-height:1.6;}
 #replayResult {font-weight:700;min-height:1.5em;}
 #replayLine {min-height:1.8em;}
+
+#replayGraph svg{cursor:crosshair;touch-action:pan-y;color:var(--color-ink,#283a31)}
+#replayGraph svg:focus-visible{outline:3px solid var(--replay-accent,#39a17a);outline-offset:3px}
+#tutorialMenu{background:var(--color-paper,#f6eddc);color:var(--color-ink,#243b32)}
