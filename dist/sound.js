@@ -227,3 +227,24 @@ export function playParadoxMotionSound(kind,durationMs=180,index=0){
  let stopped=false;const stop=()=>{if(stopped)return;stopped=true;for(const s of sources)try{s.stop();}catch{}for(const n of nodes)n.disconnect();};
  source.onended=stop;return stop;
 }
+
+// Original rare-event sounds, synthesized locally with cancellable tails.
+export function playParadoxRareSound(kind){
+ prepare();if(!context||context.state!=='running')return ()=>{};
+ const at=context.currentTime,nodes=[],sources=[],master=context.createGain();master.gain.value=.42;master.connect(context.destination);nodes.push(master);
+ const note=(freq,start,length,volume,type='sine',end=freq)=>{
+  const o=context.createOscillator(),g=context.createGain();o.type=type;o.frequency.setValueAtTime(freq,at+start);o.frequency.exponentialRampToValueAtTime(end,at+start+length);
+  g.gain.setValueAtTime(0,at+start);g.gain.linearRampToValueAtTime(volume,at+start+.008);g.gain.exponentialRampToValueAtTime(.0001,at+start+length);
+  o.connect(g);g.connect(master);o.start(at+start);o.stop(at+start+length+.01);nodes.push(o,g);sources.push(o);
+ };
+ if(kind==='extra'){
+  note(480,0,.15,.35,'sine',2200);for(const [i,f]of [1319,1976,2637,3951].entries())note(f,.08+i*.035,.8,.2/(1+i*.25));
+ }else if(kind==='annihilate'){
+  note(2100,0,.36,.18,'triangle',180);note(95,.38,.8,.6,'triangle',35);for(const [i,f]of [330,551,873].entries())note(f,.4+i*.09,.55,.11,'triangle',f*.4);
+ }else{
+  for(const [i,f]of [330,440,554,659,880,1109].entries())note(f,i*.11,.65,.17,'triangle',f*1.12);
+  for(const [i,f]of [880,1109,1319,1760,2637].entries())note(f,.95+i*.04,1.4,.2/(1+i*.3));
+ }
+ let stopped=false;const stop=()=>{if(stopped)return;stopped=true;for(const o of sources)try{o.stop();}catch{}for(const n of nodes)n.disconnect();};
+ sources.at(-1).onended=stop;return stop;
+}

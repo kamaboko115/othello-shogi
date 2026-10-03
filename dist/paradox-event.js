@@ -1,5 +1,5 @@
 import {beforeParadox,paradoxEventTiming,paradoxSummary,label} from './engine.js';
-import {playTossCutInSound,playParadoxMotionSound} from './sound.js';
+import {playTossCutInSound,playParadoxMotionSound,playParadoxRareSound} from './sound.js';
 
 // Presentation only: the authoritative board has already been resolved once.
 // Animate independent copies so a network/UI redraw cannot reveal final ownership early.
@@ -36,11 +36,41 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
    await wait(timing.cutinMs);band.remove();
   }
   if(signal?.aborted)return;
-  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote','supply'].includes(event.kind)?' rainbow':'');
+  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote','supply','extra','annihilate','dragons'].includes(event.kind)?' rainbow':'');
    caption.textContent=event.kind==='shuffle'&&!event.skipped?'すべての駒がシャッフルする':event.kind==='invert'?'すべての駒が反転する':paradoxSummary(state);
   layer.append(caption);await wait(timing.noticeMs);if(signal?.aborted)return;
   caption.classList.add('during');
-  if(event.kind==='supply'){
+  if(['extra','annihilate','dragons'].includes(event.kind)){
+   const stop=playParadoxRareSound(event.kind);if(stop)sounds.push(stop);
+   if(event.kind==='extra'){
+    field.classList.add('paradox-extra-turn');await wait(timing.motionMs);
+   }else if(event.kind==='annihilate'){
+    await Promise.all(event.pieces.map(async({square},index)=>{
+     await wait(index*600/Math.max(1,event.pieces.length));if(signal?.aborted)return;
+     const token=tokens.get(square);if(!token)return;const spear=document.createElement('span');spear.className='paradox-spear-cell';place(spear,square);field.append(spear);
+     animate(spear,[{transform:'translateY(-260%)',opacity:0},{offset:.15,opacity:1},{transform:'translateY(0)',opacity:1}],{duration:380,fill:'both',easing:'ease-in'});
+     await wait(380);if(signal?.aborted)return;
+     token.wrap.classList.add('paradox-spear-impact');
+     animate(token.wrap,[{filter:'brightness(3)',transform:'scale(1.08)'},{opacity:0,transform:'translateY(20px) scale(.1) rotate(50deg)'}],{duration:450,fill:'both',easing:'ease-out'});
+     animate(spear,[{opacity:1},{opacity:0}],{duration:350,fill:'both'});
+     await wait(450);token.wrap.style.visibility='hidden';spear.remove();
+    }));
+    if(!event.pieces.length)await wait(timing.motionMs);
+   }else{
+    const veil=document.createElement('span');veil.className='paradox-dragon-veil';field.append(veil);
+    field.classList.add('paradox-dragon-charge');await wait(650);if(signal?.aborted)return;
+    animate(veil,[{opacity:0},{offset:.45,opacity:.94},{offset:.65,opacity:.94},{opacity:0}],{duration:300,fill:'both'});
+    await wait(300);if(signal?.aborted)return;field.classList.remove('paradox-dragon-charge');
+    await Promise.all(event.pieces.map(async({square})=>{
+     const token=tokens.get(square);if(!token)return;token.wrap.classList.add('paradox-token-flipping');
+     const start=old.board[square].side===perspective?0:180;
+     animate(token.piece,[{transform:`rotate(${start}deg) scale(1)`},{offset:.5,transform:`rotate(${start+180}deg) scale(1.25)`,filter:'brightness(2)'},{transform:`rotate(${start+360}deg) scale(1)`}],{duration:1650,fill:'both',easing:'ease-in-out'});
+     await wait(825);if(signal?.aborted)return;token.piece.textContent='龍';token.piece.classList.add('prom');
+     await wait(825);token.wrap.classList.remove('paradox-token-flipping');
+    }));
+    if(!event.pieces.length)await wait(1650);
+   }
+  }else if(event.kind==='supply'){
    const types='PLNSGBR',rect=board.getBoundingClientRect(),size=Math.min(52,rect.width/9),duration=timing.motionMs/types.length;
    for(const [index,type]of Array.from(types).entries()){
     if(signal?.aborted)return;sound('flip',duration,index);

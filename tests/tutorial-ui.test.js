@@ -81,7 +81,7 @@ test('完了案内から終了するとロビーへ戻り、最初から練習�
 });
 
 test('開発者の早期崩壊は2手目から発動し、待った・オフ・チュートリアルへ漏れない',async t=>{
- t.mock.method(crypto,'getRandomValues',array=>{array.fill(9239);return array;});
+ t.mock.method(crypto,'getRandomValues',array=>{array.fill(76922999);return array;});
  const {get,clickSquare}=view();get('openDeveloper').onclick();get('devMode').value='play';
  get('devCollapseEarly').checked=true;get('devCollapseEarly').onchange();
  const count=()=>get('devBoard').children.filter(cell=>cell.children.some(el=>el.className.startsWith('piece'))).length;

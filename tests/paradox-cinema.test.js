@@ -60,3 +60,10 @@ test('supply presents seven pieces at the mover tray and cleans up',async t=>{
  for(let i=0;i<100&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
  await task;assert.equal(animations.filter(a=>a.options.duration!==650).length,7);assert.equal(animations.filter(a=>a.options.duration===650).length,1);assert.ok(animations.every(a=>a.cancelled));assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);
 });
+
+for(const [kind,count]of [['extra',3],['annihilate',5],['dragons',4]])test(kind+' plays the configured cut-ins and leaves no overlays or modified authoritative state',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});const {board,animations,cutins}=view(),state=initial();applyParadoxEvent(state,kind,()=>0);const saved=structuredClone(state);let done=false;
+ const task=runParadoxEvent(board,state,0).then(()=>done=true);
+ for(let i=0;i<160&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
+ await task;assert.equal(cutins.length,count);assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);assert.ok(animations.every(a=>a.cancelled));
+});

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {empty,initial,collapseAfterMove,arrivals,arrivalSummary} from '../dist/engine.js';
+import {empty,initial,paradoxWeights,paradoxTotal,collapseAfterMove,arrivals,arrivalSummary} from '../dist/engine.js';
 import {packReplayState,unpackReplayState} from '../dist/replay-code.js';
 import {paintArrival} from '../dist/collapse-view.js';
 const active=()=>({...initial(),ply:151,paradoxAt:150,moveLimit:false});
@@ -31,9 +31,9 @@ test('each king has one destruction ticket while every other piece has ten',()=>
 });
 
 test('production arrival probability is one in twelve',t=>{
- for(const roll of [0,1,768,769,770,1540,2002,2156,2233,2353,9239]){
+ for(const roll of [0,1,paradoxWeights.arrival-1,paradoxWeights.arrival,paradoxTotal-1]){
   let first=true;const mock=t.mock.method(crypto,'getRandomValues',bytes=>{bytes.fill(first?roll:0);first=false;return bytes;});
-  const s=active();collapseAfterMove(s);assert.equal(arrivals(s).length,roll<770?3:0);mock.mock.restore();
+  const s=active();collapseAfterMove(s);assert.equal(arrivals(s).length,roll<paradoxWeights.arrival?3:0);mock.mock.restore();
  }
 });
 

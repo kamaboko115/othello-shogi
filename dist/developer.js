@@ -75,7 +75,7 @@ export function initDeveloper(getCurrent){
   if(tutorial&&lessons[lesson].collapse||!tutorial&&$('devCollapseEarly').checked){
    const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);current.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);current.signal.addEventListener('abort',done,{once:true});if(current.signal.aborted)done();});
    const collapse=async()=>{
-    if(tutorial){collapseLesson(state,collapseTrial);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state);
+    if(tutorial){collapseLesson(state,collapseTrial);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state,undefined,undefined,mover);
     if(!state.paradoxStarted&&!state.destroyed&&!state.spawned&&!state.paradoxEvent)return;
     collapsePhase='waiting';draw();
     if(state.paradoxEvent){await wait(120);if(current.signal.aborted)return;await runParadoxEvent($('devBoard'),state,0,current.signal);collapsePhase='ash';draw();return;}
