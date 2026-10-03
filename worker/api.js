@@ -1,6 +1,6 @@
 import {normalizeMoveLimit} from '../dist/judge-options.js';
 import {normalizeTime,timeOptions,handicapOptions,applyHandicap,startClock,clockBudget,chargeClock,finishClockMove} from '../dist/match-options.js';
-import {initial,play,collapseAfterMove,label,names,moves,arrivalSummary} from '../dist/engine.js';
+import {initial,play,collapseAfterMove,label,names,moves,arrivalSummary,paradoxSummary} from '../dist/engine.js';
 import {roomLimitSchema,roomLimitResponse,insertLimitedFriendRoom} from './room-limits.js';
 import {securityHeaders,readLimitedRequestBody} from './security.js';
 import {rememberReplay,appendReplay,rewindReplay,replayRecord} from '../dist/replay-code.js';
@@ -153,7 +153,7 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
    let normalized;
    if(m.drop){if(!['R','B','G','S','N','L','P'].includes(m.drop))fail('指せない手です。');normalized={drop:m.drop,to:m.to};}
    else{if(!Number.isInteger(m.from)||m.from<0||m.from>80||typeof m.prom!=='boolean')fail('指せない手です。');normalized={from:m.from,to:m.to,prom:m.prom};}
-   try{const next=collapseAfterMove(play(s,normalized));remember(data);chargeClock(data,now);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?' ／ '+arrivalSummary(next):''));data.state=next;appendReplay(data);if(body.action==='helper-move')data.helperUsedRound=data.round||1;finishClockMove(data,s.turn,now);data.offer=null;}catch{fail('指せない手です。');}
+   try{const next=collapseAfterMove(play(s,normalized));remember(data);chargeClock(data,now);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?' ／ '+arrivalSummary(next):next.paradoxEvent?' ／ '+paradoxSummary(next):''));data.state=next;appendReplay(data);if(body.action==='helper-move')data.helperUsedRound=data.round||1;finishClockMove(data,s.turn,now);data.offer=null;}catch{fail('指せない手です。');}
   }else if(body.action==='resign'){chargeClock(data,now);s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
   else if(body.action==='offer-draw'){if(data.kind==='ai'){chargeClock(data,now);s.result='合意による引き分け';}else data.offer=side;}
   else if(body.action==='accept-draw'){if(data.offer!==1-side)fail('相手からの引き分け提案はありません。');chargeClock(data,now);s.result='合意による引き分け';data.offer=null;}

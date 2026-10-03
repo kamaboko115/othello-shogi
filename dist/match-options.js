@@ -1,3 +1,4 @@
+import {beforeParadox} from './engine.js';
 export const minuteSteps=[0,1,2,3,4,5,6,7,8,10,15,20,30];
 export const byoyomiSteps=[0,5,10,15,20,30,40,45,60];
 export function normalizeTime(value){
@@ -56,8 +57,9 @@ export function finishClockMove(data,mover,now){
  if(n>=4)delay+=3400;else if(n>=2)delay+=1000;else delay+=1000;
  if(data.state.paradoxStarted)delay+=3000;
  else if(data.state.destroyed)delay+=1700; // 500ms wait + 1200ms lightning
- else if(data.state.spawned)delay+=1320; // 120ms wait + 1200ms arrival
+ else if(data.state.spawned||data.state.paradoxEvent)delay+=1320; // 120ms wait + 1200ms arrival
+ const played=beforeParadox(data.state);
  const to=data.state.last?.[1],from=data.state.last?.[0],previous=data.takebacks?.at(-1)?.state;
- if(to!==undefined&&data.state.board[to]?.prom&&!previous?.board[from]?.prom&&['R','B'].includes(data.state.board[to]?.type))delay+=1500;
+ if(to!==undefined&&played.board[to]?.prom&&!previous?.board[from]?.prom&&['R','B'].includes(played.board[to]?.type))delay+=1500;
  data.clock.since=now+delay+500;
 }
