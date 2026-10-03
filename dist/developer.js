@@ -1,9 +1,9 @@
-import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
+import {paintCollapse,paintArrival,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {lessons,lessonState,collapseReply,tutorialMoves,collapseLesson} from './tutorial-lessons.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {paradoxSound} from './paradox.js';
 import {encodeBoard,decodeBoard} from './board-code.js';
-import {initial,empty,moves,play,label,collapseAfterMove} from './engine.js';
+import {initial,empty,moves,play,label,collapseAfterMove,arrivalSummary} from './engine.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide,runSword} from './combo.js';
 import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js';
 import {playParadoxArrival,playMoveSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue} from './sound.js';
@@ -50,8 +50,8 @@ export function initDeveloper(getCurrent){
    updateTutorialArrow();if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>updateTutorialArrow());
   }
   paintCollapse(board,state.destroyed,{phase:collapsePhase,eventKey:state.ply});
-  if(state.spawned&&working){const cell=board.querySelector('[data-square="'+state.spawned.square+'"]');if(cell){const glow=document.createElement('span');glow.className='paradox-spawn-glow'+(collapsePhase==='breaking'?' arriving':'');glow.setAttribute('aria-label',label(state.spawned.piece)+'が降臨');cell.append(glow);cell.classList.toggle('paradox-spawn-cell',collapsePhase==='breaking');}}
-  if(!tutorial&&$('devCollapseEarly').checked)$('devStatus').textContent=(state.result||'デバッグ：'+state.ply+'手目 ／ 2手目に予告・3手目から盤面崩壊')+(state.destroyed?' ／ '+label(state.destroyed.piece)+'が崩壊':state.spawned?' ／ '+label(state.spawned.piece)+'が降臨':'');
+  if(state.spawned&&working)paintArrival(board,state,collapsePhase==='breaking');
+  if(!tutorial&&$('devCollapseEarly').checked)$('devStatus').textContent=(state.result||'デバッグ：'+state.ply+'手目 ／ 2手目に予告・3手目から盤面崩壊')+(state.destroyed?' ／ '+label(state.destroyed.piece)+'が崩壊':state.spawned?' ／ '+arrivalSummary(state):'');
  }
  async function click(i){
   if(working)return;
@@ -76,7 +76,7 @@ export function initDeveloper(getCurrent){
     if(tutorial){collapseLesson(state,collapseTrial);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state);
     if(!state.paradoxStarted&&!state.destroyed&&!state.spawned)return;
     collapsePhase='waiting';draw();
-    const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':state.spawned?label(state.spawned.piece)+'が降臨！ この手では盤面崩壊による破壊はありません。':'盤上の駒が1枚壊れます';$('devBoard').append(note);
+    const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':state.spawned?arrivalSummary(state)+'！ この手では盤面崩壊による破壊はありません。':'盤上の駒が1枚壊れます';$('devBoard').append(note);
     try{
      if(state.paradoxStarted){paradoxSound(true);await wait(3000);return;}else if(state.destroyed)await wait(collapseStrikeDelay);
      if(current.signal.aborted)return;

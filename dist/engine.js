@@ -84,24 +84,32 @@ export function safeArrivalSquares(s,piece){
  return safe;
 }
 
-// Randomness is resolved only by the authoritative server after a legal move.
+// Keep the first arrival in the old shape so saved rooms remain readable.
+export const arrivals=s=>s.spawned?[s.spawned,...(s.spawned.additional||[])]:[];
+export const arrivalSummary=s=>arrivals(s).map(d=>(d.piece.side?'後手':'先手')+'の'+label(d.piece)).join('・')+'が降臨';
+// One ticket per king; ten tickets per other piece.
+export const collapseTargets=s=>s.board.flatMap((p,i)=>!p?[]:Array(p.type==='K'?1:10).fill(i));
+// Resolve randomness once, in the authoritative match engine.
 export function collapseAfterMove(s,pick,spawn){
  const threshold=s.paradoxAt??150;
  if(threshold===false||!s.mode||s.result||s.ply<threshold)return s;
  s.paradoxStarted=s.ply===threshold;
  // Activation is an announcement only: the first random event is the next move.
  if(s.paradoxStarted){s.destroyed=null;s.spawned=null;return s;}
- const choices=s.board.flatMap((p,i)=>p?[i]:[]);
+ const choices=collapseTargets(s);
  if(!choices.length)return s;
  const suppliedPick=!!pick;
  if(!pick)pick=n=>{const a=new Uint32Array(1),limit=Math.floor(4294967296/n)*n;do{crypto.getRandomValues(a);}while(a[0]>=limit);return a[0]%n;};
  if(!spawn)spawn=suppliedPick?()=>false:()=>pick(8)===0;
  if(spawn()){
-  const emptySquares=s.board.flatMap((p,i)=>p?[]:[i]);if(!emptySquares.length)return s;
-  const piece={type:pick(2)?'R':'B',side:pick(2),prom:true};
-  const safe=safeArrivalSquares(s,piece),pool=safe.length&&pick(10)<9?safe:emptySquares;
-  const square=pool[pick(pool.length)];s.board[square]=piece;
-  s.destroyed=null;s.spawned={square,piece};return s;
+  const batch=[];s.destroyed=null;s.spawned=null;
+  for(let i=0;i<3;i++){
+   const emptySquares=s.board.flatMap((p,i)=>p?[]:[i]);if(!emptySquares.length)break;
+   const piece={type:pick(2)?'R':'B',side:pick(2),prom:true};
+   const safe=safeArrivalSquares(s,piece),pool=safe.length&&pick(10)<9?safe:emptySquares;
+   const square=pool[pick(pool.length)];s.board[square]=piece;batch.push({square,piece});
+  }
+  if(batch.length)s.spawned={...batch[0],...(batch.length>1?{additional:batch.slice(1)}:{})};return s;
  }
  const index=pick(choices.length);if(!Number.isInteger(index)||index<0||index>=choices.length)throw Error('Invalid random choice');
  const square=choices[index],piece={...s.board[square]};s.board[square]=null;

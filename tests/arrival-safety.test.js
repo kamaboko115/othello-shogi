@@ -25,7 +25,7 @@ test('arrival uses safe pool on nine of ten preference rolls, both pieces promot
  const base=empty();base.ply=151;base.paradoxAt=150;base.board[4]=piece('K',1);base.board[76]=piece('K',0);base.board[36]=piece('R',1);
  for(const typeRoll of [0,1])for(let preference=0;preference<10;preference++){
   const s=structuredClone(base),p={type:typeRoll?'R':'B',side:0,prom:true},safe=safeArrivalSquares(s,p),all=s.board.flatMap((v,i)=>v?[]:[i]);
-  const picks=[typeRoll,0,preference,0];collapseAfterMove(s,n=>{const x=picks.shift();assert.ok(x>=0&&x<n);return x;},()=>true);
+  const picks=[typeRoll,0,preference,0];collapseAfterMove(s,n=>{const x=picks.shift()??0;assert.ok(x>=0&&x<n);return x;},()=>true);
   assert.deepEqual(s.spawned.piece,p);assert.equal(s.spawned.square,(preference<9?safe:all)[0]);
  }
 });
