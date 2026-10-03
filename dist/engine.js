@@ -23,6 +23,11 @@ const dead=(t,side,r)=>((t==='P'||t==='L')&&(side===0?r===0:r===8))||(t==='N'&&(
 export function raw(s,m){const n=clone(s);n.flipped=[];n.destroyed=null;n.spawned=null;n.paradoxStarted=false;if(m.drop){n.board[m.to]={type:m.drop,side:s.turn,prom:false};n.hands[s.turn][m.drop]--;}else{const p=n.board[m.from],q=n.board[m.to];if(q&&q.type!=='K')n.hands[s.turn][q.type]=(n.hands[s.turn][q.type]||0)+1;n.board[m.to]=p;n.board[m.from]=null;if(m.prom)p.prom=true;}if(s.mode)n.flipped=flip(n,m.to);n.last=m.drop?[m.to]:[m.from,m.to];n.turn=1-s.turn;n.ply++;return n;}
 export function moves(s,source,skipPawnMate=false){if(s.result||(typeof source==='string'&&s.noDrops))return [];let out=[];const drop=typeof source==='string',p=drop?{type:source,side:s.turn,prom:false}:s.board[source];if(!p||p.side!==s.turn||(drop&&!s.hands[s.turn][source]))return out;for(let to=0;to<81;to++){const q=s.board[to],r=Math.floor(to/9);if(drop){if(q||dead(p.type,p.side,r))continue;if(p.type==='P'&&s.board.some((v,i)=>i%9===to%9&&v?.side===s.turn&&v.type==='P'&&!v.prom))continue;}else if(q?.side===s.turn||(!s.mode&&q?.type==='K')||!reaches(s,source,to))continue;let opts=[false];if(!drop&&!p.prom&&promoted[p.type]&&(zone(p.side,Math.floor(source/9))||zone(p.side,r)))opts=dead(p.type,p.side,r)?[true]:[false,true];for(const prom of opts){const m=drop?{drop:source,to}:{from:source,to,prom};const n=s.mode?null:raw(s,m);if(!s.mode&&inCheck(n,s.turn))continue;if(!s.mode&&drop&&source==='P'&&!skipPawnMate){const k=n.board.findIndex(v=>v?.side===n.turn&&v.type==='K');if(reaches(n,to,k)&&!hasMove(n,true))continue;}out.push(m);}}return out;}
 export function hasMove(s,skip=false){for(let i=0;i<81;i++)if(s.board[i]?.side===s.turn&&moves(s,i,skip).length)return true;for(const t of Object.keys(s.hands[s.turn]))if(moves(s,t,skip).length)return true;return false;}
+// Inspection does not change the turn or create a playable selection.
+export function movementTargets(s,source){
+ if(!Number.isInteger(source)||source<0||source>=81||!s.board[source])return [];
+ return [...new Set(moves({...s,turn:s.board[source].side,result:''},source).map(m=>m.to))];
+}
 export const key=s=>JSON.stringify([s.board,s.hands,s.turn]);
 export function points(s){
  const scores=[0,0];const value=()=>1;
