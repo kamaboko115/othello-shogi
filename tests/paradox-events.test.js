@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initial,empty,applyParadoxEvent,beforeParadox,chooseParadoxEvent,paradoxWeights,moves,raw,collapseAfterMove} from '../dist/engine.js';
+import {initial,empty,applyParadoxEvent,beforeParadox,chooseParadoxEvent,paradoxWeights,moves,raw,collapseAfterMove,paradoxEventTiming,paradoxSummary} from '../dist/engine.js';
 import {packReplayState,unpackReplayState} from '../dist/replay-code.js';
 import {finishClockMove} from '../dist/match-options.js';
 const pick=n=>Math.floor(n/3);
@@ -56,6 +56,39 @@ test('new event animations receive 1320ms clock allowance',()=>{
  const base={settings:{timeControl:{mode:'custom',minutes:5,increment:0,byoyomi:0}},clock:{remaining:[300000,300000]},state:active()};
  const normal=structuredClone(base),event=structuredClone(base);event.state.paradoxEvent={kind:'warp',moves:[]};
  finishClockMove(normal,0,1000);finishClockMove(event,0,1000);assert.equal(event.clock.since-normal.clock.since,1320);
+});
+
+test('shuffle leaves both kings safe against all enemy replies including drops',()=>{
+ let successful=0;
+ for(let seed=1;seed<=20;seed++){
+  let rng=seed;const random=n=>{rng=(Math.imul(rng,1664525)+1013904223)>>>0;return rng%n;};
+  const s=active();s.hands[0].G=1;s.hands[1].G=1;const original=structuredClone(s.board);applyParadoxEvent(s,'shuffle',random);
+  if(s.paradoxEvent.skipped){assert.deepEqual(s.board,original);continue;}successful++;
+  for(const [square,king] of s.board.entries()){
+   if(king?.type!=='K')continue;
+   const trial={...s,turn:1-king.side},replies=s.board.flatMap((p,i)=>p?.side===trial.turn?moves(trial,i):[]).concat(Object.keys(trial.hands[trial.turn]).flatMap(t=>moves(trial,t)));
+   for(const m of replies){assert.notEqual(m.to,square);assert.equal(raw(trial,m).board[square]?.side,king.side,JSON.stringify(m));}
+  }
+ }
+ assert.ok(successful>=15,'safe shuffles should succeed for most ordinary positions');
+});
+
+test('impossible safe shuffle leaves the board intact and round-trips the replay',()=>{
+ const s=active();s.board=Array.from({length:81},(_,i)=>({type:i===4||i===76?'K':'R',side:i%2,prom:false}));
+ const old=structuredClone(s.board);applyParadoxEvent(s,'shuffle',pick);
+ assert.equal(s.paradoxEvent.skipped,true);assert.deepEqual(s.board,old);assert.deepEqual(unpackReplayState(packReplayState(s)).paradoxEvent,s.paradoxEvent);
+});
+
+test('cinematic schedules match the requested durations and clock allowance',()=>{
+ for(const kind of ['warp','flip','shuffle','invert']){
+  const e={kind,...(['flip','invert'].includes(kind)?{squares:[1,2,3,4,5]}:{moves:[{from:9,to:4}]})},timing=paradoxEventTiming(e);
+  const base={settings:{timeControl:'none'},clock:{remaining:[300000,300000]},state:active()},event=structuredClone(base);
+  event.state.paradoxEvent=e;finishClockMove(base,0,0);finishClockMove(event,0,0);assert.equal(event.clock.since-base.clock.since,120+timing.totalMs);
+  if(kind==='shuffle'){assert.ok(timing.motionMs<=3000);assert.deepEqual(timing.cutins,['middle']);assert.ok(timing.noticeMs>=1500);}
+  if(kind==='invert'){assert.equal(timing.flipMs,4000);assert.deepEqual(timing.cutins,['middle','upper','lower']);}
+  if(kind==='flip')assert.ok(timing.flipMs>=1000);
+ }
+ assert.equal(paradoxSummary({paradoxEvent:{kind:'warp',side:0,moves:[{from:0,to:1}]}}),'先手の玉がワープ');
 });
 
 test('authoritative production selection executes each event without fallback destruction',t=>{

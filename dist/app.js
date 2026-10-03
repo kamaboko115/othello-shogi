@@ -1,3 +1,4 @@
+import {runParadoxEvent} from './paradox-event.js';
 import {initMusic} from './music.js';
 import {initReplayViewer} from './replay-view.js';
 import {createRewardAds} from './reward-ad.js';
@@ -8,7 +9,7 @@ import {placeHelper} from './helper-visit.js';
 import {createDevAccess} from './dev-access.js';
 import {presentToss} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
-import {paintCollapse,paintArrival,paintParadoxEvent,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
+import {paintCollapse,paintArrival,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget,clockSecondsLabel,timeHelp} from './match-options.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide} from './combo.js';
@@ -52,16 +53,19 @@ function paintNetworkUsage(){const stats=transport.getStats(),el=$('networkUsage
 let autoHelperAttempt=null;
 let aiJob=null,aiTiming=null,helperJob=null,helperDeparting=false,helperLingering=false,helperIdea=false,helperFarewell=false,helperIdeaTimer=null;
 let helperVisiting=false,helperGreeting=false,helperTravelPending=false;
-let collapseEffect=null,collapseTimer=null,removeParadoxBanner=null;
-function cancelCollapse(){clearTimeout(collapseTimer);removeParadoxBanner?.();removeParadoxBanner=null;collapseEffect=null;}
+let collapseEffect=null,collapseTimer=null,collapseController=null,removeParadoxBanner=null;
+function cancelCollapse(){collapseController?.abort();collapseController=null;clearTimeout(collapseTimer);removeParadoxBanner?.();removeParadoxBanner=null;collapseEffect=null;}
 function paintLastCollapse(){
- paintParadoxEvent($('board'),collapseEffect?.breaking?state:null);
  if(collapseEffect?.paradoxEvent){paintCollapse($('board'),null);return;}
  if(collapseEffect?.spawned){paintCollapse($('board'),null);paintArrival($('board'),collapseEffect,collapseEffect.breaking);return;}
  paintCollapse($('board'),collapseEffect?.destroyed||state.destroyed,{perspective:online?.side??0,phase:collapseEffect?(collapseEffect.breaking?'breaking':'waiting'):comboPreparing||comboActive?'waiting':'ash',eventKey:(online?.room||'')+':'+(online?.round||1)+':'+state.ply});
 }
 function beginCollapse(next){
  cancelCollapse();collapseEffect={destroyed:next.destroyed,spawned:next.spawned,paradoxEvent:next.paradoxEvent,breaking:false};state=beforeParadox(next);
+ if(next.paradoxEvent){
+  const controller=new AbortController();collapseController=controller;render();
+  collapseTimer=setTimeout(()=>runParadoxEvent($('board'),next,online?.side??0,controller.signal).finally(()=>{if(controller.signal.aborted)return;state=next;collapseEffect=null;collapseController=null;presentEffects(state);render();}),120);return;
+ }
  if(next.paradoxStarted){removeParadoxBanner=paradoxBanner();paradoxSound(true);}
  const finish=()=>{removeParadoxBanner?.();removeParadoxBanner=null;if(next.paradoxStarted){collapseEffect=null;presentEffects(state);render();return;}state=next;if(next.spawned||next.paradoxEvent)playParadoxArrival();else paradoxSound(false);collapseEffect.breaking=true;render();collapseTimer=setTimeout(()=>{collapseEffect=null;presentEffects(state);render();},next.destroyed?collapseStrikeDuration:1200);};
  collapseTimer=setTimeout(finish,next.paradoxStarted?3000:next.destroyed?collapseStrikeDelay:120);

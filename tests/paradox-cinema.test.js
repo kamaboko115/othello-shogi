@@ -1,0 +1,38 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {initial,applyParadoxEvent} from '../dist/engine.js';
+globalThis.Audio=class{addEventListener(){}load(){}play(){return Promise.resolve();}};
+globalThis.window={addEventListener(){},removeEventListener(){}};
+globalThis.matchMedia=()=>({matches:false});
+globalThis.getComputedStyle=()=>({fontSize:'32px'});
+const {runParadoxEvent}=await import('../dist/paradox-event.js');
+function view(){
+ const animations=[],cutins=[];
+ class Element{
+  children=[];style={};dataset={};classes=new Set();clientWidth=450;clientHeight=450;
+  classList={add:c=>this.classes.add(c),remove:c=>this.classes.delete(c),toggle:(c,on)=>on?this.classes.add(c):this.classes.delete(c)};
+  append(el){el.parent=this;this.children.push(el);if(el.className?.startsWith('paradox-cutin'))cutins.push(el.className);}
+  remove(){if(this.parent)this.parent.children=this.parent.children.filter(x=>x!==this);}
+  setAttribute(){}closest(){return null;}
+  getBoundingClientRect(){return {left:0,top:0,width:450,height:450};}
+  animate(frames,options){const a={frames,options,cancelled:false,cancel(){this.cancelled=true;}};animations.push(a);return a;}
+ }
+ const board=new Element(),cells=Array.from({length:81},(_,i)=>{const c=new Element();c.dataset.square=i;c.getBoundingClientRect=()=>({left:i%9*50,top:Math.floor(i/9)*50,width:50,height:50});return c;});
+ board.querySelectorAll=()=>cells;board.querySelector=()=>new Element();
+ globalThis.document={body:new Element(),createElement:()=>new Element()};return {board,animations,cutins};
+}
+test('all-flip plays centre/top/bottom then 4-second rotations and cleans visual copies',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});
+ const {board,animations,cutins}=view(),state=initial();applyParadoxEvent(state,'invert',()=>0);const saved=structuredClone(state);
+ let done=false;const task=runParadoxEvent(board,state,1).then(()=>done=true);
+ assert.ok(board.classes.has('paradox-cinema-hidden'));
+ for(let i=0;i<100&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
+ await task;assert.deepEqual(cutins,['paradox-cutin middle','paradox-cutin upper','paradox-cutin lower']);
+ assert.equal(animations.filter(a=>a.options.duration===4000).length,40);assert.ok(animations.every(a=>a.cancelled));
+ assert.equal(document.body.children.length,0);assert.equal(board.classes.has('paradox-cinema-hidden'),false);assert.deepEqual(state,saved);
+});
+test('leaving during a cinematic removes the overlay, restores pieces and cancels animations',async t=>{
+ t.mock.timers.enable({apis:['setTimeout'],now:0});const {board,animations}=view(),state=initial(),controller=new AbortController();applyParadoxEvent(state,'invert',()=>0);
+ const task=runParadoxEvent(board,state,0,controller.signal);assert.equal(document.body.children.length,1);controller.abort();await task;
+ assert.equal(document.body.children.length,0);assert.equal(board.classes.has('paradox-cinema-hidden'),false);assert.ok(animations.every(a=>a.cancelled));
+});
