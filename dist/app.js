@@ -215,7 +215,7 @@ function render(){
  $('resign').disabled=!online||!!state.result||busy||!online.joined||!connected;
  $('draw').disabled=$('resign').disabled;$('draw').textContent='引き分けを提案';
  $('record').replaceChildren(...logs.slice(-12).reverse().map(recordLine));
- replayViewer.update(online?online.room+':'+(online.round||1):null,!!state.result);
+ replayViewer.update(online?online.room+':'+(online.round||1):null,!!state.result,ending);
  recordViewer.update(logs,online?online.room+':'+(online.round||1):null);
  $('createRoom').hidden=!!online||!!inviteRoom;$('createRoom').disabled=busy;
  $('joinRoom').hidden=!inviteRoom||!!online;$('joinRoom').disabled=busy;

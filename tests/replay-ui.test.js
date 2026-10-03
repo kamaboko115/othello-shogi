@@ -57,3 +57,32 @@ test('グラフの端や単一局面、途中からの記録でも範囲内の�
  const {document,$,jobs}=ui();const viewer=initReplayViewer(document,async()=>data);viewer.update('partial',true);await $('openReplay').events.click();jobs[0].reply([12]);
  const svg=$('replayGraph').children[0];svg.onclick({clientX:450});assert.equal(svg.attributes['aria-valuemin'],1);assert.equal(svg.attributes['aria-valuenow'],1);assert.match($('replayPly').textContent,/途中からの記録/);
 });
+
+test('終了画面は棋譜を開かず自動評価し、再描画と棋譜画面で取得・計算を共有する',async()=>{
+ const {document,$,jobs}=ui();let requests=0;const viewer=initReplayViewer(document,async()=>{requests++;return record();});
+ await viewer.update('game',false,false);assert.equal(requests,0);assert.equal($('resultEvaluation').hidden,true);
+ await viewer.update('game',true,true);assert.equal(requests,1);assert.equal(jobs.length,1);assert.equal($('replayDialog').open,false);
+ await $('openReplay').events.click();$('closeReplay').onclick();assert.equal(jobs[0].terminated,undefined,'終了画面の計算は棋譜を閉じても続ける');
+ jobs[0].reply([10,90]);assert.equal($('resultEvaluationGraph').hidden,false);
+ assert.equal($('resultEvaluationGraph').children[0].attributes.role,'img');assert.equal($('resultEvaluationGraph').children[0].onclick,undefined);
+ assert.equal($('resultEvaluationRange').textContent,'0手目 → 1手目');
+ await viewer.update('game',true,true);await $('openReplay').events.click();assert.equal(requests,1);assert.equal(jobs.length,1);assert.equal($('replayGraph').hidden,false);
+ await viewer.update('game',true,false);await viewer.update('game',true,true);assert.equal(jobs.length,1);assert.equal($('resultEvaluation').hidden,false);
+});
+
+test('終了画面の取得失敗は再描画で連続再試行せず、手動再試行と次局への移動を扱う',async()=>{
+ const {document,$,jobs}=ui();let requests=0,finish;const viewer=initReplayViewer(document,()=>{requests++;if(requests===1)throw Error('offline');return new Promise(resolve=>finish=resolve);});
+ await viewer.update('old',true,true);assert.equal($('resultEvaluationRetry').hidden,false);
+ await viewer.update('old',true,true);assert.equal(requests,1);
+ const retry=$('resultEvaluationRetry').onclick();await Promise.resolve();viewer.update('new',false,false);finish(record());await retry;
+ assert.equal(jobs.length,0);assert.equal($('resultEvaluation').hidden,true);assert.equal($('resultEvaluationGraph').children.length,0);
+});
+
+test('終了画面の遅い評価を次局に混ぜず、失敗時の再試行で記録を取り直さない',async()=>{
+ const {document,$,jobs}=ui();let requests=0;const viewer=initReplayViewer(document,async()=>{requests++;return record();});
+ await viewer.update('old',true,true);jobs[0].onerror();assert.equal($('resultEvaluationRetry').hidden,false);
+ await $('resultEvaluationRetry').onclick();assert.equal(requests,1);assert.equal(jobs.length,2);
+ viewer.update('new',false,false);jobs[1].reply([1,2]);assert.equal($('resultEvaluationGraph').children.length,0);
+ await viewer.update('new',true,true);jobs[2].reply([3,4]);assert.equal(requests,2);assert.equal($('resultEvaluationGraph').hidden,false);
+ viewer.update('new',false,false);await viewer.update('new',true,true);assert.equal(requests,3,'同じ対局でも終了を取り消した後は古い評価を使わない');
+});
