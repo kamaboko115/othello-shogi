@@ -118,10 +118,10 @@ html[data-piece-skin="stones"] .piece.prom[data-side="1"] {color:#9b4615;}
 .replay-position,.replay-controls {min-width:0;}
 .replay-controls {padding-top:14px;}
 @media(max-width:700px){.replay-layout{grid-template-columns:minmax(0,1fr);gap:8px}.replay-controls{padding-top:0}}
-#replayBoard {display:grid;grid-template-columns:repeat(9,1fr);aspect-ratio:1;background:#174b3c;gap:2px;padding:3px;}
+#replayBoard {display:grid;grid-template-columns:repeat(9,1fr);aspect-ratio:1;background:#174b3c;gap:2px;padding:3px;container-type:inline-size;}
 #replayBoard .cell {display:flex;align-items:center;justify-content:center;min-width:0;aspect-ratio:1;background:#296653;position:relative;}
-#replayBoard .piece {width:72%;height:82%;font-size:clamp(14px,4vw,28px);line-height:1;display:flex;align-items:center;justify-content:center;}
-#replayBoard .piece.long {font-size:clamp(10px,2.7vw,20px);}
+#replayBoard .piece {width:72%;height:82%;font-size:5.6cqw;line-height:1;display:flex;align-items:center;justify-content:center;white-space:nowrap;text-align:center;}
+#replayBoard .piece.long {font-size:3.2cqw;}
 #replayBoard .last {box-shadow:inset 0 0 0 2px #c4bc7b;}
 #replayBoard .replay-flipped {background:#397e61;}
 #replayBoard .replay-destroyed:after {content:'×';color:#e1ad96;font-size:26px;}
