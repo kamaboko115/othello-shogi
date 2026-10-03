@@ -1,5 +1,5 @@
 import {validateReplay,unpackReplayState} from './replay-code.js';
-import {label} from './engine.js';
+import {label,arrivals} from './engine.js';
 
 const maxBytes=2*1024*1024;
 export function replayIndexAt(ratio,count){return Math.round(Math.max(0,Math.min(1,Number.isFinite(ratio)?ratio:0))*Math.max(0,count-1));}
@@ -37,7 +37,7 @@ export function initReplayViewer(document,load){
  }
  function paint(){
   if(!record)return;const frame=record.frames[index],state=unpackReplayState(frame),board=$('replayBoard');board.replaceChildren();
-  state.board.forEach((p,i)=>{const cell=document.createElement('div');cell.className='cell'+(state.last.includes(i)?' last':'')+(state.flipped.includes(i)?' replay-flipped':'')+(frame.d===i?' replay-destroyed':'')+(frame.u===i?' replay-spawned':'');cell.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'後手 ':'先手 ')+label(p):'空き'));
+  state.board.forEach((p,i)=>{const cell=document.createElement('div');cell.className='cell'+(state.last.includes(i)?' last':'')+(state.flipped.includes(i)?' replay-flipped':'')+(frame.d===i?' replay-destroyed':'')+(arrivals(state).some(d=>d.square===i)?' replay-spawned':'');cell.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'後手 ':'先手 ')+label(p):'空き'));
    if(p){const piece=document.createElement('span');piece.className='piece'+(p.side?' enemy':'')+(p.prom?' prom':'')+(label(p).length>1?' long':'');piece.dataset.side=p.side;piece.textContent=label(p);cell.append(piece);}board.append(cell);
   });
   for(const side of [0,1])$('replayHand'+side).textContent=(side?'後手':'先手')+'の持ち駒：'+Object.entries(state.hands[side]).filter(([,n])=>n).map(([type,n])=>label({type,prom:false})+'×'+n).join(' ');

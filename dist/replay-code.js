@@ -1,10 +1,11 @@
-import {empty} from './engine.js';
+import {empty,arrivals} from './engine.js';
 
 const types='PLNSGBRK',handTypes='PLNSGBR';
 export const replayLimit=4096;
 // One small snapshot per ply; no duplicated logs or AI search state.
 export function packReplayState(s){
- return {b:s.board.map(p=>p?String.fromCharCode(65+types.indexOf(p.type)+8*p.side+(p.prom?16:0)):'.').join(''),h:s.hands.map(h=>Array.from(handTypes,t=>h[t]||0)),t:s.turn,p:s.ply,l:s.last||[],f:s.flipped||[],d:s.destroyed?.square??null,u:s.spawned?.square??null};
+ const extra=arrivals(s).slice(1).map(d=>d.square);
+ return {b:s.board.map(p=>p?String.fromCharCode(65+types.indexOf(p.type)+8*p.side+(p.prom?16:0)):'.').join(''),h:s.hands.map(h=>Array.from(handTypes,t=>h[t]||0)),t:s.turn,p:s.ply,l:s.last||[],f:s.flipped||[],d:s.destroyed?.square??null,u:s.spawned?.square??null,...(extra.length?{a:extra}:{})};
 }
 export function unpackReplayState(frame){
  const bad=()=>{throw Error('棋譜データの形式が正しくありません。');};
@@ -22,6 +23,10 @@ export function unpackReplayState(frame){
  for(const name of ['d','u'])if(frame[name]!==null&&(!Number.isInteger(frame[name])||frame[name]<0||frame[name]>80))bad();
  if(frame.d!==null){if(s.board[frame.d])bad();s.destroyed={square:frame.d};}
  if(frame.u!==null){const piece=s.board[frame.u];if(!piece?.prom||!['R','B'].includes(piece.type)||frame.d!==null)bad();s.spawned={square:frame.u,piece};}
+ if(frame.a!==undefined){
+  if(!s.spawned||!Array.isArray(frame.a)||frame.a.length>2||new Set([frame.u,...frame.a]).size!==frame.a.length+1)bad();
+  s.spawned.additional=frame.a.map(square=>{if(!Number.isInteger(square)||square<0||square>80)bad();const piece=s.board[square];if(!piece?.prom||!['R','B'].includes(piece.type))bad();return {square,piece};});
+ }
  return s;
 }
 export function rememberReplay(data){data.replay||=[packReplayState(data.state)];}

@@ -8,7 +8,7 @@ import {placeHelper} from './helper-visit.js';
 import {createDevAccess} from './dev-access.js';
 import {presentToss} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
-import {paintCollapse,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
+import {paintCollapse,paintArrival,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget,clockSecondsLabel,timeHelp} from './match-options.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide} from './combo.js';
@@ -55,7 +55,7 @@ let helperVisiting=false,helperGreeting=false,helperTravelPending=false;
 let collapseEffect=null,collapseTimer=null,removeParadoxBanner=null;
 function cancelCollapse(){clearTimeout(collapseTimer);removeParadoxBanner?.();removeParadoxBanner=null;collapseEffect=null;}
 function paintLastCollapse(){
- if(collapseEffect?.spawned){paintCollapse($('board'),null);const d=collapseEffect.spawned,cell=$('board').querySelector('[data-square="'+d.square+'"]');if(cell){cell.querySelectorAll('.spawn-marker').forEach(el=>el.remove());const glow=document.createElement('span');glow.className='spawn-marker paradox-spawn-glow'+(collapseEffect.breaking?' arriving':'');glow.setAttribute('aria-label',label(d.piece)+'が降臨');cell.append(glow);cell.classList.toggle('paradox-spawn-cell',collapseEffect.breaking);}return;}
+ if(collapseEffect?.spawned){paintCollapse($('board'),null);paintArrival($('board'),collapseEffect,collapseEffect.breaking);return;}
  paintCollapse($('board'),collapseEffect?.destroyed||state.destroyed,{perspective:online?.side??0,phase:collapseEffect?(collapseEffect.breaking?'breaking':'waiting'):comboPreparing||comboActive?'waiting':'ash',eventKey:(online?.room||'')+':'+(online?.round||1)+':'+state.ply});
 }
 function beginCollapse(next){

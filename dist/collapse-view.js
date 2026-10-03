@@ -1,4 +1,13 @@
-import {label} from './engine.js';
+import {label,arrivals} from './engine.js';
+
+export function paintArrival(board,state,breaking=false){
+ for(const d of arrivals(state)){
+  const cell=board.querySelector('[data-square="'+d.square+'"]');if(!cell)continue;
+  cell.querySelectorAll('.spawn-marker').forEach(el=>el.remove());
+  const glow=document.createElement('span');glow.className='spawn-marker paradox-spawn-glow'+(breaking?' arriving':'');
+  glow.setAttribute('aria-label',label(d.piece)+'が降臨');cell.append(glow);cell.classList.toggle('paradox-spawn-cell',breaking);
+ }
+}
 
 const displays=new WeakMap();
 export const collapseStrikeDuration=1200;
