@@ -36,3 +36,18 @@ test('leaving during a cinematic removes the overlay, restores pieces and cancel
  const task=runParadoxEvent(board,state,0,controller.signal);assert.equal(document.body.children.length,1);controller.abort();await task;
  assert.equal(document.body.children.length,0);assert.equal(board.classes.has('paradox-cinema-hidden'),false);assert.ok(animations.every(a=>a.cancelled));
 });
+
+test('shuffle highlights only kings after all moves and retains them for 1500ms',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});t.mock.method(performance,'now',()=>Date.now());
+ const {board}=view(),state=initial();state.board=state.board.map(p=>p?.type==='K'?p:null);state.board[40]={type:'G',side:0,prom:false};
+ applyParadoxEvent(state,'shuffle',n=>Math.floor(n/3));assert.ok(!state.paradoxEvent.skipped);
+ let done=false;const task=runParadoxEvent(board,state,0).then(()=>done=true);
+ const tokens=document.body.children[0].children[0].children;
+ const glowing=()=>tokens.filter(t=>t.classes.has('paradox-shuffle-king'));
+ assert.equal(glowing().length,0);
+ for(let i=0;i<600&&!glowing().length;i++){t.mock.timers.tick(10);await Promise.resolve();await Promise.resolve();}
+ assert.equal(glowing().length,2);assert.ok(glowing().every(t=>t.children[0].textContent==='玉'));
+ assert.equal(tokens.filter(t=>t.classes.has('paradox-token-travel')).length,0);
+ t.mock.timers.tick(1499);await Promise.resolve();assert.equal(done,false);assert.equal(document.body.children.length,1);
+ t.mock.timers.tick(1);await task;assert.equal(done,true);assert.equal(document.body.children.length,0);
+});

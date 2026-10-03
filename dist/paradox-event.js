@@ -56,6 +56,14 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
     if(target){target.classList.add('arrived');token.wrap.classList.add('paradox-warp-arrived');}else token.wrap.style.zIndex='';
    }
    if(!moving.length)await wait(timing.motionMs);
+   if(event.kind==='shuffle'&&!event.skipped&&!signal?.aborted){
+    for(const {from,to}of moving){
+     if(state.board[to]?.type!=='K')continue;
+     const token=tokens.get(from);if(!token)continue;
+     token.wrap.style.zIndex='3';token.wrap.classList.add('paradox-shuffle-king');
+     token.wrap.classList.add('paradox-warp-king');token.wrap.classList.add('paradox-warp-arrived');
+    }
+   }
   }else{
    if(event.kind==='invert')sound('rumble',timing.motionMs);
    if(event.kind==='promote'&&event.squares.length)sound('flip',timing.motionMs,4);

@@ -95,7 +95,7 @@ export const paradoxWeights=Object.freeze({arrival:770,warp:770,flip:462,shuffle
 export function paradoxEventTiming(event){
  const kind=event?.kind,cutins=kind==='invert'?['middle','upper','lower']:kind==='shuffle'?['middle']:[];
  const cutinMs=650,noticeMs=kind==='invert'||kind==='shuffle'?1600:kind==='promote'?800:kind==='flip'?500:200;
- const flipMs=kind==='invert'?4000:kind==='promote'?1200:1100,staggerMs=280,tailMs=kind==='warp'?1400:350;
+ const flipMs=kind==='invert'?4000:kind==='promote'?1200:1100,staggerMs=280,tailMs=kind==='warp'?1400:kind==='shuffle'&&!event.skipped?1500:350;
  const motionMs=kind==='shuffle'?2800:kind==='invert'?4000:kind==='promote'?flipMs:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
  return {cutins,cutinMs,noticeMs,flipMs,staggerMs,motionMs,tailMs,totalMs:cutins.length*cutinMs+noticeMs+motionMs+tailMs};
 }

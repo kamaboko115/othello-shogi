@@ -97,7 +97,7 @@ test('cinematic schedules match the requested durations and clock allowance',()=
   const e={kind,...(['flip','invert','promote'].includes(kind)?{squares:[1,2,3,4,5]}:{moves:[{from:9,to:4}]})},timing=paradoxEventTiming(e);
   const base={settings:{timeControl:'none'},clock:{remaining:[300000,300000]},state:active()},event=structuredClone(base);
   event.state.paradoxEvent=e;finishClockMove(base,0,0);finishClockMove(event,0,0);assert.equal(event.clock.since-base.clock.since,120+timing.totalMs);
-  if(kind==='shuffle'){assert.ok(timing.motionMs<=3000);assert.deepEqual(timing.cutins,['middle']);assert.ok(timing.noticeMs>=1500);}
+  if(kind==='shuffle'){assert.equal(timing.tailMs,1500);assert.ok(timing.motionMs<=3000);assert.deepEqual(timing.cutins,['middle']);assert.ok(timing.noticeMs>=1500);}
   if(kind==='invert'){assert.equal(timing.flipMs,4000);assert.deepEqual(timing.cutins,['middle','upper','lower']);}
   if(kind==='flip')assert.ok(timing.flipMs>=1000);
  }
