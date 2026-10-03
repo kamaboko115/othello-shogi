@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initial,empty,applyParadoxEvent,beforeParadox,chooseParadoxEvent,paradoxWeights,moves,raw,collapseAfterMove,paradoxEventTiming,paradoxSummary} from '../dist/engine.js';
+import {initial,empty,applyParadoxEvent,beforeParadox,chooseParadoxEvent,paradoxWeights,moves,raw,collapseAfterMove,paradoxEventTiming,paradoxSummary,paradoxCutinCount} from '../dist/engine.js';
 import {packReplayState,unpackReplayState} from '../dist/replay-code.js';
 import {finishClockMove} from '../dist/match-options.js';
 const pick=n=>Math.floor(n/3);
@@ -11,7 +11,7 @@ test('all 9240 event tickets match the configured weights',()=>{
  const counts={};for(let roll=0;roll<9240;roll++){const kind=chooseParadoxEvent(n=>{assert.equal(n,9240);return roll;});counts[kind]=(counts[kind]||0)+1;}
  assert.deepEqual(counts,paradoxWeights);for(const value of [-1,9240,NaN,1.5])assert.throws(()=>chooseParadoxEvent(()=>value));
  assert.equal(counts.promote/9240,1/77);assert.equal(counts.arrival/9240,1/12);assert.equal(counts.warp/9240,1/12);
- assert.equal(counts.flip/9240,1/20);assert.equal(counts.shuffle/9240,1/60);assert.equal(counts.invert/9240,1/120);
+ assert.equal(counts.flip/9240,1/20);assert.equal(counts.shuffle/9240,1/60);assert.equal(counts.invert/9240,1/120);assert.equal(counts.supply/9240,1/60);
 });
 
 test('all-promotion affects both sides but never kings, golds, hands or already promoted pieces',()=>{
@@ -93,7 +93,7 @@ test('impossible safe shuffle leaves the board intact and round-trips the replay
 });
 
 test('cinematic schedules match the requested durations and clock allowance',()=>{
- for(const kind of ['warp','flip','shuffle','invert','promote']){
+ for(const kind of ['warp','flip','shuffle','invert','promote','supply']){
   const e={kind,...(['flip','invert','promote'].includes(kind)?{squares:[1,2,3,4,5]}:{moves:[{from:9,to:4}]})},timing=paradoxEventTiming(e);
   const base={settings:{timeControl:'none'},clock:{remaining:[300000,300000]},state:active()},event=structuredClone(base);
   event.state.paradoxEvent=e;finishClockMove(base,0,0);finishClockMove(event,0,0);assert.equal(event.clock.since-base.clock.since,120+timing.totalMs);
@@ -105,8 +105,31 @@ test('cinematic schedules match the requested durations and clock allowance',()=
 });
 
 test('authoritative production selection executes each event without fallback destruction',t=>{
- for(const [roll,kind] of [[770,'warp'],[1540,'flip'],[2002,'shuffle'],[2156,'invert'],[2233,'promote']]){
+ for(const [roll,kind] of [[770,'warp'],[1540,'flip'],[2002,'shuffle'],[2156,'invert'],[2233,'promote'],[2353,'supply']]){
   let first=true;const mock=t.mock.method(crypto,'getRandomValues',a=>{a.fill(first?roll:0);first=false;return a;});
   const s=active();collapseAfterMove(s);assert.equal(s.paradoxEvent.kind,kind);assert.equal(s.destroyed,null);assert.equal(s.spawned,null);mock.mock.restore();
  }
+});
+
+test('supply adds seven types only to the mover hand, including either side and no-drops games',()=>{
+ for(const noDrops of [false,true])for(const mover of [0,1]){
+  const s=active();s.turn=1-mover;s.noDrops=noDrops;s.hands=[{P:81,R:3},{B:2}];const old=structuredClone(s);
+  applyParadoxEvent(s,'supply',pick);assert.deepEqual(s.board,old.board);assert.equal(s.turn,old.turn);assert.equal(s.noDrops,noDrops);
+  for(const side of [0,1])for(const type of 'PLNSGBR')assert.equal(s.hands[side][type]||0,(old.hands[side][type]||0)+(side===mover?1:0));
+  assert.equal(s.hands[0].K,undefined);assert.equal(s.hands[1].K,undefined);
+  const restored=unpackReplayState(packReplayState(s));for(const side of [0,1])for(const type of 'PLNSGBR')assert.equal(restored.hands[side][type],s.hands[side][type]||0);
+  assert.deepEqual(restored.paradoxEvent,{kind:'supply',side:mover});
+  const before=beforeParadox(restored);for(const side of [0,1])for(const type of 'PLNSGBR')assert.equal(before.hands[side][type],old.hands[side][type]||0);
+  assert.deepEqual(s.hands[1-mover],old.hands[1-mover]);assert.equal(moves({...s,turn:mover},'R').length>0,!noDrops);
+  assert.throws(()=>unpackReplayState({...packReplayState(s),e:{kind:'supply',side:1-mover}}));
+  const frame=packReplayState(s);frame.h[mover][0]=0;assert.throws(()=>unpackReplayState(frame));
+ }
+});
+
+test('cut-in count follows actual odds at the 1/40 and 1/120 boundaries',()=>{
+ for(const kind of ['arrival','warp','flip','destroy'])assert.equal(paradoxCutinCount(kind),0);
+ for(const kind of ['shuffle','promote','supply'])assert.equal(paradoxCutinCount(kind),1);
+ assert.equal(paradoxCutinCount('invert'),3);assert.equal(paradoxCutinCount('unknown'),0);
+ for(const [denominator,count]of [[39,0],[40,1],[119,1],[120,3],[121,3]])assert.equal(paradoxCutinCount('supply',{supply:1,rest:denominator-1}),count);
+ for(const kind of ['promote','supply']){const t=paradoxEventTiming({kind});assert.deepEqual(t.cutins,['middle']);assert.equal(t.totalMs,t.cutinMs+t.noticeMs+t.motionMs+t.tailMs);}
 });

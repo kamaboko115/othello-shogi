@@ -51,3 +51,15 @@ export function presentToss({toss,playerSide,dialog,coins,result,banner,cutin,cl
   },tossPauseMs);
  },tossLandingMs);
 }
+
+// Local presentation history only; the authoritative toss result is unchanged.
+export function createTossHistory(storage){
+ const storageKey='othello-shogi-seen-tosses',seen=new Set();
+ try{const saved=JSON.parse(storage.getItem(storageKey)||'[]');if(Array.isArray(saved))for(const key of saved.slice(-128))if(typeof key==='string')seen.add(key);}catch{}
+ return {claim(key,started=false){
+  const show=!started&&!seen.has(key);seen.delete(key);seen.add(key);
+  while(seen.size>128)seen.delete(seen.values().next().value);
+  try{storage.setItem(storageKey,JSON.stringify([...seen]));}catch{}
+  return show;
+ }};
+}

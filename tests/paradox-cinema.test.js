@@ -51,3 +51,12 @@ test('shuffle highlights only kings after all moves and retains them for 1500ms'
  t.mock.timers.tick(1499);await Promise.resolve();assert.equal(done,false);assert.equal(document.body.children.length,1);
  t.mock.timers.tick(1);await task;assert.equal(done,true);assert.equal(document.body.children.length,0);
 });
+
+test('supply presents seven pieces at the mover tray and cleans up',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});
+ const {board,animations}=view(),state=initial();document.getElementById=()=>({querySelector:()=>board});
+ applyParadoxEvent(state,'supply',()=>0);const saved=structuredClone(state);let done=false;
+ const task=runParadoxEvent(board,state,0).then(()=>done=true);
+ for(let i=0;i<100&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
+ await task;assert.equal(animations.filter(a=>a.options.duration!==650).length,7);assert.equal(animations.filter(a=>a.options.duration===650).length,1);assert.ok(animations.every(a=>a.cancelled));assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);
+});

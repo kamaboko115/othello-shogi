@@ -17,7 +17,7 @@ export function unpackReplayState(frame){
   const p={type:types[code%8],side:Math.floor(code/8)%2,prom:code>=16};if(p.prom&&['G','K'].includes(p.type))bad();return p;
  });
  if(!Array.isArray(frame.h)||frame.h.length!==2)bad();
- s.hands=frame.h.map(h=>{if(!Array.isArray(h)||h.length!==7||h.some(n=>!Number.isInteger(n)||n<0||n>81))bad();return Object.fromEntries(Array.from(handTypes,(t,i)=>[t,h[i]]));});
+ s.hands=frame.h.map(h=>{if(!Array.isArray(h)||h.length!==7||h.some(n=>!Number.isInteger(n)||n<0||n>81+4*Math.min(frame.p,100000)))bad();return Object.fromEntries(Array.from(handTypes,(t,i)=>[t,h[i]]));});
  for(const [name,max]of [['l',2],['f',81]]){if(!Array.isArray(frame[name])||frame[name].length>max||frame[name].some(i=>!Number.isInteger(i)||i<0||i>80))bad();}
  s.last=[...frame.l];s.flipped=[...frame.f];
  for(const name of ['d','u'])if(frame[name]!==null&&(!Number.isInteger(frame[name])||frame[name]<0||frame[name]>80))bad();
@@ -29,8 +29,11 @@ export function unpackReplayState(frame){
  }
  if(frame.e!==undefined){
   const e=frame.e,validSquare=i=>Number.isInteger(i)&&i>=0&&i<81;
-  if(!e||!['warp','flip','shuffle','invert','promote'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
-  if(e.kind==='warp'||e.kind==='shuffle'){
+  if(!e||!['warp','flip','shuffle','invert','promote','supply'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
+  if(e.kind==='supply'){
+   if(e.side!==1-s.turn||Array.from(handTypes,t=>s.hands[e.side][t]||0).some(n=>n<1))bad();
+   s.paradoxEvent={kind:e.kind,side:e.side};
+  }else if(e.kind==='warp'||e.kind==='shuffle'){
    if(!Array.isArray(e.moves)||e.moves.length>81||e.moves.some(m=>!m||!validSquare(m.from)||!validSquare(m.to)||!s.board[m.to])||new Set(e.moves.map(m=>m.from)).size!==e.moves.length||new Set(e.moves.map(m=>m.to)).size!==e.moves.length)bad();
    if(e.kind==='warp'){
     if(e.moves.length>1)bad();

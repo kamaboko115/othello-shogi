@@ -7,7 +7,7 @@ import {guideHTML,initBeginnerGuide,initTutorialMenu} from './novice-guide.js';
 import {initCredits} from './credits.js';
 import {placeHelper} from './helper-visit.js';
 import {createDevAccess} from './dev-access.js';
-import {presentToss} from './toss.js';
+import {presentToss,createTossHistory} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
 import {paintCollapse,paintArrival,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
@@ -100,6 +100,7 @@ function syncAI(){
 }
 
 let lastTossKey="",animationKey="",animationStarted=0;
+const tossHistory=createTossHistory({getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)});
 let burstTimer;
 function showFlipBurst(count,victoryText=''){
  if(!victoryText&&count<2)return;
@@ -261,7 +262,7 @@ function render(){
  $('offerRematch').hidden=requested;$('acceptRematch').hidden=!requested||mine;$('declineRematch').hidden=!requested;
  for(const id of ['offerRematch','acceptRematch','declineRematch'])$(id).disabled=busy||!connected;
  if(!online)$('furigoma').hidden=true;
- if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;presentToss({toss:online.toss,playerSide:online.side,dialog:$('furigoma'),coins:$('tossCoins'),result:$('tossResult'),banner:$('tossSide'),cutin:$('tossCutIn'),close:$('closeToss'),onShatter:playTossShatterSound,onCutIn:playTossCutInSound,isCurrent:()=>lastTossKey===key&&online?.room+':'+online?.round===key});}}
+ if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;if(tossHistory.claim(key,online.state.ply>0||!!online.state.result))presentToss({toss:online.toss,playerSide:online.side,dialog:$('furigoma'),coins:$('tossCoins'),result:$('tossResult'),banner:$('tossSide'),cutin:$('tossCutIn'),close:$('closeToss'),onShatter:playTossShatterSound,onCutIn:playTossCutInSound,isCurrent:()=>lastTossKey===key&&online?.room+':'+online?.round===key});else $('furigoma').hidden=true;}}
 
  paintLastCollapse();syncAI();
 }

@@ -89,20 +89,26 @@ export const arrivals=s=>s.spawned?[s.spawned,...(s.spawned.additional||[])]:[];
 export const arrivalSummary=s=>arrivals(s).map(d=>(d.piece.side?'後手':'先手')+'の'+label(d.piece)).join('・')+'が降臨';
 // One ticket per king; ten tickets per other piece.
 export const collapseTargets=s=>s.board.flatMap((p,i)=>!p?[]:Array(p.type==='K'?1:10).fill(i));
-// Total 9240 (=120*77): preserve existing special odds and allocate 1/77 to promotion.
-export const paradoxWeights=Object.freeze({arrival:770,warp:770,flip:462,shuffle:154,invert:77,promote:120,destroy:6887});
+// Total 9240 (=120*77): preserve existing special odds with promotion at 1/77 and hand supply at 1/60.
+export const paradoxWeights=Object.freeze({arrival:770,warp:770,flip:462,shuffle:154,invert:77,promote:120,supply:154,destroy:6733});
+export function paradoxCutinCount(kind,weights=paradoxWeights){
+ const weight=weights[kind],total=Object.values(weights).reduce((a,b)=>a+b,0);
+ if(!(weight>0))return 0;
+ return total>=weight*120?3:total>=weight*40?1:0;
+}
 // Shared with the clock: presentation never consumes a player's thinking time.
 export function paradoxEventTiming(event){
- const kind=event?.kind,cutins=kind==='invert'?['middle','upper','lower']:kind==='shuffle'?['middle']:[];
- const cutinMs=650,noticeMs=kind==='invert'||kind==='shuffle'?1600:kind==='promote'?800:kind==='flip'?500:200;
+ const kind=event?.kind,count=paradoxCutinCount(kind),cutins=count===3?['middle','upper','lower']:count===1?['middle']:[];
+ const cutinMs=650,noticeMs=kind==='invert'||kind==='shuffle'?1600:kind==='supply'?600:kind==='promote'?800:kind==='flip'?500:200;
  const flipMs=kind==='invert'?4000:kind==='promote'?1200:1100,staggerMs=280,tailMs=kind==='warp'?1400:kind==='shuffle'&&!event.skipped?1500:350;
- const motionMs=kind==='shuffle'?2800:kind==='invert'?4000:kind==='promote'?flipMs:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
+ const motionMs=kind==='supply'?1800:kind==='shuffle'?2800:kind==='invert'?4000:kind==='promote'?flipMs:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
  return {cutins,cutinMs,noticeMs,flipMs,staggerMs,motionMs,tailMs,totalMs:cutins.length*cutinMs+noticeMs+motionMs+tailMs};
 }
 export function chooseParadoxEvent(pick){let roll=pick(Object.values(paradoxWeights).reduce((a,b)=>a+b,0));if(!Number.isInteger(roll)||roll<0)throw Error('Invalid paradox roll');for(const [kind,weight]of Object.entries(paradoxWeights)){if(roll<weight)return kind;roll-=weight;}throw Error('Invalid paradox roll');}
 const shuffle=(items,pick)=>{for(let i=items.length-1;i>0;i--){const j=pick(i+1);[items[i],items[j]]=[items[j],items[i]];}return items;};
 export function paradoxSummary(s){
  const e=s.paradoxEvent;if(!e)return '';
+ if(e.kind==='supply')return (e.side?'後手':'先手')+'の駒台に7種類の駒が1枚ずつ出現';
  if(e.kind==='warp')return e.moves.length?(e.side?'後手':'先手')+'の玉がワープ':'玉のワープは不発';
  if(e.kind==='flip')return '王以外の'+e.squares.length+'枚が反転';
  if(e.kind==='promote')return e.squares.length?'盤上の全駒が成る':'全駒成りは不発（成れる駒なし）';
@@ -111,13 +117,15 @@ export function paradoxSummary(s){
 // Reconstruct the just-played position for move animations, before the random event.
 export function beforeParadox(s){
  const e=s.paradoxEvent;if(!e)return s;const n={...s,board:s.board.slice()};delete n.paradoxEvent;
+ if(e.kind==='supply')n.hands=s.hands.map((h,side)=>{const old={...h};if(side===e.side)for(const type of 'PLNSGBR')old[type]--;return old;});
  if(e.moves){for(const m of e.moves)n.board[m.to]=null;for(const m of e.moves)n.board[m.from]=s.board[m.to];}
  if(e.squares)for(const i of e.squares)n.board[i]=e.kind==='promote'?{...n.board[i],prom:false}:{...n.board[i],side:1-n.board[i].side};
  return n;
 }
 export function applyParadoxEvent(s,kind,pick){
- if(!['warp','flip','shuffle','invert','promote'].includes(kind))throw Error('Invalid paradox event');
+ if(!['warp','flip','shuffle','invert','promote','supply'].includes(kind))throw Error('Invalid paradox event');
  s.destroyed=null;s.spawned=null;
+ if(kind==='supply'){const side=1-s.turn,hand=s.hands[side];for(const type of 'PLNSGBR')hand[type]=(hand[type]||0)+1;s.paradoxEvent={kind,side};return s;}
  if(kind==='promote'){
   const squares=s.board.flatMap((p,i)=>p&&!p.prom&&['P','L','N','S','B','R'].includes(p.type)?[i]:[]);
   for(const i of squares)s.board[i]={...s.board[i],prom:true};s.paradoxEvent={kind,squares};return s;

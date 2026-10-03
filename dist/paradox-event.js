@@ -36,11 +36,25 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
    await wait(timing.cutinMs);band.remove();
   }
   if(signal?.aborted)return;
-  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote'].includes(event.kind)?' rainbow':'');
+  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote','supply'].includes(event.kind)?' rainbow':'');
    caption.textContent=event.kind==='shuffle'&&!event.skipped?'すべての駒がシャッフルする':event.kind==='invert'?'すべての駒が反転する':paradoxSummary(state);
   layer.append(caption);await wait(timing.noticeMs);if(signal?.aborted)return;
   caption.classList.add('during');
-  if(event.kind==='shuffle'||event.kind==='warp'){
+  if(event.kind==='supply'){
+   const types='PLNSGBR',rect=board.getBoundingClientRect(),size=Math.min(52,rect.width/9),duration=timing.motionMs/types.length;
+   for(const [index,type]of Array.from(types).entries()){
+    if(signal?.aborted)return;sound('flip',duration,index);
+    for(const side of [event.side]){
+     const tray=document.getElementById((board.id==='devBoard'?'devHand':'hand')+side),slot=tray?.querySelector('[data-type="'+type+'"]');
+     if(!slot)continue;const target=slot.getBoundingClientRect(),x=rect.left+rect.width/2-size/2,y=rect.top+rect.height/2-size/2,dx=target.left+target.width/2-size/2-x,dy=target.top+target.height/2-size/2-y;
+     const token=document.createElement('span');token.className='paradox-supply-token';Object.assign(token.style,{left:x+'px',top:y+'px',width:size+'px',height:size+'px'});
+     const piece=document.createElement('span');piece.className='piece'+(side!==perspective?' enemy':'');piece.dataset.side=side;piece.textContent=label({type,prom:false});token.append(piece);layer.append(token);
+     token.style.transform=`translate(${dx}px,${dy}px)`;
+     animate(token,[{transform:'translate(0,0) scale(.3)',opacity:0},{offset:.2,transform:'translate(0,0) scale(1.2)',opacity:1},{transform:`translate(${dx}px,${dy}px) scale(1)`,opacity:1}],{duration,fill:'both',easing:'ease-out'});
+    }
+    await wait(duration);
+   }
+  }else if(event.kind==='shuffle'||event.kind==='warp'){
    const moving=event.moves,waveStart=performance.now();
    for(let i=0;i<moving.length;i++){
     if(signal?.aborted)return;const {from,to}=moving[i],token=tokens.get(from),a=rects.get(from),b=rects.get(to);if(!token||!a||!b)continue;

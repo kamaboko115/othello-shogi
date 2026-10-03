@@ -50,3 +50,9 @@ test('Osesho respects the 60-ply board count adjudication',()=>{
  const s=base();s.moveLimit=true;s.ply=59;s.board[49]={type:'G',side:0,prom:false};s.board[39]={type:'P',side:1,prom:false};s.board[38]={type:'P',side:1,prom:false};s.board[37]={type:'P',side:0,prom:false};s.hands[1].R=9;
  assert.match(play(s,chooseOsesho(s,500)).result,/先手の勝ち.*60手/);
 });
+
+test('generated reserves above 81 and 255 retain distinct reversible search hashes',()=>{
+ const s=initial();s.hands[0].P=300;const p=new SearchPosition(s),start=[p.hash,p.lock];
+ assert.equal(p.hands[1],300);p.hand(0,1,299);assert.notDeepEqual([p.hash,p.lock],start);
+ p.hand(0,1,300);assert.deepEqual([p.hash,p.lock],start);
+});
