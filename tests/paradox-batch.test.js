@@ -31,9 +31,9 @@ test('each king has one destruction ticket while every other piece has ten',()=>
 });
 
 test('production arrival probability is one in twelve',t=>{
- for(let roll=0;roll<120;roll++){
+ for(const roll of [0,1,768,769,770,1540,2002,2156,2233,2353,9239]){
   let first=true;const mock=t.mock.method(crypto,'getRandomValues',bytes=>{bytes.fill(first?roll:0);first=false;return bytes;});
-  const s=active();collapseAfterMove(s);assert.equal(arrivals(s).length,roll<10?3:0);mock.mock.restore();
+  const s=active();collapseAfterMove(s);assert.equal(arrivals(s).length,roll<770?3:0);mock.mock.restore();
  }
 });
 

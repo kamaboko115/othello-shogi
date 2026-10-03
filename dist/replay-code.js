@@ -29,7 +29,7 @@ export function unpackReplayState(frame){
  }
  if(frame.e!==undefined){
   const e=frame.e,validSquare=i=>Number.isInteger(i)&&i>=0&&i<81;
-  if(!e||!['warp','flip','shuffle','invert'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
+  if(!e||!['warp','flip','shuffle','invert','promote'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
   if(e.kind==='warp'||e.kind==='shuffle'){
    if(!Array.isArray(e.moves)||e.moves.length>81||e.moves.some(m=>!m||!validSquare(m.from)||!validSquare(m.to)||!s.board[m.to])||new Set(e.moves.map(m=>m.from)).size!==e.moves.length||new Set(e.moves.map(m=>m.to)).size!==e.moves.length)bad();
    if(e.kind==='warp'){
@@ -41,6 +41,7 @@ export function unpackReplayState(frame){
    if(!Array.isArray(e.squares)||e.squares.length>81||new Set(e.squares).size!==e.squares.length||e.squares.some(i=>!validSquare(i)||!s.board[i]))bad();
    if(e.kind==='flip'&&(e.squares.length>5||e.squares.some(i=>s.board[i].type==='K')))bad();
    if(e.kind==='invert'&&e.squares.length!==s.board.filter(Boolean).length)bad();
+   if(e.kind==='promote'&&e.squares.some(i=>!s.board[i].prom||!['P','L','N','S','B','R'].includes(s.board[i].type)))bad();
    s.paradoxEvent={kind:e.kind,squares:[...e.squares]};
   }
  }
