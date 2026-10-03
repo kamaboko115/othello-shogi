@@ -369,3 +369,9 @@ html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 .rules-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}
 .rules-title-row h2{flex:1;min-width:0}
 #closeRulesTop{flex:none;margin:0;white-space:nowrap}
+
+#tutorialMenu{width:min(92vw,640px)}
+.tutorial-choices{display:grid;gap:12px;margin-top:24px}
+.tutorial-choices button{display:grid;gap:6px;width:100%;margin:0;padding:18px 20px;text-align:left}
+.tutorial-choices strong{font-size:17px}.tutorial-choices span{font-size:14px;font-weight:400;line-height:1.5}
+#closeTutorialMenu{flex:none;margin:0}

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {guideHTML,initBeginnerGuide} from '../dist/novice-guide.js';
+import {guideHTML,initBeginnerGuide,initTutorialMenu} from '../dist/novice-guide.js';
 import {empty,reaches} from '../dist/engine.js';
 
 test('fixed guides reject unknown topics and provide accessible diagrams',()=>{
@@ -78,4 +78,20 @@ test('guide opens above the existing rules, resets each topic, and uses native d
  assert.match(app,/initBeginnerGuide\(document,guideHTML\)/);
  const assets=readFileSync(new URL('../worker/static-assets.js',import.meta.url),'utf8');
  assert.match(assets,/'novice-guide.js'/);
+});
+
+test('チュートリアルの3入口は基本解説か練習を開き、解説から練習へ進める',()=>{
+ const ids=['tutorialMenu','tutorialMenuTitle','openTutorial','tutorialShogi','tutorialOthello','tutorialKnown','closeTutorialMenu','beginnerTutorial','beginnerGuide','beginnerTitle','beginnerBody','closeBeginner','openOthelloBasics','openShogiBasics'];
+ const elements=new Map(ids.map(id=>[id,{open:false,hidden:true,showModal(){this.open=true;},close(){this.open=false;},focus(){}}]));
+ const document={getElementById:id=>elements.get(id)},get=id=>elements.get(id),guide=initBeginnerGuide(document);let starts=0;
+ initTutorialMenu(document,guide,()=>starts++);
+ get('openTutorial').onclick();assert.equal(get('tutorialMenu').open,true);assert.equal(starts,0);
+ for(const [button,title] of [['tutorialShogi','将棋の基本'],['tutorialOthello','オセロの基本']]){
+  get(button).onclick();assert.equal(get('beginnerGuide').open,true);assert.equal(get('beginnerTitle').textContent,title);assert.equal(get('beginnerTutorial').hidden,false);
+  get('closeBeginner').onclick();assert.equal(get('tutorialMenu').open,true);
+ }
+ get('tutorialShogi').onclick();get('beginnerTutorial').onclick();assert.equal(starts,1);assert.equal(get('beginnerGuide').open,false);assert.equal(get('tutorialMenu').open,false);
+ get('openTutorial').onclick();get('tutorialKnown').onclick();assert.equal(starts,2);
+ get('openTutorial').onclick();get('closeTutorialMenu').onclick();assert.equal(starts,2);assert.equal(get('tutorialMenu').open,false);
+ get('openShogiBasics').onclick();assert.equal(get('beginnerTutorial').hidden,true,'通常のルール解説には練習へ進む操作を追加しない');
 });

@@ -120,11 +120,12 @@ export function initDeveloper(getCurrent){
   $('lessonText').textContent=lessons[lesson].text;$('lessonNext').textContent=lesson===lessons.length-1?'チュートリアルを終える':'次へ';
   $('devStatus').textContent=lessons[lesson].collapse?'好きな駒を動かして、盤面崩壊を体験してみましょう。':lessons[lesson].move.drop?'駒台の金を選び、矢印の移動先へ打ってください。':'光る駒を選び、矢印の移動先を押してください。';
  }
- $('openTutorial').onclick=()=>{tutorial=true;lesson=0;history=[];$('developerDialog').classList.add('tutorial-mode');$('tutorialLesson').hidden=false;$('devTransfer').hidden=true;loadLesson();$('developerDialog').showModal();};
+ const startTutorial=()=>{tutorial=true;lesson=0;history=[];$('developerDialog').classList.add('tutorial-mode');$('tutorialLesson').hidden=false;$('devTransfer').hidden=true;loadLesson();$('developerDialog').showModal();};
+ $('openTutorial').onclick=startTutorial;
  $('lessonReset').onclick=()=>{if(!working)loadLesson();};
  const nextLesson=()=>{if(working)return;if(lesson===lessons.length-1){$('developerDialog').close();return;}lesson++;loadLesson();};
  $('lessonNext').onclick=nextLesson;$('lessonCompleteNext').onclick=()=>{$('lessonComplete').close();nextLesson();};$('lessonCompleteRepeat').onclick=()=>{if(!working)loadLesson();};
  const exitTutorial=()=>{$('lessonComplete').close();$('developerDialog').close();};$('lessonExit').onclick=exitTutorial;$('lessonCompleteExit').onclick=exitTutorial;
-
+ return {startTutorial};
 }
 
