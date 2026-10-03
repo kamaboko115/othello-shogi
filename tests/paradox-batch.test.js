@@ -30,10 +30,10 @@ test('each king has one destruction ticket while every other piece has ten',()=>
  assert.deepEqual([...counts],[[4,1],[20,10],[60,10],[76,1]]);
 });
 
-test('production arrival probability remains one in eight',t=>{
- for(let roll=0;roll<16;roll++){
+test('production arrival probability is one in twelve',t=>{
+ for(let roll=0;roll<120;roll++){
   let first=true;const mock=t.mock.method(crypto,'getRandomValues',bytes=>{bytes.fill(first?roll:0);first=false;return bytes;});
-  const s=active();collapseAfterMove(s);assert.equal(arrivals(s).length,roll%8===0?3:0);mock.mock.restore();
+  const s=active();collapseAfterMove(s);assert.equal(arrivals(s).length,roll<10?3:0);mock.mock.restore();
  }
 });
 

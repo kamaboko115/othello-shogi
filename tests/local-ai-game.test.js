@@ -90,9 +90,9 @@ test('no-moves AI adjudication matches the server and normal moves remain imposs
 });
 
 test('promotion, capture, simultaneous flips, drops, adjudication and random arrivals preserve server results and undo',async t=>{
- t.mock.method(crypto,'getRandomValues',bytes=>bytes.fill(bytes instanceof Uint32Array?0:1));
+ let eventRoll=0;t.mock.method(crypto,'getRandomValues',bytes=>bytes.fill(bytes instanceof Uint32Array?eventRoll:1));
  const piece=(type,side,prom=false)=>({type,side,prom});
- for(const scenario of ['promotion','capture-flip','drop-flip','judge','arrival']){
+ for(const scenario of ['promotion','capture-flip','drop-flip','judge','arrival','warp','flip','shuffle','invert']){
   const db=localDB(),client=createLocalAIStore({storage:storage()});
   try{
    let remote=(await server(db,'',{invite,kind:'ai',settings:{moveLimit:false,paradoxAt:false}})).data;
@@ -103,6 +103,7 @@ test('promotion, capture, simultaneous flips, drops, adjudication and random arr
    else if(scenario==='drop-flip'){s.hands[0].G=1;s.board[39]=piece('P',1);s.board[38]=piece('G',0);move={drop:'G',to:40};}
    else if(scenario==='judge'){s.ply=59;s.moveLimit=60;s.board[54]=piece('P',0);move={from:54,to:45,prom:false};}
    else{s.ply=2;s.paradoxAt=1;s.board[54]=piece('P',0);move={from:54,to:45,prom:false};}
+   eventRoll=({warp:10,flip:20,shuffle:26,invert:28})[scenario]||0;
    data.state=s;data.toss={coins:[1,1,1,1,1],hostSide:0};data.takebacks=[];data.undoOffer=null;
    await db.prepare('UPDATE rooms SET data = ? WHERE id = ?').bind(JSON.stringify(data),remote.room).run();
    remote=(await server(db,'/'+remote.room)).data;let local=client.import(remote);
@@ -112,6 +113,7 @@ test('promotion, capture, simultaneous flips, drops, adjudication and random arr
    if(scenario==='drop-flip')assert.deepEqual(local.state.flipped,[39]);
    if(scenario==='judge')assert.match(local.state.result,/60手/);
    if(scenario==='arrival')assert.ok(local.state.spawned);
+   if(['warp','flip','shuffle','invert'].includes(scenario))assert.equal(local.state.paradoxEvent.kind,scenario);
    local=client.action(local.room,{action:'offer-undo',version:local.version});remote=(await server(db,'/'+remote.room+'/action',{action:'offer-undo',version:remote.version})).data;assert.deepEqual(comparable(local),comparable(remote));assert.deepEqual(local.state,s);
   }finally{db.close();}
  }

@@ -48,7 +48,7 @@ export default {
 // Only the default handler is a Workers entrypoint; helper module exports
 // (including numeric constants) must remain internal to the bundled Worker.
 const replaySource=(await readFile('dist/replay-code.js','utf8')).replace(/^import .*;\r?\n/gm,'');
-const helpers=[engine,replaySource,await readFile('dist/match-options.js','utf8'),securitySource,limitsSource,apiSource].join('\n').replace(/^export /gm,'');
+const helpers=[engine,replaySource,(await readFile('dist/match-options.js','utf8')).replace(/^import .*;\r?\n/gm,''),securitySource,limitsSource,apiSource].join('\n').replace(/^export /gm,'');
 const worker=helpers+'\nconst assets='+JSON.stringify(assets)+';\nconst binary='+JSON.stringify(binary)+';\nconst etags='+JSON.stringify(etags)+';\n'+staticWorker;
 // Tests and preview builds can run concurrently. Readers must never see a
 // truncated module while another build is replacing the same entrypoint.

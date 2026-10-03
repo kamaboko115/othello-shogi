@@ -8,7 +8,7 @@ import {placeHelper} from './helper-visit.js';
 import {createDevAccess} from './dev-access.js';
 import {presentToss} from './toss.js';
 import {judgeSteps,adjudicationLimit,judgeLabel,initJudgeSlider} from './judge-options.js';
-import {paintCollapse,paintArrival,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
+import {paintCollapse,paintArrival,paintParadoxEvent,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget,clockSecondsLabel,timeHelp} from './match-options.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide} from './combo.js';
@@ -24,7 +24,7 @@ import {initBoardPreview,shareInvitation,initRecordViewer} from './lobby-tools.j
 import {createClockWarning} from './clock-warning.js';
 import {playClockWarning} from './sound.js';
 import {playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
-import {initial,moves,movementTargets,label,names,points} from './engine.js';
+import {initial,moves,movementTargets,label,names,points,beforeParadox} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const localAI=createLocalAIStore();
 const winAds=createWinAdBreak();
@@ -55,13 +55,15 @@ let helperVisiting=false,helperGreeting=false,helperTravelPending=false;
 let collapseEffect=null,collapseTimer=null,removeParadoxBanner=null;
 function cancelCollapse(){clearTimeout(collapseTimer);removeParadoxBanner?.();removeParadoxBanner=null;collapseEffect=null;}
 function paintLastCollapse(){
+ paintParadoxEvent($('board'),collapseEffect?.breaking?state:null);
+ if(collapseEffect?.paradoxEvent){paintCollapse($('board'),null);return;}
  if(collapseEffect?.spawned){paintCollapse($('board'),null);paintArrival($('board'),collapseEffect,collapseEffect.breaking);return;}
  paintCollapse($('board'),collapseEffect?.destroyed||state.destroyed,{perspective:online?.side??0,phase:collapseEffect?(collapseEffect.breaking?'breaking':'waiting'):comboPreparing||comboActive?'waiting':'ash',eventKey:(online?.room||'')+':'+(online?.round||1)+':'+state.ply});
 }
 function beginCollapse(next){
- cancelCollapse();collapseEffect={destroyed:next.destroyed,spawned:next.spawned,breaking:false};
+ cancelCollapse();collapseEffect={destroyed:next.destroyed,spawned:next.spawned,paradoxEvent:next.paradoxEvent,breaking:false};state=beforeParadox(next);
  if(next.paradoxStarted){removeParadoxBanner=paradoxBanner();paradoxSound(true);}
- const finish=()=>{removeParadoxBanner?.();removeParadoxBanner=null;if(next.paradoxStarted){collapseEffect=null;presentEffects(state);render();return;}if(next.spawned)playParadoxArrival();else paradoxSound(false);collapseEffect.breaking=true;render();collapseTimer=setTimeout(()=>{collapseEffect=null;presentEffects(state);render();},next.destroyed?collapseStrikeDuration:1200);};
+ const finish=()=>{removeParadoxBanner?.();removeParadoxBanner=null;if(next.paradoxStarted){collapseEffect=null;presentEffects(state);render();return;}state=next;if(next.spawned||next.paradoxEvent)playParadoxArrival();else paradoxSound(false);collapseEffect.breaking=true;render();collapseTimer=setTimeout(()=>{collapseEffect=null;presentEffects(state);render();},next.destroyed?collapseStrikeDuration:1200);};
  collapseTimer=setTimeout(finish,next.paradoxStarted?3000:next.destroyed?collapseStrikeDelay:120);
 }
 function stopAI(){aiJob?.task.cancel();aiJob=null;}
@@ -302,17 +304,18 @@ function adopt(data){
   cancelCombo();cancelCollapse();
   const moved=data.state.ply>state.ply&&(data.round||1)===previousRound,rewound=data.state.ply<state.ply;
   const ended=!state.result&&!!data.state.result&&(data.round||1)===previousRound;
-  const last=data.state.last,promotedNow=moved&&last.length===2&&!state.board[last[0]]?.prom&&data.state.board[last[1]]?.prom;
-  const slide=moved?slidingMove(state,data.state):null;
-  const capture=moved?capturedPiece(state,data.state):null;
-  const kingImpact=moved?kingCaptureSquare(state,data.state):null;
-  clearInspection();state=data.state;logs=data.logs;selected=null;legal=[];
+  const settled=data.state,played=moved?beforeParadox(settled):settled;
+  const last=played.last,promotedNow=moved&&last.length===2&&!state.board[last[0]]?.prom&&played.board[last[1]]?.prom;
+  const slide=moved?slidingMove(state,played):null;
+  const capture=moved?capturedPiece(state,played):null;
+  const kingImpact=moved?kingCaptureSquare(state,played):null;
+  clearInspection();state=played;logs=data.logs;selected=null;legal=[];
   if(rewound)animationKey='';if($('promotion').open)$('promotion').close();
   message=state.result||(state.flipped.length?`${state.flipped.length}枚が寝返りました。`:logs.at(-1)||'相手が参加しました。あなたの手番で指してください。');
   if(moved){
    if(promotedNow&&!state.result)playArcadeCue('promote');
    animationStarted=performance.now();animationKey=data.room+':'+(data.round||1)+':'+state.ply;
-   const finish=()=>{if(state.paradoxStarted||state.destroyed||state.spawned)beginCollapse(state);else presentEffects(state);};
+   const finish=()=>{state=settled;if(state.paradoxStarted||state.destroyed||state.spawned||state.paradoxEvent)beginCollapse(state);else presentEffects(state);};
    if(state.flipped.length>=1||capture||slide||kingImpact!==null){
     comboPreparing=true;render();comboActive=true;comboPreparing=false;
     const controller=new AbortController();comboController=controller;

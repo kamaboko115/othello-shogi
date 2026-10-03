@@ -1,4 +1,17 @@
-import {label,arrivals} from './engine.js';
+import {label,arrivals,paradoxSummary} from './engine.js';
+
+export function paintParadoxEvent(board,state){
+ board.querySelectorAll('.paradox-event-marker').forEach(el=>el.remove());
+ const event=state?.paradoxEvent;if(!event)return;
+ const squares=event.squares||event.moves.map(m=>m.to);
+ for(const square of squares){
+  const cell=board.querySelector('[data-square="'+square+'"]');if(!cell)continue;
+  const glow=document.createElement('span');glow.className='paradox-event-marker paradox-event-ring event-'+event.kind;
+  glow.setAttribute('aria-hidden','true');cell.append(glow);
+ }
+ const caption=document.createElement('div');caption.className='paradox-event-marker paradox-event-caption';
+ caption.setAttribute('role','status');caption.textContent=paradoxSummary(state);board.append(caption);
+}
 
 export function paintArrival(board,state,breaking=false){
  for(const d of arrivals(state)){

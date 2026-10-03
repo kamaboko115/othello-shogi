@@ -1,6 +1,6 @@
 import {normalizeMoveLimit} from './judge-options.js';
 import {normalizeTime,handicapOptions,applyHandicap} from './match-options.js';
-import {initial,play,collapseAfterMove,label,names,moves,arrivalSummary} from './engine.js';
+import {initial,play,collapseAfterMove,label,names,moves,arrivalSummary,paradoxSummary} from './engine.js';
 import {rememberReplay,appendReplay,rewindReplay,replayRecord} from './replay-code.js';
 
 const lifetime=7*86400000;
@@ -86,7 +86,7 @@ export function createLocalAIStore({storage=()=>globalThis.localStorage,now=Date
      let normalized;
      if(m.drop){if(!['R','B','G','S','N','L','P'].includes(m.drop))fail('指せない手です。');normalized={drop:m.drop,to:m.to};}
      else{if(!Number.isInteger(m.from)||m.from<0||m.from>80||typeof m.prom!=='boolean')fail('指せない手です。');normalized={from:m.from,to:m.to,prom:m.prom};}
-     try{const next=collapseAfterMove(play(s,normalized));remember(data);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?' ／ '+arrivalSummary(next):''));data.state=next;appendReplay(data);if(body.action==='helper-move')data.helperUsedRound=data.round||1;data.offer=null;}catch{fail('指せない手です。');}
+     try{const next=collapseAfterMove(play(s,normalized));remember(data);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?' ／ '+arrivalSummary(next):next.paradoxEvent?' ／ '+paradoxSummary(next):''));data.state=next;appendReplay(data);if(body.action==='helper-move')data.helperUsedRound=data.round||1;data.offer=null;}catch{fail('指せない手です。');}
     }else if(body.action==='resign'){s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
     else if(body.action==='offer-draw'){s.result='合意による引き分け';}
     else if(body.action==='accept-draw')fail('相手からの引き分け提案はありません。');

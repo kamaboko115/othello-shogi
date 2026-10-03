@@ -1,9 +1,9 @@
-import {paintCollapse,paintArrival,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
+import {paintCollapse,paintArrival,paintParadoxEvent,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {lessons,lessonState,collapseReply,tutorialMoves,collapseLesson} from './tutorial-lessons.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {paradoxSound} from './paradox.js';
 import {encodeBoard,decodeBoard} from './board-code.js';
-import {initial,empty,moves,play,label,collapseAfterMove,arrivalSummary} from './engine.js';
+import {initial,empty,moves,play,label,collapseAfterMove,arrivalSummary,paradoxSummary,beforeParadox} from './engine.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide,runSword} from './combo.js';
 import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js';
 import {playParadoxArrival,playMoveSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue} from './sound.js';
@@ -19,7 +19,7 @@ export function initDeveloper(getCurrent){
  let updateTutorialArrow=()=>{};
  if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>updateTutorialArrow()).observe($('devBoardFrame'));
  const copyCurrent=()=>{const current=getCurrent(),s=structuredClone(current.state);if(current.side===1){s.board.reverse();s.board.forEach(p=>{if(p)p.side=1-p.side;});s.hands.reverse();s.turn=1-s.turn;}return s;};
- const reset=(s,remember=true,preserveDebug=false)=>{if(remember)history.push(structuredClone(state));controller?.abort();working=false;state=structuredClone(s);state.result='';state.flipped=[];state.last=[];state.moveLimit=false;if(!tutorial){if(preserveDebug)$('devCollapseEarly').checked=state.paradoxAt===2;else{state.ply=0;state.destroyed=null;state.spawned=null;state.paradoxStarted=false;}}state.paradoxAt=tutorial&&lessons[lesson].collapse?150:!tutorial&&$('devCollapseEarly').checked?2:false;collapsePhase='ash';selected=null;$('devTurn').value=String(state.turn);draw();};
+ const reset=(s,remember=true,preserveDebug=false)=>{if(remember)history.push(structuredClone(state));controller?.abort();working=false;state=structuredClone(s);state.result='';state.flipped=[];state.last=[];state.moveLimit=false;if(!tutorial){if(preserveDebug)$('devCollapseEarly').checked=state.paradoxAt===2;else{state.ply=0;state.destroyed=null;state.spawned=null;delete state.paradoxEvent;state.paradoxStarted=false;}}state.paradoxAt=tutorial&&lessons[lesson].collapse?150:!tutorial&&$('devCollapseEarly').checked?2:false;collapsePhase='ash';selected=null;$('devTurn').value=String(state.turn);draw();};
  function draw(){
   document.querySelectorAll('#developerDialog select,#developerDialog input,.dev-buttons button').forEach(el=>el.disabled=working);
   $('devUndo').disabled=working||!history.length;
@@ -32,7 +32,8 @@ export function initDeveloper(getCurrent){
   }}
   $('lessonProgress').hidden=true;$('lessonProgress').textContent='';
   const board=$('devBoard');board.replaceChildren();updateTutorialArrow=()=>{};const legal=selected===null?[]:availableMoves(selected),guide=guided()&&!working&&state.ply===0?lessons[lesson].move:null;
-  for(let i=0;i<81;i++){const b=document.createElement('button'),p=state.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(guide&&i===(guide.from??guide.to))b.classList.add('tutorial-hint');if(guide&&i===guide.to)b.classList.add('tutorial-target');b.dataset.square=i;b.disabled=working||(guided()&&(state.ply!==0||(i!==lessons[lesson].move.from&&!legal.some(m=>m.to===i))));b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き')+(guide&&i===guide.to?' 移動先':guide&&i===guide.from?' この駒を動かす':''));if(p){const el=document.createElement('span');el.className='piece'+((working&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'');el.dataset.side=working&&state.flipped.includes(i)?1-p.side:p.side;el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
+  const visible=collapsePhase==='waiting'?beforeParadox(state):state;
+  for(let i=0;i<81;i++){const b=document.createElement('button'),p=visible.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(guide&&i===(guide.from??guide.to))b.classList.add('tutorial-hint');if(guide&&i===guide.to)b.classList.add('tutorial-target');b.dataset.square=i;b.disabled=working||(guided()&&(state.ply!==0||(i!==lessons[lesson].move.from&&!legal.some(m=>m.to===i))));b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き')+(guide&&i===guide.to?' 移動先':guide&&i===guide.from?' この駒を動かす':''));if(p){const el=document.createElement('span');el.className='piece'+((working&&!state.paradoxEvent&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'');el.dataset.side=working&&!state.paradoxEvent&&state.flipped.includes(i)?1-p.side:p.side;el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
   if(guide){
    const arrow=document.createElement('div');arrow.className='tutorial-arrow';arrow.setAttribute('aria-hidden','true');
    board.append(arrow);
@@ -51,7 +52,8 @@ export function initDeveloper(getCurrent){
   }
   paintCollapse(board,state.destroyed,{phase:collapsePhase,eventKey:state.ply});
   if(state.spawned&&working)paintArrival(board,state,collapsePhase==='breaking');
-  if(!tutorial&&$('devCollapseEarly').checked)$('devStatus').textContent=(state.result||'デバッグ：'+state.ply+'手目 ／ 2手目に予告・3手目から盤面崩壊')+(state.destroyed?' ／ '+label(state.destroyed.piece)+'が崩壊':state.spawned?' ／ '+arrivalSummary(state):'');
+  paintParadoxEvent(board,working&&collapsePhase==='breaking'?state:null);
+  if(!tutorial&&$('devCollapseEarly').checked)$('devStatus').textContent=(state.result||'デバッグ：'+state.ply+'手目 ／ 2手目に予告・3手目から盤面崩壊')+(state.destroyed?' ／ '+label(state.destroyed.piece)+'が崩壊':state.spawned?' ／ '+arrivalSummary(state):state.paradoxEvent?' ／ '+paradoxSummary(state):'');
  }
  async function click(i){
   if(working)return;
@@ -74,13 +76,13 @@ export function initDeveloper(getCurrent){
    const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);current.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);current.signal.addEventListener('abort',done,{once:true});if(current.signal.aborted)done();});
    const collapse=async()=>{
     if(tutorial){collapseLesson(state,collapseTrial);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state);
-    if(!state.paradoxStarted&&!state.destroyed&&!state.spawned)return;
+    if(!state.paradoxStarted&&!state.destroyed&&!state.spawned&&!state.paradoxEvent)return;
     collapsePhase='waiting';draw();
-    const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':state.spawned?arrivalSummary(state)+'！ この手では盤面崩壊による破壊はありません。':'盤上の駒が1枚壊れます';$('devBoard').append(note);
+    const note=document.createElement('div');note.className='tutorial-collapse-note';note.textContent=state.paradoxStarted?'オセロ将棋パラドックスにより、盤面が崩れてゆく！':state.spawned?arrivalSummary(state)+'！ この手では盤面崩壊による破壊はありません。':state.paradoxEvent?paradoxSummary(state):'盤上の駒が1枚壊れます';$('devBoard').append(note);
     try{
      if(state.paradoxStarted){paradoxSound(true);await wait(3000);return;}else if(state.destroyed)await wait(collapseStrikeDelay);
      if(current.signal.aborted)return;
-     if(state.spawned)playParadoxArrival();else paradoxSound(false);collapsePhase='breaking';draw();
+     if(state.spawned||state.paradoxEvent)playParadoxArrival();else paradoxSound(false);collapsePhase='breaking';draw();
     await wait(state.destroyed?collapseStrikeDuration:1200);collapsePhase='ash';
     }finally{note.remove();}
     draw();
@@ -106,7 +108,7 @@ export function initDeveloper(getCurrent){
  $('devCopy').onclick=()=>reset(copyCurrent());$('devInitial').onclick=()=>reset(initial());$('devClear').onclick=()=>reset(empty());
  $('devTurn').onchange=()=>{if(working)return;history.push(structuredClone(state));state.turn=Number($('devTurn').value);state.result='';selected=null;draw();};
  $('devUndo').onclick=()=>{if(working||!history.length)return;const previous=history.pop();reset(previous,false,true);$('devStatus').textContent='1手戻しました。';};
- $('devCollapseEarly').onchange=()=>{if(working||tutorial)return;history.push(structuredClone(state));state.paradoxAt=$('devCollapseEarly').checked?2:false;state.ply=0;state.destroyed=null;state.spawned=null;state.paradoxStarted=false;selected=null;draw();if(!state.paradoxAt)$('devStatus').textContent='デバッグの盤面崩壊をオフにしました。';};
+ $('devCollapseEarly').onchange=()=>{if(working||tutorial)return;history.push(structuredClone(state));state.paradoxAt=$('devCollapseEarly').checked?2:false;state.ply=0;state.destroyed=null;state.spawned=null;delete state.paradoxEvent;state.paradoxStarted=false;selected=null;draw();if(!state.paradoxAt)$('devStatus').textContent='デバッグの盤面崩壊をオフにしました。';};
  $('devExport').onclick=async()=>{const code=encodeBoard(state);$('devTransfer').hidden=false;$('devCode').value=code;try{await navigator.clipboard.writeText(code);$('devStatus').textContent='盤面をコピーしました。ペーストで復元できます。';}catch{$('devCode').focus();$('devCode').select();$('devStatus').textContent='盤面データを選択しました。コピーして保存できます。';}};
  $('devPaste').onclick=async()=>{$('devTransfer').hidden=false;try{$('devCode').value=await navigator.clipboard.readText();}catch{$('devCode').value='';}$('devCode').focus();$('devStatus').textContent='貼り付けた内容を「この盤面を読み込む」で反映します。';};
  $('devImport').onclick=()=>{if(working)return;try{const next=decodeBoard($('devCode').value);reset(next);$('devStatus').textContent='盤面を読み込みました。';}catch(e){$('devStatus').textContent=e.message;}};

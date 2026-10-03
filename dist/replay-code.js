@@ -5,7 +5,7 @@ export const replayLimit=4096;
 // One small snapshot per ply; no duplicated logs or AI search state.
 export function packReplayState(s){
  const extra=arrivals(s).slice(1).map(d=>d.square);
- return {b:s.board.map(p=>p?String.fromCharCode(65+types.indexOf(p.type)+8*p.side+(p.prom?16:0)):'.').join(''),h:s.hands.map(h=>Array.from(handTypes,t=>h[t]||0)),t:s.turn,p:s.ply,l:s.last||[],f:s.flipped||[],d:s.destroyed?.square??null,u:s.spawned?.square??null,...(extra.length?{a:extra}:{})};
+ return {b:s.board.map(p=>p?String.fromCharCode(65+types.indexOf(p.type)+8*p.side+(p.prom?16:0)):'.').join(''),h:s.hands.map(h=>Array.from(handTypes,t=>h[t]||0)),t:s.turn,p:s.ply,l:s.last||[],f:s.flipped||[],d:s.destroyed?.square??null,u:s.spawned?.square??null,...(extra.length?{a:extra}:{}),...(s.paradoxEvent?{e:structuredClone(s.paradoxEvent)}:{})};
 }
 export function unpackReplayState(frame){
  const bad=()=>{throw Error('棋譜データの形式が正しくありません。');};
@@ -26,6 +26,23 @@ export function unpackReplayState(frame){
  if(frame.a!==undefined){
   if(!s.spawned||!Array.isArray(frame.a)||frame.a.length>2||new Set([frame.u,...frame.a]).size!==frame.a.length+1)bad();
   s.spawned.additional=frame.a.map(square=>{if(!Number.isInteger(square)||square<0||square>80)bad();const piece=s.board[square];if(!piece?.prom||!['R','B'].includes(piece.type))bad();return {square,piece};});
+ }
+ if(frame.e!==undefined){
+  const e=frame.e,validSquare=i=>Number.isInteger(i)&&i>=0&&i<81;
+  if(!e||!['warp','flip','shuffle','invert'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
+  if(e.kind==='warp'||e.kind==='shuffle'){
+   if(!Array.isArray(e.moves)||e.moves.length>81||e.moves.some(m=>!m||!validSquare(m.from)||!validSquare(m.to)||!s.board[m.to])||new Set(e.moves.map(m=>m.from)).size!==e.moves.length||new Set(e.moves.map(m=>m.to)).size!==e.moves.length)bad();
+   if(e.kind==='warp'){
+    if(e.moves.length>1)bad();
+    if(e.moves.length){const m=e.moves[0];if(s.board[m.from]||s.board[m.to].type!=='K'||e.side!==s.board[m.to].side)bad();}
+   }else if(e.moves.length!==s.board.filter(Boolean).length)bad();
+   s.paradoxEvent={kind:e.kind,...(e.moves.length&&e.kind==='warp'?{side:e.side}:{}),moves:e.moves.map(m=>({from:m.from,to:m.to}))};
+  }else{
+   if(!Array.isArray(e.squares)||e.squares.length>81||new Set(e.squares).size!==e.squares.length||e.squares.some(i=>!validSquare(i)||!s.board[i]))bad();
+   if(e.kind==='flip'&&(e.squares.length>5||e.squares.some(i=>s.board[i].type==='K')))bad();
+   if(e.kind==='invert'&&e.squares.length!==s.board.filter(Boolean).length)bad();
+   s.paradoxEvent={kind:e.kind,squares:[...e.squares]};
+  }
  }
  return s;
 }
