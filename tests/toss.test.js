@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {presentToss,tossLandingMs,tossPauseMs,tossShatterMs,tossCutInMs,tossInterventionMs} from '../dist/toss.js';
+import {presentToss,createTossHistory,tossLandingMs,tossPauseMs,tossShatterMs,tossCutInMs,tossInterventionMs} from '../dist/toss.js';
 function view(){
  const classes=new Set(),timers=[],styles=new Map(),sounds=[];
  const dialog={style:{setProperty:(key,value)=>styles.set(key,value)},classList:{add(...names){names.forEach(n=>classes.add(n));},remove(...names){names.forEach(n=>classes.delete(n));}},hidden:true};
@@ -67,4 +67,19 @@ test('特別な破壊と置換だけを約3/5倍速にし、CSSと段階切り�
  const css=readFileSync(new URL('../dist/style.css',import.meta.url),'utf8');
  assert.match(css,/animation:toss-side-shatter var\(--toss-shatter-duration,/);assert.match(css,/animation:toss-intervene var\(--toss-intervention-duration,/);
  const app=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');assert.match(app,/presentToss\(\{[^\n]+onShatter:playTossShatterSound/);
+});
+
+test('reload skips an already shown toss, while a rematch or new room shows once',()=>{
+ let value=null;const disk={getItem:()=>value,setItem:(_,v)=>value=v};
+ assert.equal(createTossHistory(disk).claim('room:1'),true);
+ const reloaded=createTossHistory(disk);assert.equal(reloaded.claim('room:1'),false);
+ assert.equal(reloaded.claim('room:2'),true);assert.equal(reloaded.claim('other:1'),true);
+ assert.equal(reloaded.claim('old:1',true),false);
+});
+test('toss history survives corrupt or blocked storage without blocking play and stays bounded',()=>{
+ const denied={getItem(){throw Error('denied');},setItem(){throw Error('denied');}},memory=createTossHistory(denied);
+ assert.equal(memory.claim('room:1'),true);assert.equal(memory.claim('room:1'),false);
+ let value='{broken';const disk={getItem:()=>value,setItem:(_,v)=>value=v},history=createTossHistory(disk);
+ for(let i=0;i<150;i++)assert.equal(history.claim('room:'+i),true);
+ assert.equal(JSON.parse(value).length,128);assert.equal(createTossHistory(disk).claim('room:149'),false);
 });

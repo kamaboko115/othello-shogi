@@ -25,7 +25,7 @@ export function initDeveloper(getCurrent){
   document.querySelectorAll('#developerDialog select,#developerDialog input,.dev-buttons button').forEach(el=>el.disabled=working);
   $('devUndo').disabled=working||!history.length;
   for(const side of [0,1]){const tray=$('devHand'+side);tray.replaceChildren();for(const type of ['R','B','G','S','N','L','P']){
-   const amount=state.hands[side][type]||0,slot=document.createElement('button');slot.type='button';slot.dataset.type=type;slot.textContent=label({type,prom:false})+' ×'+amount;slot.setAttribute('aria-label',(side?'相手':'自分')+'の持ち駒 '+label({type,prom:false})+' '+amount+'枚');slot.setAttribute('aria-pressed',String(side===state.turn&&selected===type));slot.disabled=working||!!state.result||side!==state.turn||!amount||$('devMode').value!=='play';
+   const amount=(collapsePhase==='waiting'?beforeParadox(state):state).hands[side][type]||0,slot=document.createElement('button');slot.type='button';slot.dataset.type=type;slot.textContent=label({type,prom:false})+' ×'+amount;slot.setAttribute('aria-label',(side?'相手':'自分')+'の持ち駒 '+label({type,prom:false})+' '+amount+'枚');slot.setAttribute('aria-pressed',String(side===state.turn&&selected===type));slot.disabled=working||!!state.result||side!==state.turn||!amount||$('devMode').value!=='play';
    slot.hidden=tutorial&&!amount;
    if(tutorial&&type===lessons[lesson].move.drop&&side===0&&state.ply===0)slot.classList.add('tutorial-hint');
    if(guided())slot.disabled||=state.ply!==0||side!==0||type!==lessons[lesson].move.drop;

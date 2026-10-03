@@ -36,13 +36,18 @@ const random=()=>{let x=seed=(seed+0x9e3779b9)>>>0;x=Math.imul(x^(x>>>16),0x21f0
 const z1=Uint32Array.from({length:81*64+2*8*82+1},random);
 const z2=Uint32Array.from({length:z1.length},random);
 const SIDE_HASH=z1.length-1,HAND_HASH=81*64;
+// Generated reserves can exceed the original 81-piece lookup range.
+const handHash=(table,index,amount)=>{
+ if(amount<=81)return table[HAND_HASH+index*82+amount];
+ let x=amount^table[HAND_HASH+index*82];x=Math.imul(x^(x>>>16),0x21f0aaad);x=Math.imul(x^(x>>>15),0x735a2d97);return (x^(x>>>15))>>>0;
+};
 const value=p=>(p&16?PV:VALUES)[p&15];
 const objectMove=m=>{const from=m>>7&127,to=m&127;return from>=81?{drop:TYPES[from-80],to}:{from,to,prom:!!(m&16384)};};
 const encode=m=>m.to|((m.drop?80+TYPES.indexOf(m.drop):m.from)<<7)|(m.prom?16384:0);
 
 export class SearchPosition {
  constructor(s){
-  this.board=new Uint8Array(81);this.hands=new Uint8Array(16);this.kings=new Int16Array([-1,-1]);
+  this.board=new Uint8Array(81);this.hands=new Uint32Array(16);this.kings=new Int16Array([-1,-1]);
   this.turn=s.turn;this.ply=s.ply;this.limit=adjudicationLimit(s);this.mode=s.mode;
   this.hash=0;this.lock=0;this.stack=[];this.count=new Int16Array(2);this.material=new Int32Array(2);
   s.board.forEach((p,i)=>{if(p)this.set(i,TYPES.indexOf(p.type)|(p.prom?16:0)|(p.side<<5));});
@@ -57,8 +62,8 @@ export class SearchPosition {
   if(p){const n=p>>5;this.count[n]++;this.material[n]+=value(p);if((p&15)===8)this.kings[n]=sq;}
  }
  hand(n,t,amount){
-  const index=n*8+t,base=HAND_HASH+index*82,old=this.hands[index];
-  this.hash^=z1[base+old]^z1[base+amount];this.lock^=z2[base+old]^z2[base+amount];this.hands[index]=amount;
+  const index=n*8+t,old=this.hands[index];
+  this.hash^=handHash(z1,index,old)^handHash(z1,index,amount);this.lock^=handHash(z2,index,old)^handHash(z2,index,amount);this.hands[index]=amount;
  }
  make(m){
   const to=m&127,from=m>>7&127,n=this.turn,board=this.board,captured=board[to];
