@@ -133,7 +133,9 @@ const tutorialTools=initDeveloper(()=>({state,side:online?.side??0}));
 function stone(side){const el=document.createElement('span');el.className='stone '+(side===0?'black':'white');el.setAttribute('aria-hidden','true');return el;}
 function recordLine(text){const el=document.createElement('div');for(const part of text.split(/([▲▽])/)){if(part==='▲'||part==='▽'){const mark=stone(part==='▲'?0:1);mark.removeAttribute('aria-hidden');mark.setAttribute('aria-label',part==='▲'?'先手':'後手');el.append(mark);}else el.append(document.createTextNode(part));}return el;}
 const selectedSettings=()=>({timeControl:selectedKind==='friend'&&Number($('mainTime').value)<minuteSteps.length?{minutes:minuteSteps[Number($('mainTime').value)],increment:Number($('incrementTime').value),byoyomi:byoyomiSteps[Number($('byoyomiTime').value)]}:'none',handicap:selectedKind==='friend'?$('handicap').value:$('aiHandicap').value,paradoxAt:$('paradoxAt').value==='none'?false:Number($('paradoxAt').value),moveLimit:judgeSteps[Number($('moveLimit').value)],noDrops:$('allowDrops').value==='no',...(selectedKind==='ai'?{helperUnlimited:$('helperUnlimited').checked,handicapSide:$('aiHandicapSide').value,aiLevel:$('aiLevel').value,thinkMs:Number($('thinkTime').value)}:{})});
-const canAct=()=>!state.result&&!busy&&!!online&&connected&&online.joined&&online.side===state.turn;
+// A collapse can change ownership/positions after the move animation. Do not
+// allow moves or helper searches against that temporary presentation board.
+const canAct=()=>!state.result&&!busy&&!!online&&connected&&online.joined&&online.side===state.turn&&!collapseEffect&&!((comboActive||comboPreparing)&&(online.state?.paradoxEvent||online.state?.destroyed||online.state?.spawned||online.state?.paradoxStarted));
 const canInspect=()=>!!online?.joined&&!state.result&&!comboActive&&!comboPreparing&&!effectsActive&&!collapseEffect&&$('furigoma').hidden;
 function renderHand(n){
  let clock=$('clock'+n);if(!clock){clock=document.createElement('div');clock.id='clock'+n;clock.className='player-clock';$('hand'+n).before(clock);}
@@ -263,7 +265,13 @@ function render(){
 
  paintLastCollapse();syncAI();
 }
-function interruptMoveEffects(){if(!comboActive&&!comboPreparing&&!effectsActive&&!collapseEffect)return;cancelCombo();cancelCollapse();animationKey='';render();}
+function interruptMoveEffects(){
+ if(!comboActive&&!comboPreparing&&!effectsActive&&!collapseEffect)return;
+ cancelCombo();cancelCollapse();
+ // Resign/undo and other interruptions must never leave beforeParadox() on screen.
+ if(online?.state)state=online.state;
+ selected=null;legal=[];clearInspection();animationKey='';render();
+}
 function select(src){if(!canAct())return;interruptMoveEffects();clearInspection();selected=selected===src?null:src;legal=selected===null?[]:moves(state,selected);message=selected===null?'駒を選んで、移動先をクリック。':legal.length?'白い印のマスへ移動できます。':'この駒は今、動かせません。';render();}
 function click(i){
  if(!canAct()&&!canInspect())return;
