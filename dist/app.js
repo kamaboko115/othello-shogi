@@ -32,12 +32,12 @@ const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=
 const localAI=createLocalAIStore();
 const challengeWins=createChallengeWins();
 let challengeCountShown=false,challengeReportKey='';
-function showChallengeCount(){if(challengeCountShown)return;challengeCountShown=true;challengeWins.count().then(total=>{$('challengeWins').textContent=`オセショ様への通算勝利：${total}局`;} ).catch(()=>{$('challengeWins').textContent='通算勝利数は現在確認できません';});}
+function showChallengeCount(){if(challengeCountShown)return;challengeCountShown=true;challengeWins.count().then(total=>{$('challengeWins').textContent=`全プレイヤー合計：オセショ様に${total}勝`;} ).catch(()=>{$('challengeWins').textContent='全プレイヤーの合計勝利数は現在確認できません';});}
 function showChallengeVictory(data){
  const el=$('challengeVictory'),eligible=challengeWins.eligible(data);el.hidden=!eligible;if(!eligible){el.classList.remove('challenge-crowned');return;}
  const key=data.room+':'+data.round;if(challengeReportKey===key)return;challengeReportKey=key;
- el.textContent='オセショ様に勝利！ 通算勝利数を集計しています…';$('retryChallengeWin').hidden=true;
- challengeWins.report(data).then(({ordinal})=>{if(challengeReportKey===key){el.textContent=`オセショ様への通算${ordinal}勝目！`;el.classList.add('challenge-crowned');}}).catch(()=>{if(challengeReportKey===key){el.textContent='オセショ様に勝利！ 集計に接続できませんでした。';$('retryChallengeWin').hidden=false;}});
+ el.textContent='オセショ様に勝利！ 全プレイヤーの勝利数に加算しています…';$('retryChallengeWin').hidden=true;
+ challengeWins.report(data).then(({ordinal})=>{if(challengeReportKey===key){el.textContent=`全プレイヤー合計で${ordinal}勝目の勝利！`;el.classList.add('challenge-crowned');}}).catch(()=>{if(challengeReportKey===key){el.textContent='オセショ様に勝利！ 集計に接続できませんでした。';$('retryChallengeWin').hidden=false;}});
 }
 $('retryChallengeWin').onclick=()=>{challengeReportKey='';showChallengeVictory(online);};
 const winAds=createWinAdBreak();

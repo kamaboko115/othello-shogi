@@ -59,3 +59,8 @@ html[data-design=improved] body.hallmark-trial :is(.rules-card,.guide-card) h3{c
 @media(prefers-reduced-motion:reduce){#challengeVictory.challenge-crowned{animation:none}}
 
 html[data-ui-theme=dark] #challengeVictory{color:#f3cf6a}
+
+/* The selected value may be red; other native menu options must not inherit it. */
+#aiLevel option{color:var(--color-ink,#242b27);background:var(--color-input,#fff);font-weight:400}
+#aiLevel option[value="osesho"]{color:#d44747;font-weight:700}
+
