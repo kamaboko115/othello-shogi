@@ -1,4 +1,4 @@
-import {beforeParadox,paradoxEventTiming,paradoxSummary,label} from './engine.js';
+import {beforeParadox,paradoxEventTiming,paradoxSummary,label,spearStormTiming} from './engine.js';
 import {playTossCutInSound,playParadoxMotionSound,playParadoxRareSound} from './sound.js';
 
 // Presentation only: the authoritative board has already been resolved once.
@@ -145,21 +145,43 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
     await wait(1000);if(signal?.aborted)return;piece.classList.remove('has-wings');await wait(350);
    }));
   }else if(['extra','annihilate','dragons'].includes(event.kind)){
-   const stop=playParadoxRareSound(event.kind);if(stop)sounds.push(stop);
+   if(event.kind!=='annihilate'){const stop=playParadoxRareSound(event.kind);if(stop)sounds.push(stop);}
    if(event.kind==='extra'){
     field.classList.add('paradox-extra-turn');await wait(timing.motionMs);
    }else if(event.kind==='annihilate'){
-    await Promise.all(event.pieces.map(async({square},index)=>{
-     await wait(index*600/Math.max(1,event.pieces.length));if(signal?.aborted)return;
-     const token=tokens.get(square);if(!token)return;const spear=document.createElement('span');spear.className='paradox-spear-cell';place(spear,square);field.append(spear);
-     animate(spear,[{transform:'translateY(-260%)',opacity:0},{offset:.15,opacity:1},{transform:'translateY(0)',opacity:1}],{duration:380,fill:'both',easing:'ease-in'});
-     await wait(380);if(signal?.aborted)return;
-     token.wrap.classList.add('paradox-spear-impact');
+    const {openMs,riseMs,hangMs,rainMs,closeMs}=spearStormTiming;
+    const hole=document.createElement('span');hole.className='paradox-spear-abyss';field.append(hole);
+    sound('rumble',openMs+riseMs);
+    animate(hole,[{opacity:0,transform:'scale(.08)'},{offset:.7,opacity:1,transform:'scale(1.1)'},{opacity:1,transform:'scale(1)'}],{duration:openMs,fill:'both',easing:'ease-out'});
+    await wait(openMs);if(signal?.aborted)return;
+    // The chute clips the shaft below the central hole as the one large spear emerges.
+    const chute=document.createElement('span');chute.className='paradox-spear-chute';field.append(chute);
+    const giant=document.createElement('span');giant.className='paradox-spear-launch';chute.append(giant);
+    const riseSound=playParadoxRareSound('spear-rise');if(riseSound)sounds.push(riseSound);
+    animate(giant,[{opacity:1,transform:'translateY(102%)'},{offset:.45,opacity:1,transform:'translateY(0)'},{offset:.75,opacity:1,transform:'translateY(-4%)'},{opacity:0,transform:'translateY(-210%)'}],{duration:riseMs,fill:'both',easing:'linear'});
+    await wait(riseMs*.45);if(signal?.aborted)return;giant.classList.add('airborne');
+    await wait(riseMs*.55);chute.remove();if(signal?.aborted)return;
+    await wait(hangMs);if(signal?.aborted)return;
+    const sky=document.createElement('span');sky.className='paradox-spear-sky';field.append(sky);
+    animate(sky,[{opacity:0},{offset:.1,opacity:.85},{offset:.5,opacity:.4},{opacity:0}],{duration:rainMs,fill:'both'});
+    const impactSound=playParadoxRareSound('annihilate');if(impactSound)sounds.push(impactSound);
+    // Scatter timing across the board rather than sweeping one row at a time.
+    const targets=[...event.pieces].sort((a,b)=>(a.square*37%83)-(b.square*37%83));
+    await Promise.all([wait(rainMs),...targets.map(async({square},index)=>{
+     await wait(index*700/Math.max(1,targets.length-1));if(signal?.aborted)return;
+     const token=tokens.get(square),r=rects.get(square);if(!token||!r)return;
+     const spear=document.createElement('span');spear.className='paradox-spear-cell';place(spear,square);field.append(spear);
+     const aboveBoard=-(r.y+r.h+25)/r.h*100;
+     animate(spear,[{transform:`translateY(${aboveBoard}%)`,opacity:0},{offset:.08,opacity:1},{transform:'translateY(0)',opacity:1}],{duration:550,fill:'both',easing:'cubic-bezier(.55,0,1,.45)'});
+     await wait(550);if(signal?.aborted)return;
+     token.wrap.classList.add('paradox-spear-impact');spear.classList.add('landed');
+     if(index%Math.max(1,Math.ceil(targets.length/6))===0)sound('thunder',240,index);
      animate(token.wrap,[{filter:'brightness(3)',transform:'scale(1.08)'},{opacity:0,transform:'translateY(20px) scale(.1) rotate(50deg)'}],{duration:450,fill:'both',easing:'ease-out'});
-     animate(spear,[{opacity:1},{opacity:0}],{duration:350,fill:'both'});
-     await wait(450);token.wrap.style.visibility='hidden';spear.remove();
-    }));
-    if(!event.pieces.length)await wait(timing.motionMs);
+     animate(spear,[{opacity:1},{opacity:0}],{duration:450,fill:'both'});
+     await wait(450);if(signal?.aborted)return;token.wrap.style.visibility='hidden';spear.remove();
+    })]);
+    animate(hole,[{opacity:1,transform:'scale(1)'},{opacity:0,transform:'scale(.1)'}],{duration:closeMs,fill:'both',easing:'ease-in'});
+    await wait(closeMs);
    }else{
     const veil=document.createElement('span');veil.className='paradox-dragon-veil';field.append(veil);
     field.classList.add('paradox-dragon-charge');await wait(650);if(signal?.aborted)return;

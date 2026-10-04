@@ -248,6 +248,8 @@ export function playParadoxRareSound(kind){
   for(const [i,f]of [659,880,1109,1319,1760,2217].entries())note(f,(kind==='rebirth'?.4:0)+i*.09,1.15,.2/(1+i*.2));
  }else if(kind==='extra'){
   note(480,0,.15,.35,'sine',2200);for(const [i,f]of [1319,1976,2637,3951].entries())note(f,.08+i*.035,.8,.2/(1+i*.25));
+ }else if(kind==='spear-rise'){
+  note(110,0,.75,.32,'triangle',1200);note(440,.1,.7,.2,'sine',2200);note(1320,.35,.55,.1,'triangle',3300);
  }else if(kind==='annihilate'){
   note(2100,0,.36,.18,'triangle',180);note(95,.38,.8,.6,'triangle',35);for(const [i,f]of [330,551,873].entries())note(f,.4+i*.09,.55,.11,'triangle',f*.4);
  }else{

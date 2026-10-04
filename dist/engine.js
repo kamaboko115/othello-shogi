@@ -124,12 +124,13 @@ export function paradoxCutinCount(kind,weights=paradoxWeights){
  if(!(weight>0))return 0;
  return total>weight*300?5:total>=weight*200?4:total>=weight*120?3:total>=weight*80?2:total>=weight*40?1:0;
 }
+export const spearStormTiming=Object.freeze({openMs:550,riseMs:950,hangMs:150,rainMs:1700,closeMs:350});
 // Shared with the clock: presentation never consumes a player's thinking time.
 export function paradoxEventTiming(event){
  const kind=event?.kind,count=paradoxCutinCount(kind),cutins=['middle','upper','lower','middle','upper'].slice(0,count);
  const cutinMs=count>1?1300/count:650,noticeMs=['charisma','summon'].includes(kind)?1600:kind==='wings'?1800:kind==='rebirth'?350:['extra','annihilate','dragons','wings','thunder','wind','windRows'].includes(kind)?1200:kind==='invert'||kind==='shuffle'?1600:kind==='supply'?600:kind==='promote'?800:kind==='flip'?500:200;
  const flipMs=kind==='invert'?4000:kind==='promote'?1200:1100,staggerMs=280,tailMs=kind==='warp'?1400:kind==='shuffle'&&!event.skipped?1500:350;
- const motionMs=kind==='charisma'?2800:kind==='summon'?3200:['wind','windRows'].includes(kind)?1800:kind==='thunder'?Math.max(1400,(event.pieces?.length||0)*450+750):kind==='wings'?1500:kind==='rebirth'?1800:kind==='extra'?700:kind==='annihilate'?1500:kind==='dragons'?2600:kind==='supply'?1800:kind==='shuffle'?2800:kind==='invert'?4000:kind==='promote'?flipMs:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
+ const motionMs=kind==='charisma'?2800:kind==='summon'?3200:['wind','windRows'].includes(kind)?1800:kind==='thunder'?Math.max(1400,(event.pieces?.length||0)*450+750):kind==='wings'?1500:kind==='rebirth'?1800:kind==='extra'?700:kind==='annihilate'?Object.values(spearStormTiming).reduce((sum,ms)=>sum+ms,0):kind==='dragons'?2600:kind==='supply'?1800:kind==='shuffle'?2800:kind==='invert'?4000:kind==='promote'?flipMs:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
  return {cutins,cutinMs,noticeMs,flipMs,staggerMs,motionMs,tailMs,totalMs:cutins.length*cutinMs+noticeMs+motionMs+tailMs};
 }
 export function chooseParadoxEvent(pick){let roll=pick(Object.values(paradoxWeights).reduce((a,b)=>a+b,0));if(!Number.isInteger(roll)||roll<0)throw Error('Invalid paradox roll');for(const [kind,weight]of Object.entries(paradoxWeights)){if(roll<weight)return kind;roll-=weight;}throw Error('Invalid paradox roll');}

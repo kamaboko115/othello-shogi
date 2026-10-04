@@ -125,3 +125,18 @@ for(const kind of ['charisma','summon'])for(const reduced of [false,true])for(co
   else assert.equal(field.children.filter(c=>c.className?.includes('paradox-spirit-arrival')).length,state.paradoxEvent.spawnedSquares.length);
  }
 });
+
+for(const reduced of [false,true])for(const interrupt of ['', 'hole', 'rise', 'rain'])test(`forbidden spear opens a hole, launches once, then rains (${reduced}, ${interrupt||'complete'})`,async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});t.mock.method(globalThis,'matchMedia',()=>({matches:reduced}));
+ const {board,animations}=view(),state=initial();applyParadoxEvent(state,'annihilate',()=>0);const saved=structuredClone(state),controller=new AbortController();let done=false;
+ const task=runParadoxEvent(board,state,0,controller.signal).then(()=>done=true),field=document.body.children[0].children[0];
+ const has=c=>field.children.some(el=>el.className===c);let hole=false,rise=false,rain=false;
+ for(let i=0;i<900&&!done;i++){
+  t.mock.timers.tick(10);await Promise.resolve();await Promise.resolve();
+  if(has('paradox-spear-abyss')){hole=true;if(interrupt==='hole')controller.abort();}
+  if(has('paradox-spear-chute')){assert.ok(hole);assert.equal(has('paradox-spear-cell'),false);rise=true;if(interrupt==='rise')controller.abort();}
+  if(has('paradox-spear-cell')){assert.ok(rise);assert.equal(has('paradox-spear-chute'),false);rain=true;if(interrupt==='rain')controller.abort();}
+ }
+ await task;assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);assert.equal(board.classes.has('paradox-cinema-hidden'),false);assert.ok(animations.every(a=>a.cancelled));
+ if(!interrupt){assert.ok(hole&&rise&&rain);assert.equal(field.children.filter(el=>el.style.visibility==='hidden').length,state.paradoxEvent.pieces.length);assert.ok(field.children.filter(el=>el.children[0]?.textContent==='玉').every(el=>el.style.visibility!=='hidden'));}
+});
