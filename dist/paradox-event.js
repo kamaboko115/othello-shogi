@@ -26,6 +26,21 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
  const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);timers.delete(timer);signal?.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);timers.add(timer);signal?.addEventListener('abort',done,{once:true});if(signal?.aborted)done();});
  const animate=(el,frames,options)=>{if(!reduced){const a=el.animate(frames,options);animations.push(a);return a;}};
  const sound=(kind,duration,index)=>{const stop=playParadoxMotionSound(kind,duration,index);if(stop)sounds.push(stop);};
+ const supply=async(amount,durationMs)=>{
+   const types='PLNSGBR',rect=board.getBoundingClientRect(),size=Math.min(52,rect.width/9),duration=durationMs/types.length;
+   for(const [index,type]of Array.from(types).entries()){
+    if(signal?.aborted)return;sound('flip',duration,index);
+    for(const side of [event.side]){
+     const tray=document.getElementById((board.id==='devBoard'?'devHand':'hand')+side),slot=tray?.querySelector('[data-type="'+type+'"]');
+     if(!slot)continue;const target=slot.getBoundingClientRect(),x=rect.left+rect.width/2-size/2,y=rect.top+rect.height/2-size/2,dx=target.left+target.width/2-size/2-x,dy=target.top+target.height/2-size/2-y;
+     const token=document.createElement('span');token.className='paradox-supply-token';Object.assign(token.style,{left:x+'px',top:y+'px',width:size+'px',height:size+'px'});
+     const piece=document.createElement('span');piece.className='piece'+(side!==perspective?' enemy':'');piece.dataset.side=side;piece.textContent=label({type,prom:false});if(amount>1){const badge=document.createElement('b');badge.className='paradox-supply-count';badge.textContent='×'+amount;token.append(badge);}token.append(piece);layer.append(token);
+     token.style.transform=`translate(${dx}px,${dy}px)`;
+     animate(token,[{transform:'translate(0,0) scale(.3)',opacity:0},{offset:.2,transform:'translate(0,0) scale(1.2)',opacity:1},{transform:`translate(${dx}px,${dy}px) scale(1)`,opacity:1}],{duration,fill:'both',easing:'ease-out'});
+    }
+    await wait(duration);
+   }
+ };
  let caption;
  try{
   for(const position of timing.cutins){
@@ -36,13 +51,51 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
    await wait(timing.cutinMs);band.remove();
   }
   if(signal?.aborted)return;
-  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth','thunder','wind','windRows'].includes(event.kind)?' rainbow':'');
+  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth','thunder','wind','windRows','charisma','summon'].includes(event.kind)?' rainbow':'');
    caption.textContent=event.kind==='thunder'?'オセショ様が雷雲を呼ぶ':event.kind==='shuffle'&&!event.skipped?'すべての駒がシャッフルする':event.kind==='invert'?'すべての駒が反転する':event.kind==='promote'?'盤上の全駒が成る':paradoxSummary(state);
   layer.append(caption);await wait(timing.noticeMs);if(signal?.aborted)return;
   if(event.kind==='promote'&&!event.squares.length)caption.textContent='しかし、コマはすでに全てなっていた';
   else if(event.kind==='thunder'&&!event.pieces.length)caption.textContent='しかし雷は落ちなかった';
   else caption.classList.add('during');
-  if(event.kind==='wind'||event.kind==='windRows'){
+  if(event.kind==='charisma'){
+   const stop=playParadoxRareSound('charisma');if(stop)sounds.push(stop);
+   const king=tokens.get(event.square),origin=rects.get(event.square);
+   if(king){
+    const avatar=document.createElement('span');avatar.className='paradox-token paradox-charisma-avatar';place(avatar,event.square);
+    const portrait=document.createElement('span');portrait.className='paradox-charisma-portrait';avatar.append(portrait);field.append(avatar);
+    animate(avatar,[{opacity:0,transform:'translateY(-80%) scale(1.8)'},{offset:.23,opacity:.95,transform:'translateY(0) scale(1)'},{offset:.8,opacity:.85},{opacity:0}],{duration:timing.motionMs,fill:'both',easing:'ease-out'});
+    king.wrap.classList.add('paradox-charisma-king');
+    const wave=document.createElement('span');wave.className='paradox-token paradox-charisma-wave';place(wave,event.square);field.append(wave);
+    animate(wave,[{opacity:0,transform:'scale(.3)'},{offset:.15,opacity:.9},{opacity:0,transform:'scale(22)'}],{duration:2400,fill:'both',easing:'ease-out'});
+   }
+   await wait(650);if(signal?.aborted)return;
+   const ordered=[...event.squares].sort((a,b)=>{const r=rects.get(a),q=rects.get(b);return origin&&r&&q?Math.hypot(r.x-origin.x,r.y-origin.y)-Math.hypot(q.x-origin.x,q.y-origin.y):a-b;});
+   await Promise.all([wait(2150),...ordered.map(async(square,index)=>{
+    await wait(index*650/Math.max(1,ordered.length-1));if(signal?.aborted)return;
+    const token=tokens.get(square);if(!token)return;token.wrap.classList.add('paradox-token-flipping');
+    const start=old.board[square].side===perspective?0:180;
+    animate(token.piece,[{transform:`rotate(${start}deg) scale(1)`,filter:'brightness(1)'},{offset:.5,transform:`rotate(${start+270}deg) scale(1.25)`,filter:'brightness(2.4)'},{transform:`rotate(${start+540}deg) scale(1)`,filter:'brightness(1)'}],{duration:1500,fill:'both',easing:'ease-in-out'});
+    if(index%4===0)sound('flip',600,Math.min(index/4,6));
+    await wait(750);if(signal?.aborted)return;token.piece.dataset.side=event.side;
+    await wait(750);if(signal?.aborted)return;token.piece.classList.toggle('enemy',event.side!==perspective);token.wrap.classList.remove('paradox-token-flipping');
+   })]);
+  }else if(event.kind==='summon'){
+   const stop=playParadoxRareSound('summon');if(stop)sounds.push(stop);
+   const gate=document.createElement('span');gate.className='paradox-spirit-gate';field.append(gate);
+   animate(gate,[{opacity:0,transform:'scale(.15) rotate(-45deg)'},{offset:.2,opacity:1},{offset:.75,opacity:.75},{opacity:0,transform:'scale(1.3) rotate(45deg)'}],{duration:2250,fill:'both',easing:'ease-out'});
+   await wait(450);if(signal?.aborted)return;
+   const ordered=[...event.spawnedSquares].sort((a,b)=>Math.hypot(a%9-4,Math.floor(a/9)-4)-Math.hypot(b%9-4,Math.floor(b/9)-4));
+   await Promise.all([wait(1800),...ordered.map(async(square,index)=>{
+    await wait(index*900/Math.max(1,ordered.length-1));if(signal?.aborted)return;
+    const p=state.board[square],wrap=document.createElement('span');wrap.className='paradox-token paradox-spirit-arrival';place(wrap,square);
+    const piece=document.createElement('span');piece.className='piece prom'+(p.side!==perspective?' enemy':'');piece.dataset.side=p.side;piece.textContent=label(p);
+    const source=board.querySelector('.piece');if(source)piece.style.fontSize=getComputedStyle(source).fontSize;
+    wrap.append(piece);field.append(wrap);
+    animate(wrap,[{opacity:0,transform:'translateY(-100%) scale(.15)',filter:'brightness(3)'},{offset:.6,opacity:1,transform:'translateY(0) scale(1.2)',filter:'brightness(2)'},{opacity:1,transform:'translateY(0) scale(1)',filter:'brightness(1)'}],{duration:900,fill:'both',easing:'ease-out'});
+    await wait(900);if(signal?.aborted)return;wrap.classList.remove('paradox-spirit-arrival');
+   })]);
+   if(signal?.aborted)return;await supply(10,950);
+  }else if(event.kind==='wind'||event.kind==='windRows'){
    sound('wind',timing.motionMs);
    const rows=event.kind==='windRows';
    for(const band of rows?event.rows:event.columns){
@@ -122,19 +175,7 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
     if(!event.pieces.length)await wait(1650);
    }
   }else if(event.kind==='supply'){
-   const types='PLNSGBR',rect=board.getBoundingClientRect(),size=Math.min(52,rect.width/9),duration=timing.motionMs/types.length;
-   for(const [index,type]of Array.from(types).entries()){
-    if(signal?.aborted)return;sound('flip',duration,index);
-    for(const side of [event.side]){
-     const tray=document.getElementById((board.id==='devBoard'?'devHand':'hand')+side),slot=tray?.querySelector('[data-type="'+type+'"]');
-     if(!slot)continue;const target=slot.getBoundingClientRect(),x=rect.left+rect.width/2-size/2,y=rect.top+rect.height/2-size/2,dx=target.left+target.width/2-size/2-x,dy=target.top+target.height/2-size/2-y;
-     const token=document.createElement('span');token.className='paradox-supply-token';Object.assign(token.style,{left:x+'px',top:y+'px',width:size+'px',height:size+'px'});
-     const piece=document.createElement('span');piece.className='piece'+(side!==perspective?' enemy':'');piece.dataset.side=side;piece.textContent=label({type,prom:false});token.append(piece);layer.append(token);
-     token.style.transform=`translate(${dx}px,${dy}px)`;
-     animate(token,[{transform:'translate(0,0) scale(.3)',opacity:0},{offset:.2,transform:'translate(0,0) scale(1.2)',opacity:1},{transform:`translate(${dx}px,${dy}px) scale(1)`,opacity:1}],{duration,fill:'both',easing:'ease-out'});
-    }
-    await wait(duration);
-   }
+   await supply(1,timing.motionMs);
   }else if(event.kind==='shuffle'||event.kind==='warp'){
    const moving=event.moves,waveStart=performance.now();
    for(let i=0;i<moving.length;i++){

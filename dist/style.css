@@ -402,3 +402,12 @@ html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 .paradox-wind-column{position:absolute;pointer-events:none;z-index:4;border-inline:2px solid #b7fffcb3;background:repeating-linear-gradient(165deg,transparent 0 24px,#d6fffa99 26px,transparent 29px 66px),linear-gradient(90deg,transparent,#69ebdb44,transparent);background-size:100% 132px,100% 100%;box-shadow:0 0 16px #72edda55;animation:paradox-wind-flow .25s linear infinite}@keyframes paradox-wind-flow{to{background-position:0 -132px,0 0}}@media(prefers-reduced-motion:reduce){.paradox-wind-column{animation:none}}
 
 .paradox-wind-row{border-inline:0;border-block:2px solid #b7fffcb3;background:repeating-linear-gradient(75deg,transparent 0 24px,#d6fffa99 26px,transparent 29px 66px),linear-gradient(0deg,transparent,#69ebdb44,transparent);background-size:132px 100%,100% 100%;animation-name:paradox-wind-row-flow}@keyframes paradox-wind-row-flow{to{background-position:132px 0,0 0}}
+
+/* Rare paradox summons: all layers stay anchored to board cells. */
+.paradox-charisma-avatar{z-index:8;pointer-events:none;overflow:visible;mix-blend-mode:screen}
+.paradox-charisma-portrait{position:absolute;width:220%;height:220%;left:-60%;top:-60%;background:linear-gradient(125deg,#fff5bd,#fff,#e3b5ff);mask:url('osesho.png') center/contain no-repeat;mask-mode:luminance}.paradox-charisma-avatar{filter:drop-shadow(0 0 8px #ffd96a) drop-shadow(0 0 20px #ad6bff)}
+.paradox-charisma-king{filter:drop-shadow(0 0 12px #ffe187)}
+.paradox-charisma-wave{border:.5px solid #ffeaa3;border-radius:50%;box-shadow:0 0 12px #f5c557,inset 0 0 12px #bb7cff;pointer-events:none;z-index:4}
+.paradox-spirit-gate{position:absolute;inset:4%;border:4px double #a9f8ff;border-radius:50%;background:repeating-conic-gradient(from 0deg,transparent 0deg 28deg,#b6ffff70 29deg 30deg),radial-gradient(circle,#180933c9 15%,#8438c94d 55%,#81ffff88 69%,transparent 72%);box-shadow:0 0 35px #92faff,inset 0 0 45px #9e61ee;pointer-events:none}
+.paradox-spirit-arrival{z-index:5;filter:drop-shadow(0 0 10px #bafcff)}
+.paradox-supply-count{position:absolute;right:-10px;bottom:0;font:900 18px/1 sans-serif;color:#fff7b2;text-shadow:0 1px 3px #000,0 0 6px #601796;z-index:2}

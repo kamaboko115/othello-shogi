@@ -111,3 +111,17 @@ for(const kind of ['wind','windRows'])for(const reduced of [false,true])test(`${
  await task;assert.equal(tokens.filter(t=>t.style.visibility==='hidden').length,state.paradoxEvent.pieces.length);
  assert.ok(tokens.filter(t=>t.children[0]?.textContent==='玉').every(t=>t.style.visibility!=='hidden'));assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);
 });
+
+for(const kind of ['charisma','summon'])for(const reduced of [false,true])for(const abort of [false,true])test(`${kind}: perspective, reduced motion and interrupted cleanup (${reduced}, ${abort})`,async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});t.mock.method(globalThis,'matchMedia',()=>({matches:reduced}));
+ const {board,animations,cutins}=view(),state=initial();document.getElementById=()=>({querySelector:()=>board});
+ state.turn=1;applyParadoxEvent(state,kind,()=>0);const saved=structuredClone(state),controller=new AbortController();let done=false;
+ const task=runParadoxEvent(board,state,1,controller.signal).then(()=>done=true);
+ const field=document.body.children[0].children[0];
+ for(let i=0;i<200&&!done;i++){t.mock.timers.tick(50);await Promise.resolve();await Promise.resolve();if(abort&&i===70)controller.abort();}
+ await task;assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);assert.equal(board.classes.has('paradox-cinema-hidden'),false);assert.ok(animations.every(a=>a.cancelled));assert.equal(cutins.length,5);
+ if(!abort){
+  if(kind==='charisma'){assert.ok(field.children.some(c=>c.className?.includes('paradox-charisma-avatar')));for(const i of state.paradoxEvent.squares)assert.equal(field.children.filter(c=>c.className==='paradox-token')[state.board.slice(0,i).filter(Boolean).length].children[0].dataset.side,0);}
+  else assert.equal(field.children.filter(c=>c.className?.includes('paradox-spirit-arrival')).length,state.paradoxEvent.spawnedSquares.length);
+ }
+});
