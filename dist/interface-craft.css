@@ -59,3 +59,31 @@ html[data-design=improved] body.hallmark-trial :is(.rules-card,.guide-card) h3{c
 @media(prefers-reduced-motion:reduce){#challengeVictory.challenge-crowned{animation:none}}
 
 html[data-ui-theme=dark] #challengeVictory{color:#f3cf6a}
+
+/* The selected value may be red; other native menu options must not inherit it. */
+#aiLevel option{color:var(--color-ink,#242b27);background:var(--color-input,#fff);font-weight:400}
+#aiLevel option[value="osesho"]{color:#d44747;font-weight:700}
+
+/* A numbered victory deserves a persistent celebration, not a small footnote. */
+#challengeVictory.challenge-crowned{position:relative;isolation:isolate;overflow:clip;text-align:center;padding:34px 20px 26px;margin:24px 0 28px;border-block:1px solid #d5ac48;background:radial-gradient(ellipse at 50% 28%,#ffe59a80,transparent 67%);animation:challenge-arrive .6s ease-out both}
+#challengeVictory.challenge-crowned::before{content:"";position:absolute;inset:-80%;z-index:-1;background:conic-gradient(from 0deg,transparent 0deg 25deg,#edc55b22 26deg 29deg,transparent 30deg 55deg,#edc55b22 56deg 59deg,transparent 60deg);animation:challenge-rays 12s linear 1;pointer-events:none}
+.challenge-achievement{position:relative;z-index:1;display:flex;align-items:center;flex-direction:column;gap:9px}
+.challenge-defeated{font-size:clamp(20px,3vw,32px);letter-spacing:.12em;color:var(--color-ink,#242b27)}
+.challenge-total{font-size:clamp(14px,2vw,20px);color:var(--color-ink,#242b27)}
+.challenge-number{display:block;max-width:100%;overflow-wrap:anywhere;font-size:clamp(72px,12vw,144px);line-height:1.12;color:#89600a;text-shadow:0 2px #fff4c6,0 0 28px #f6c64188;animation:challenge-number-in 1.1s cubic-bezier(.16,1,.3,1) both}
+.challenge-number>span{display:block;font-size:clamp(22px,3vw,34px);letter-spacing:.07em;line-height:1.4}
+#challengeVictory .challenge-share{font:inherit;font-size:clamp(18px,2vw,23px);font-weight:800;min-height:60px;width:min(100%,360px);margin:18px 0 0;padding:14px 28px;color:#211b0d;background:#edca67;border:1px solid #a97917;border-radius:6px;box-shadow:0 4px 0 #9b731e;cursor:pointer}
+#challengeVictory .challenge-share:hover{background:#ffdd7d;transform:translateY(-1px)}
+#challengeVictory .challenge-share:focus-visible{outline:3px solid var(--color-ink,#242b27);outline-offset:5px}
+#challengeVictory .challenge-share:disabled{opacity:.65;cursor:wait;transform:none}
+.challenge-share-status{font-size:14px;font-weight:400;color:var(--color-ink,#242b27)}
+.challenge-share-copy{width:min(100%,480px);min-height:100px;font-size:16px}
+.challenge-sparks{position:absolute;inset:0;pointer-events:none;z-index:0}
+.challenge-sparks i{position:absolute;top:42%;left:50%;width:7px;height:12px;border-radius:1px;background:#d6a62c;opacity:0;animation:challenge-spark 1.7s var(--spark-delay) ease-out both}
+html[data-ui-theme=dark] .challenge-number{color:#ffe28c;text-shadow:0 2px #513503,0 0 32px #ecb83770}
+html[data-ui-theme=dark] #challengeVictory.challenge-crowned{background:radial-gradient(ellipse at 50% 28%,#99701f45,transparent 68%)}
+@keyframes challenge-arrive{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes challenge-number-in{0%{opacity:0;transform:scale(.65)}55%{opacity:1;transform:scale(1.09)}100%{opacity:1;transform:scale(1)}}
+@keyframes challenge-rays{to{transform:rotate(100deg)}}
+@keyframes challenge-spark{0%{opacity:0;transform:rotate(var(--spark-angle)) translateY(-40px)}20%{opacity:1}100%{opacity:0;transform:rotate(var(--spark-angle)) translateY(-280px) rotate(140deg)}}
+@media(prefers-reduced-motion:reduce){#challengeVictory.challenge-crowned,#challengeVictory.challenge-crowned::before,.challenge-number,.challenge-sparks i{animation:none}.challenge-sparks{display:none}}
