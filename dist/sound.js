@@ -211,10 +211,10 @@ let paradoxNoise;
 export function playParadoxMotionSound(kind,durationMs=180,index=0){
  prepare();if(!context||context.state!=='running')return ()=>{};
  if(!paradoxNoise){paradoxNoise=context.createBuffer(1,context.sampleRate,context.sampleRate);const a=paradoxNoise.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;}
- const duration=Math.max(.055,durationMs/1000),at=context.currentTime,rumble=kind==='rumble',source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
- source.buffer=paradoxNoise;source.loop=true;filter.type=rumble?'lowpass':'bandpass';filter.Q.value=rumble?.7:1.2;
- filter.frequency.setValueAtTime(rumble?230:kind==='flip'?700+index*120:1700,at);filter.frequency.exponentialRampToValueAtTime(rumble?90:400,at+duration);
- gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(rumble?.48:kind==='flip'?.18:.2,at+Math.min(.06,duration*.15));gain.gain.setValueAtTime(rumble?.38:.11,at+duration*.65);gain.gain.linearRampToValueAtTime(0,at+duration);
+ const duration=Math.max(.055,durationMs/1000),at=context.currentTime,rumble=kind==='rumble',thunder=kind==='thunder',source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();
+ source.buffer=paradoxNoise;source.loop=true;filter.type=rumble||thunder?'lowpass':'bandpass';filter.Q.value=rumble?.7:1.2;
+ filter.frequency.setValueAtTime(rumble?230:thunder?4200:kind==='flip'?700+index*120:1700,at);filter.frequency.exponentialRampToValueAtTime(rumble?90:400,at+duration);
+ gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(thunder?.4:rumble?.48:kind==='flip'?.18:.2,at+(thunder?.004:Math.min(.06,duration*.15)));gain.gain.setValueAtTime(rumble?.38:.11,at+duration*.65);gain.gain.linearRampToValueAtTime(0,at+duration);
  source.connect(filter);filter.connect(gain);gain.connect(context.destination);source.start(at);source.stop(at+duration+.02);
  const nodes=[source,filter,gain],sources=[source];
  if(rumble){

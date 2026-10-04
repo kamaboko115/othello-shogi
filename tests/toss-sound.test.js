@@ -35,3 +35,14 @@ test('カットインの金属音はその瞬間に開始し、1秒以内の余�
  assert.ok(swish.buffer.getChannelData(0).some(value=>value!==0));assert.ok(tones.every(n=>n.stopped<11));
  tones.at(-1).onended();assert.ok(nodes.every(n=>n.disconnected));
 });
+
+test('thunder and existing paradox sounds schedule ramps relative to the audio clock and release nodes',()=>{
+ for(const kind of ['thunder','rumble','flip','warp']){
+  const {context,nodes}=audio();const ramps=[];
+  const gain=context.createGain;context.createGain=()=>{const n=gain();for(const method of ['setValueAtTime','linearRampToValueAtTime','exponentialRampToValueAtTime'])n.gain[method]=(value,at)=>{assert.ok(at>=context.currentTime,kind+' must not schedule a past ramp');ramps.push(at);};return n;};
+  const filter=context.createBiquadFilter;context.createBiquadFilter=()=>{const n=filter();n.Q={value:0};return n;};
+  const c={window:{AudioContext:function(){return context;}}};vm.createContext(c);
+  vm.runInContext('let context;'+source.slice(source.indexOf('function prepare(){'),source.indexOf('function tone('))+source.slice(source.indexOf('let paradoxNoise;'),source.indexOf('// Original rare-event sounds')).replaceAll('export ',''),c);
+  const stop=c.playParadoxMotionSound(kind,450,0);assert.ok(ramps.length>0);assert.equal(nodes.find(n=>n.kind==='source').started,10);stop();assert.ok(nodes.every(n=>n.disconnected));
+ }
+});

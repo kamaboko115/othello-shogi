@@ -117,7 +117,7 @@ export const arrivalSummary=s=>arrivals(s).map(d=>(d.piece.side?'後手':'先手
 export const collapseTargets=s=>s.board.flatMap((p,i)=>!p?[]:Array(p.type==='K'?1:10).fill(i));
 // LCM of the configured odds: every probability is an exact integer ticket count.
 export const paradoxTotal=76923000;
-const rareOdds={arrival:12,warp:12,flip:20,shuffle:60,invert:120,promote:77,supply:60,extra:120,annihilate:500,dragons:300,wings:300};
+const rareOdds={arrival:12,warp:12,flip:20,shuffle:90,thunder:60,invert:120,promote:77,supply:60,extra:120,annihilate:500,dragons:300,wings:300};
 export const paradoxWeights=Object.freeze({...Object.fromEntries(Object.entries(rareOdds).map(([kind,odds])=>[kind,paradoxTotal/odds])),destroy:paradoxTotal-Object.values(rareOdds).reduce((sum,odds)=>sum+paradoxTotal/odds,0)});
 export function paradoxCutinCount(kind,weights=paradoxWeights){
  const weight=weights[kind],total=Object.values(weights).reduce((a,b)=>a+b,0);
@@ -127,15 +127,16 @@ export function paradoxCutinCount(kind,weights=paradoxWeights){
 // Shared with the clock: presentation never consumes a player's thinking time.
 export function paradoxEventTiming(event){
  const kind=event?.kind,count=paradoxCutinCount(kind),cutins=['middle','upper','lower','middle','upper'].slice(0,count);
- const cutinMs=650,noticeMs=kind==='wings'?1800:kind==='rebirth'?350:['extra','annihilate','dragons','wings'].includes(kind)?1200:kind==='invert'||kind==='shuffle'?1600:kind==='supply'?600:kind==='promote'?800:kind==='flip'?500:200;
+ const cutinMs=650,noticeMs=kind==='wings'?1800:kind==='rebirth'?350:['extra','annihilate','dragons','wings','thunder'].includes(kind)?1200:kind==='invert'||kind==='shuffle'?1600:kind==='supply'?600:kind==='promote'?800:kind==='flip'?500:200;
  const flipMs=kind==='invert'?4000:kind==='promote'?1200:1100,staggerMs=280,tailMs=kind==='warp'?1400:kind==='shuffle'&&!event.skipped?1500:350;
- const motionMs=kind==='wings'?1500:kind==='rebirth'?1800:kind==='extra'?700:kind==='annihilate'?1500:kind==='dragons'?2600:kind==='supply'?1800:kind==='shuffle'?2800:kind==='invert'?4000:kind==='promote'?flipMs:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
+ const motionMs=kind==='thunder'?Math.max(1400,(event.pieces?.length||0)*450+750):kind==='wings'?1500:kind==='rebirth'?1800:kind==='extra'?700:kind==='annihilate'?1500:kind==='dragons'?2600:kind==='supply'?1800:kind==='shuffle'?2800:kind==='invert'?4000:kind==='promote'?flipMs:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
  return {cutins,cutinMs,noticeMs,flipMs,staggerMs,motionMs,tailMs,totalMs:cutins.length*cutinMs+noticeMs+motionMs+tailMs};
 }
 export function chooseParadoxEvent(pick){let roll=pick(Object.values(paradoxWeights).reduce((a,b)=>a+b,0));if(!Number.isInteger(roll)||roll<0)throw Error('Invalid paradox roll');for(const [kind,weight]of Object.entries(paradoxWeights)){if(roll<weight)return kind;roll-=weight;}throw Error('Invalid paradox roll');}
 const shuffle=(items,pick)=>{for(let i=items.length-1;i>0;i--){const j=pick(i+1);[items[i],items[j]]=[items[j],items[i]];}return items;};
 export function paradoxSummary(s){
  const e=s.paradoxEvent;if(!e)return '';
+ if(e.kind==='thunder')return 'オセショ様が雷雲を呼ぶ'+(e.pieces.length?'':'。しかし雷は落ちなかった');
  if(e.kind==='wings')return 'オセショ様が再誕の翼を王に与え、一度のみ復活できる！';
  if(e.kind==='rebirth')return e.entries.map(e=>(e.side?'後手':'先手')+'の王が再誕の翼で復活！').join('・');
  if(e.kind==='extra')return 'オセショ様の力により追加ターンを得る';
@@ -160,9 +161,14 @@ export function beforeParadox(s){
  return n;
 }
 export function applyParadoxEvent(s,kind,pick,mover=1-s.turn){
- if(!['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings'].includes(kind))throw Error('Invalid paradox event');
+ if(!['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings','thunder'].includes(kind))throw Error('Invalid paradox event');
  s.destroyed=null;s.spawned=null;
  if(kind==='wings'){const square=s.board.findIndex(p=>p?.type==='K'&&p.side===mover);if(square<0)return s;const wasWinged=!!s.board[square].wings;s.board[square]={...s.board[square],wings:true};s.paradoxEvent={kind,side:mover,square,wasWinged};return s;}
+ if(kind==='thunder'){
+  const pieces=shuffle(s.board.flatMap((p,square)=>p&&p.type!=='K'?[{square,piece:{...p}}]:[]),pick).slice(0,5);
+  for(const {square}of pieces)s.board[square]=null;
+  s.paradoxEvent={kind,side:mover,pieces};return s;
+ }
  if(kind==='extra'){s.turn=mover;s.paradoxEvent={kind,side:mover};return s;}
  if(kind==='annihilate'||kind==='dragons'){
   const target=kind==='annihilate'?1-mover:mover,pieces=s.board.flatMap((p,square)=>p&&p.side===target&&p.type!=='K'?[{square,piece:{...p}}]:[]);

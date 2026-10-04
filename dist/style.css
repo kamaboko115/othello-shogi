@@ -396,3 +396,5 @@ html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 @supports not ((background-clip:text) or (-webkit-background-clip:text)){
  #flipBurst,.combo-notice.tier-gold,.combo-notice.tier-platinum,.combo-notice.tier-rainbow,.dev-finish,.dev-finish.tier-gold,.dev-finish.tier-platinum,.dev-finish.tier-rainbow,#flipBurst.tier-gold,#flipBurst.tier-platinum,#flipBurst.tier-rainbow,.paradox-active-label,.paradox-cinema-title.rainbow,#furigoma.osesho-intervention #tossResult,#lessonAdvice strong{background:none;color:#ffe795;-webkit-text-fill-color:#ffe795}
 }
+
+.paradox-thunder-cloud{position:absolute;inset:-12% -5% auto;height:30%;pointer-events:none;z-index:5;background:radial-gradient(ellipse at 25% 40%,#343f58ed,transparent 58%),radial-gradient(ellipse at 72% 40%,#45506bf2,transparent 60%);filter:drop-shadow(0 8px 12px #111b35aa)}

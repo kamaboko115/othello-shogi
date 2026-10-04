@@ -61,7 +61,7 @@ test('supply presents seven pieces at the mover tray and cleans up',async t=>{
  await task;assert.equal(animations.filter(a=>a.options.duration!==650).length,7);assert.equal(animations.filter(a=>a.options.duration===650).length,1);assert.ok(animations.every(a=>a.cancelled));assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);
 });
 
-for(const [kind,count]of [['extra',3],['annihilate',5],['dragons',4],['wings',4]])test(kind+' plays the configured cut-ins and leaves no overlays or modified authoritative state',async t=>{
+for(const [kind,count]of [['thunder',1],['extra',3],['annihilate',5],['dragons',4],['wings',4]])test(kind+' plays the configured cut-ins and leaves no overlays or modified authoritative state',async t=>{
  t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});const {board,animations,cutins}=view(),state=initial();applyParadoxEvent(state,kind,()=>0);const saved=structuredClone(state);let done=false;
  const task=runParadoxEvent(board,state,0).then(()=>done=true);
  for(let i=0;i<160&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
@@ -88,4 +88,16 @@ for(const reduced of [false,true])test(`empty promotion announces then explains 
  assert.equal(caption().textContent,'しかし、コマはすでに全てなっていた');assert.equal(caption().classes.has('during'),false);
  for(let i=0;i<40&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
  await task;assert.equal(document.body.children.length,0);assert.deepEqual(state,saved);assert.ok(animations.every(a=>a.options.duration===650),'no pieces rotate on a miss');
+});
+
+for(const reduced of [false,true])test(`empty thunder announces then shows no lightning (reduced: ${reduced})`,async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});t.mock.method(globalThis,'matchMedia',()=>({matches:reduced}));
+ const {board,animations}=view(),state=initial();state.board=state.board.map(p=>p?.type==='K'?p:null);applyParadoxEvent(state,'thunder',()=>0);
+ let done=false;const task=runParadoxEvent(board,state,0).then(()=>done=true);
+ const caption=()=>document.body.children[0]?.children.find(el=>el.className?.startsWith('paradox-cinema-title'));
+ for(let i=0;i<20&&!caption();i++){t.mock.timers.tick(50);await Promise.resolve();await Promise.resolve();}
+ assert.equal(caption().textContent,'オセショ様が雷雲を呼ぶ');t.mock.timers.tick(1200);await Promise.resolve();await Promise.resolve();
+ assert.equal(caption().textContent,'しかし雷は落ちなかった');assert.equal(caption().classes.has('during'),false);
+ for(let i=0;i<40&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
+ await task;assert.equal(document.body.children.length,0);assert.ok(animations.every(a=>a.options.duration===650));
 });
