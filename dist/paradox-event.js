@@ -37,9 +37,10 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
   }
   if(signal?.aborted)return;
   caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth'].includes(event.kind)?' rainbow':'');
-   caption.textContent=event.kind==='shuffle'&&!event.skipped?'すべての駒がシャッフルする':event.kind==='invert'?'すべての駒が反転する':paradoxSummary(state);
+   caption.textContent=event.kind==='shuffle'&&!event.skipped?'すべての駒がシャッフルする':event.kind==='invert'?'すべての駒が反転する':event.kind==='promote'?'盤上の全駒が成る':paradoxSummary(state);
   layer.append(caption);await wait(timing.noticeMs);if(signal?.aborted)return;
-  caption.classList.add('during');
+  if(event.kind==='promote'&&!event.squares.length)caption.textContent='しかし、コマはすでに全てなっていた';
+  else caption.classList.add('during');
   if(event.kind==='wings'){
    const stop=playParadoxRareSound('wings');if(stop)sounds.push(stop);
    const token=tokens.get(event.square);if(token){token.piece.classList.add('has-wings');token.wrap.classList.add('rebirth-halo');animate(token.wrap,[{transform:'scale(.8)',filter:'brightness(3)'},{offset:.5,transform:'scale(1.35)',filter:'brightness(1.5)'},{transform:'scale(1)',filter:'brightness(1)'}],{duration:1500,fill:'both',easing:'ease-out'});}

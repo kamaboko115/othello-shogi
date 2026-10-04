@@ -74,3 +74,18 @@ test('rebirth explodes the occupant, restores the king visually and cleans up on
  for(let i=0;i<80&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();if(abort&&i===5)controller.abort();}
  await task;assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);assert.equal(board.classes.has('paradox-cinema-hidden'),false);assert.ok(animations.every(a=>a.cancelled));}
 });
+
+for(const reduced of [false,true])test(`empty promotion announces then explains the miss (reduced motion: ${reduced})`,async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});t.mock.method(globalThis,'matchMedia',()=>({matches:reduced}));
+ const {board,animations}=view(),state=initial();state.board.forEach(p=>{if(p&&'PLNSBR'.includes(p.type))p.prom=true;});
+ applyParadoxEvent(state,'promote',()=>0);const saved=structuredClone(state);assert.deepEqual(state.paradoxEvent.squares,[]);
+ let done=false;const task=runParadoxEvent(board,state,0).then(()=>done=true);
+ const caption=()=>document.body.children[0]?.children.find(el=>el.className?.startsWith('paradox-cinema-title'));
+ for(let i=0;i<20&&!caption();i++){t.mock.timers.tick(50);await Promise.resolve();await Promise.resolve();}
+ assert.equal(caption().textContent,'盤上の全駒が成る');
+ t.mock.timers.tick(799);await Promise.resolve();assert.equal(caption().textContent,'盤上の全駒が成る');
+ t.mock.timers.tick(1);await Promise.resolve();await Promise.resolve();
+ assert.equal(caption().textContent,'しかし、コマはすでに全てなっていた');assert.equal(caption().classes.has('during'),false);
+ for(let i=0;i<40&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
+ await task;assert.equal(document.body.children.length,0);assert.deepEqual(state,saved);assert.ok(animations.every(a=>a.options.duration===650),'no pieces rotate on a miss');
+});
