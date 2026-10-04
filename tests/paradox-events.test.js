@@ -14,7 +14,7 @@ test('every interval has exact odds and selection includes both boundaries',()=>
   start+=weight;
  }
  assert.equal(start,paradoxTotal);for(const value of [-1,paradoxTotal,NaN,1.5])assert.throws(()=>chooseParadoxEvent(()=>value));
- for(const [kind,odds]of Object.entries({promote:90,arrival:12,warp:12,flip:20,shuffle:90,thunder:40,wind:120,windRows:120,invert:120,supply:80,extra:120,annihilate:400,dragons:300,wings:300}))assert.equal(paradoxWeights[kind]*odds,paradoxTotal);
+ for(const [kind,odds]of Object.entries({promote:90,arrival:12,warp:12,flip:20,shuffle:90,thunder:40,wind:120,windRows:120,invert:120,supply:80,extra:120,annihilate:400,dragons:300,wings:300,charisma:400,summon:500}))assert.equal(paradoxWeights[kind]*odds,paradoxTotal);
 });
 
 test('all-promotion affects both sides but never kings, golds, hands or already promoted pieces',()=>{

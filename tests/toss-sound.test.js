@@ -46,3 +46,12 @@ test('thunder and existing paradox sounds schedule ramps relative to the audio c
   const stop=c.playParadoxMotionSound(kind,450,0);assert.ok(ramps.length>0);assert.equal(nodes.find(n=>n.kind==='source').started,10);stop();assert.ok(nodes.every(n=>n.disconnected));
  }
 });
+
+for(const kind of ['charisma','summon','spear-rise'])test(kind+' audio starts immediately and releases every node on completion or interruption',()=>{
+ for(const abort of [false,true]){
+  const {context,nodes}=audio(),c={window:{AudioContext:function(){return context;}}};vm.createContext(c);
+  vm.runInContext('let context;'+source.slice(source.indexOf('function prepare(){'),source.indexOf('function tone('))+source.slice(source.indexOf('export function playParadoxRareSound(')).replaceAll('export ',''),c);
+  const stop=c.playParadoxRareSound(kind),tones=nodes.filter(n=>n.kind==='oscillator');assert.equal(tones[0].started,10);assert.ok(tones.length>=(kind==='spear-rise'?3:6));assert.ok(tones.every(n=>n.stopped>n.started&&n.stopped<=tones.at(-1).stopped));
+  if(abort)stop();else tones.at(-1).onended();stop();assert.ok(nodes.every(n=>n.disconnected));
+ }
+});

@@ -402,3 +402,22 @@ html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 .paradox-wind-column{position:absolute;pointer-events:none;z-index:4;border-inline:2px solid #b7fffcb3;background:repeating-linear-gradient(165deg,transparent 0 24px,#d6fffa99 26px,transparent 29px 66px),linear-gradient(90deg,transparent,#69ebdb44,transparent);background-size:100% 132px,100% 100%;box-shadow:0 0 16px #72edda55;animation:paradox-wind-flow .25s linear infinite}@keyframes paradox-wind-flow{to{background-position:0 -132px,0 0}}@media(prefers-reduced-motion:reduce){.paradox-wind-column{animation:none}}
 
 .paradox-wind-row{border-inline:0;border-block:2px solid #b7fffcb3;background:repeating-linear-gradient(75deg,transparent 0 24px,#d6fffa99 26px,transparent 29px 66px),linear-gradient(0deg,transparent,#69ebdb44,transparent);background-size:132px 100%,100% 100%;animation-name:paradox-wind-row-flow}@keyframes paradox-wind-row-flow{to{background-position:132px 0,0 0}}
+
+/* Rare paradox summons: all layers stay anchored to board cells. */
+.paradox-charisma-avatar{z-index:8;pointer-events:none;overflow:visible;mix-blend-mode:screen}
+.paradox-charisma-portrait{position:absolute;width:220%;height:220%;left:-60%;top:-60%;background:linear-gradient(125deg,#fff5bd,#fff,#e3b5ff);mask:url('osesho.png') center/contain no-repeat;mask-mode:luminance}.paradox-charisma-avatar{filter:drop-shadow(0 0 8px #ffd96a) drop-shadow(0 0 20px #ad6bff)}
+.paradox-charisma-king{filter:drop-shadow(0 0 12px #ffe187)}
+.paradox-charisma-wave{border:.5px solid #ffeaa3;border-radius:50%;box-shadow:0 0 12px #f5c557,inset 0 0 12px #bb7cff;pointer-events:none;z-index:4}
+.paradox-spirit-gate{position:absolute;inset:4%;border:4px double #a9f8ff;border-radius:50%;background:repeating-conic-gradient(from 0deg,transparent 0deg 28deg,#b6ffff70 29deg 30deg),radial-gradient(circle,#180933c9 15%,#8438c94d 55%,#81ffff88 69%,transparent 72%);box-shadow:0 0 35px #92faff,inset 0 0 45px #9e61ee;pointer-events:none}
+.paradox-spirit-arrival{z-index:5;filter:drop-shadow(0 0 10px #bafcff)}
+.paradox-supply-count{position:absolute;right:-10px;bottom:0;font:900 18px/1 sans-serif;color:#fff7b2;text-shadow:0 1px 3px #000,0 0 6px #601796;z-index:2}
+
+/* Forbidden spear: an abyss opens, one spear rises, then the storm lands. */
+.paradox-spear-abyss{position:absolute;left:29%;top:42%;width:42%;height:16%;z-index:6;border:3px solid #ff5170;border-radius:50%;background:radial-gradient(ellipse,#020006 35%,#18010d 60%,#b20b3d 78%,#ffb378 88%,#26020c 96%);box-shadow:0 0 9px #fff1ab,0 0 30px #ff184e,inset 0 0 25px #000;pointer-events:none}
+.paradox-spear-abyss:after{content:'';position:absolute;inset:-65% -20%;border:1px solid #ff365d88;border-radius:50%;transform:rotate(-12deg);box-shadow:0 0 16px #e11b4680}
+.paradox-spear-chute{position:absolute;left:0;bottom:50%;width:100%;height:180%;overflow:hidden;z-index:9;pointer-events:none}
+.paradox-spear-launch{position:absolute;left:43%;bottom:0;width:14%;height:42%;filter:drop-shadow(0 0 8px #fff3a5) drop-shadow(0 0 24px #ff234d)}
+.paradox-spear-launch:before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#7a0021,#ff415d 25%,#fff7c6 49%,#fff 53%,#e93048 72%,#69001a);clip-path:polygon(50% 0,100% 23%,68% 19%,64% 37%,88% 35%,89% 40%,60% 44%,60% 100%,40% 100%,40% 44%,11% 40%,12% 35%,36% 37%,32% 19%,0 23%)}
+.paradox-spear-launch:after{content:'';position:absolute;top:44%;bottom:0;left:46%;width:8%;background:#fff7cf;box-shadow:0 0 10px #fff}
+.paradox-spear-sky{position:absolute;left:-10%;top:-28%;width:120%;height:85%;z-index:3;background:radial-gradient(ellipse at top,#ff4f7c88,transparent 70%);pointer-events:none}
+.paradox-spear-cell:after{opacity:0}.paradox-spear-cell.landed:after{opacity:.85}

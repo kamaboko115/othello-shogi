@@ -88,3 +88,10 @@ html[data-ui-theme=dark] #challengeVictory.challenge-crowned{background:radial-g
 @keyframes challenge-spark{0%{opacity:0;transform:rotate(var(--spark-angle)) translateY(-40px)}20%{opacity:1}100%{opacity:0;transform:rotate(var(--spark-angle)) translateY(-280px) rotate(140deg)}}
 @media(prefers-reduced-motion:reduce){#challengeVictory.challenge-crowned,#challengeVictory.challenge-crowned::before,.challenge-number,.challenge-sparks i{animation:none}.challenge-sparks{display:none}}
 #challengeVictory a.challenge-share{display:block;box-sizing:border-box;text-decoration:none;text-align:center}
+
+/* Readable, crawlable introduction above the existing playable tutorial. */
+.lobby-introduction{color:var(--color-ink,#233a32);margin:0 0 28px;padding:0 2px;max-width:36em}
+.lobby-introduction h2{color:var(--color-ink,#233a32);font-family:var(--font-display,serif);font-size:clamp(24px,2.5vw,30px);font-weight:700;line-height:1.4;margin:0 0 14px}
+.lobby-introduction p{font-size:16px;line-height:1.9;margin:0 0 10px;overflow-wrap:anywhere}
+.lobby-introduction a{display:inline-block;color:inherit;font-size:14px;line-height:1.7;padding:6px 0;text-underline-offset:4px;text-decoration-thickness:1px}
+@media(max-width:480px){.lobby-introduction{margin-bottom:20px}.lobby-introduction h2{margin-bottom:10px}.lobby-introduction p{font-size:15px;line-height:1.85}}

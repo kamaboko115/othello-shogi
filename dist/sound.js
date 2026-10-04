@@ -237,11 +237,19 @@ export function playParadoxRareSound(kind){
   g.gain.setValueAtTime(0,at+start);g.gain.linearRampToValueAtTime(volume,at+start+.008);g.gain.exponentialRampToValueAtTime(.0001,at+start+length);
   o.connect(g);g.connect(master);o.start(at+start);o.stop(at+start+length+.01);nodes.push(o,g);sources.push(o);
  };
- if(kind==='wings'||kind==='rebirth'){
+ if(kind==='charisma'){
+  note(180,0,1.8,.2,'triangle',360);
+  for(const [i,f]of [440,554,659,880,1109].entries())note(f,.25+i*.18,1.5,.16);
+ }else if(kind==='summon'){
+  note(55,0,2,.3,'triangle',110);
+  for(const [i,f]of [220,330,440,554,659,880,1109,1319].entries())note(f,.35+i*.14,1.5,.14,'sine',f*1.01);
+ }else if(kind==='wings'||kind==='rebirth'){
   if(kind==='rebirth'){note(110,0,.5,.5,'triangle',35);note(1900,0,.25,.15,'triangle',120);}
   for(const [i,f]of [659,880,1109,1319,1760,2217].entries())note(f,(kind==='rebirth'?.4:0)+i*.09,1.15,.2/(1+i*.2));
  }else if(kind==='extra'){
   note(480,0,.15,.35,'sine',2200);for(const [i,f]of [1319,1976,2637,3951].entries())note(f,.08+i*.035,.8,.2/(1+i*.25));
+ }else if(kind==='spear-rise'){
+  note(110,0,.75,.32,'triangle',1200);note(440,.1,.7,.2,'sine',2200);note(1320,.35,.55,.1,'triangle',3300);
  }else if(kind==='annihilate'){
   note(2100,0,.36,.18,'triangle',180);note(95,.38,.8,.6,'triangle',35);for(const [i,f]of [330,551,873].entries())note(f,.4+i*.09,.55,.11,'triangle',f*.4);
  }else{

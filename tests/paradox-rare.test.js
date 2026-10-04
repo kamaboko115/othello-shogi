@@ -41,3 +41,8 @@ test('rare event messages use the requested exact wording',()=>{
  assert.equal(paradoxSummary({paradoxEvent:{kind:'annihilate'}}),'オセショ様の禁断の槍がすべてを焦がす');
  assert.equal(paradoxSummary({paradoxEvent:{kind:'dragons'}}),'オセショ様が滅ぼした龍の時代が訪れる...');
 });
+
+test('forbidden spear clock covers the abyss, rise, rain and closing stages',()=>{
+ const t=paradoxEventTiming({kind:'annihilate',pieces:[]});assert.equal(t.motionMs,3700);assert.equal(t.totalMs,6550);
+ const data={settings:{timeControl:'none'},state:initial(),clock:{remaining:[300000,300000]}};data.state.paradoxEvent={kind:'annihilate',pieces:[]};finishClockMove(data,0,1000);assert.ok(data.clock.since>=1000+t.totalMs);
+});

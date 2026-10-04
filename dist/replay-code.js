@@ -18,7 +18,7 @@ export function unpackReplayState(frame){
  });
  if(frame.w!==undefined){if(!Array.isArray(frame.w)||frame.w.length>81||new Set(frame.w).size!==frame.w.length||frame.w.some(i=>!Number.isInteger(i)||i<0||i>80||s.board[i]?.type!=='K'))bad();for(const i of frame.w)s.board[i].wings=true;}
  if(!Array.isArray(frame.h)||frame.h.length!==2)bad();
- s.hands=frame.h.map(h=>{if(!Array.isArray(h)||h.length!==7||h.some(n=>!Number.isInteger(n)||n<0||n>81+4*Math.min(frame.p,100000)))bad();return Object.fromEntries(Array.from(handTypes,(t,i)=>[t,h[i]]));});
+ s.hands=frame.h.map(h=>{if(!Array.isArray(h)||h.length!==7||h.some(n=>!Number.isInteger(n)||n<0||n>81+11*Math.min(frame.p,100000)))bad();return Object.fromEntries(Array.from(handTypes,(t,i)=>[t,h[i]]));});
  for(const [name,max]of [['l',2],['f',81]]){if(!Array.isArray(frame[name])||frame[name].length>max||frame[name].some(i=>!Number.isInteger(i)||i<0||i>80))bad();}
  s.last=[...frame.l];s.flipped=[...frame.f];
  for(const name of ['d','u'])if(frame[name]!==null&&(!Number.isInteger(frame[name])||frame[name]<0||frame[name]>80))bad();
@@ -30,8 +30,14 @@ export function unpackReplayState(frame){
  }
  if(frame.e!==undefined){
   const e=frame.e,validSquare=i=>Number.isInteger(i)&&i>=0&&i<81;
-  if(!e||!['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth','thunder','wind','windRows'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
-  if(e.kind==='wings'){
+  if(!e||!['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth','thunder','wind','windRows','charisma','summon'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
+  if(e.kind==='charisma'){
+   if(e.side!==1-s.turn||!validSquare(e.square)||s.board[e.square]?.type!=='K'||s.board[e.square].side!==e.side||!Array.isArray(e.squares)||e.squares.length>81||new Set(e.squares).size!==e.squares.length||e.squares.some(i=>!validSquare(i)||!s.board[i]||['K','R','B'].includes(s.board[i].type)||s.board[i].side!==e.side)||s.board.some(p=>p&&p.side!==e.side&&!['K','R','B'].includes(p.type)))bad();
+   s.paradoxEvent={kind:e.kind,side:e.side,square:e.square,squares:[...e.squares]};
+  }else if(e.kind==='summon'){
+   if(e.side!==1-s.turn||s.board.some(p=>!p)||!Array.isArray(e.spawnedSquares)||e.spawnedSquares.length>81||new Set(e.spawnedSquares).size!==e.spawnedSquares.length||e.spawnedSquares.some(i=>!validSquare(i)||!s.board[i]?.prom||!['R','B'].includes(s.board[i].type)||s.board[i].side!==e.side)||Array.from(handTypes,t=>s.hands[e.side][t]).some(n=>n<10))bad();
+   s.paradoxEvent={kind:e.kind,side:e.side,spawnedSquares:[...e.spawnedSquares]};
+  }else if(e.kind==='wings'){
    if(!validSquare(e.square)||s.board[e.square]?.type!=='K'||s.board[e.square].side!==e.side||!s.board[e.square].wings||typeof e.wasWinged!=='boolean')bad();
    s.paradoxEvent={kind:e.kind,side:e.side,square:e.square,wasWinged:e.wasWinged};
   }else if(e.kind==='rebirth'){

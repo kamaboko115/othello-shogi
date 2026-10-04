@@ -92,7 +92,7 @@ test('no-moves AI adjudication matches the server and normal moves remain imposs
 test('promotion, capture, simultaneous flips, drops, adjudication and random arrivals preserve server results and undo',async t=>{
  let eventRoll=0;t.mock.method(crypto,'getRandomValues',bytes=>bytes.fill(bytes instanceof Uint32Array?eventRoll:1));
  const piece=(type,side,prom=false)=>({type,side,prom});
- for(const scenario of ['promotion','capture-flip','drop-flip','judge','arrival','warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings']){
+ for(const scenario of ['promotion','capture-flip','drop-flip','judge','arrival','warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings','charisma','summon']){
   const db=localDB(),client=createLocalAIStore({storage:storage()});
   try{
    let remote=(await server(db,'',{invite,kind:'ai',settings:{moveLimit:false,paradoxAt:false}})).data;
@@ -113,7 +113,7 @@ test('promotion, capture, simultaneous flips, drops, adjudication and random arr
    if(scenario==='drop-flip')assert.deepEqual(local.state.flipped,[39]);
    if(scenario==='judge')assert.match(local.state.result,/60手/);
    if(scenario==='arrival')assert.ok(local.state.spawned);
-   if(['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings'].includes(scenario))assert.equal(local.state.paradoxEvent.kind,scenario);
+   if(['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings','charisma','summon'].includes(scenario))assert.equal(local.state.paradoxEvent.kind,scenario);
    local=client.action(local.room,{action:'offer-undo',version:local.version});remote=(await server(db,'/'+remote.room+'/action',{action:'offer-undo',version:remote.version})).data;assert.deepEqual(comparable(local),comparable(remote));assert.deepEqual(local.state,s);
   }finally{db.close();}
  }
