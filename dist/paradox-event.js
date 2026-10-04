@@ -36,13 +36,28 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
    await wait(timing.cutinMs);band.remove();
   }
   if(signal?.aborted)return;
-  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth','thunder'].includes(event.kind)?' rainbow':'');
+  caption=document.createElement('div');caption.className='paradox-cinema-title'+(['shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth','thunder','wind'].includes(event.kind)?' rainbow':'');
    caption.textContent=event.kind==='thunder'?'オセショ様が雷雲を呼ぶ':event.kind==='shuffle'&&!event.skipped?'すべての駒がシャッフルする':event.kind==='invert'?'すべての駒が反転する':event.kind==='promote'?'盤上の全駒が成る':paradoxSummary(state);
   layer.append(caption);await wait(timing.noticeMs);if(signal?.aborted)return;
   if(event.kind==='promote'&&!event.squares.length)caption.textContent='しかし、コマはすでに全てなっていた';
   else if(event.kind==='thunder'&&!event.pieces.length)caption.textContent='しかし雷は落ちなかった';
   else caption.classList.add('during');
-  if(event.kind==='thunder'){
+  if(event.kind==='wind'){
+   sound('wind',timing.motionMs);
+   for(const column of event.columns){
+    const top=rects.get(column),bottom=rects.get(column+72);if(!top||!bottom)continue;
+    const gust=document.createElement('span');gust.className='paradox-wind-column';
+    Object.assign(gust.style,{left:top.x+'%',top:Math.min(top.y,bottom.y)+'%',width:top.w+'%',height:(Math.abs(bottom.y-top.y)+top.h)+'%'});field.append(gust);
+    animate(gust,[{opacity:0},{offset:.2,opacity:1},{offset:.7,opacity:1},{opacity:0}],{duration:timing.motionMs,fill:'both'});
+   }
+   await wait(300);if(signal?.aborted)return;
+   await Promise.all(event.pieces.map(async({square},index)=>{
+    const token=tokens.get(square);if(!token)return;await wait(index*300/Math.max(1,event.pieces.length));if(signal?.aborted)return;
+    animate(token.wrap,[{opacity:1,transform:'translate(0,0) rotate(0)'},{offset:.25,opacity:1,transform:'translate(20%,-30%) rotate(35deg)'},{opacity:0,transform:'translate(100%,-500%) rotate(300deg) scale(.2)'}],{duration:1000,fill:'both',easing:'ease-in'});
+    await wait(1000);if(signal?.aborted)return;token.wrap.style.visibility='hidden';
+   }));
+   await wait(event.pieces.length?200:1500);
+  }else if(event.kind==='thunder'){
    if(event.pieces.length){
     const cloud=document.createElement('span');cloud.className='paradox-thunder-cloud';field.append(cloud);
     sound('rumble',timing.motionMs);

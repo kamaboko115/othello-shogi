@@ -61,7 +61,7 @@ test('supply presents seven pieces at the mover tray and cleans up',async t=>{
  await task;assert.equal(animations.filter(a=>a.options.duration!==650).length,7);assert.equal(animations.filter(a=>a.options.duration===650).length,1);assert.ok(animations.every(a=>a.cancelled));assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);
 });
 
-for(const [kind,count]of [['thunder',1],['extra',3],['annihilate',5],['dragons',4],['wings',4]])test(kind+' plays the configured cut-ins and leaves no overlays or modified authoritative state',async t=>{
+for(const [kind,count]of [['wind',3],['thunder',1],['extra',3],['annihilate',5],['dragons',4],['wings',4]])test(kind+' plays the configured cut-ins and leaves no overlays or modified authoritative state',async t=>{
  t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});const {board,animations,cutins}=view(),state=initial();applyParadoxEvent(state,kind,()=>0);const saved=structuredClone(state);let done=false;
  const task=runParadoxEvent(board,state,0).then(()=>done=true);
  for(let i=0;i<160&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
@@ -81,7 +81,7 @@ for(const reduced of [false,true])test(`empty promotion announces then explains 
  applyParadoxEvent(state,'promote',()=>0);const saved=structuredClone(state);assert.deepEqual(state.paradoxEvent.squares,[]);
  let done=false;const task=runParadoxEvent(board,state,0).then(()=>done=true);
  const caption=()=>document.body.children[0]?.children.find(el=>el.className?.startsWith('paradox-cinema-title'));
- for(let i=0;i<20&&!caption();i++){t.mock.timers.tick(50);await Promise.resolve();await Promise.resolve();}
+ for(let i=0;i<40&&!caption();i++){t.mock.timers.tick(50);await Promise.resolve();await Promise.resolve();}
  assert.equal(caption().textContent,'盤上の全駒が成る');
  t.mock.timers.tick(799);await Promise.resolve();assert.equal(caption().textContent,'盤上の全駒が成る');
  t.mock.timers.tick(1);await Promise.resolve();await Promise.resolve();
@@ -95,9 +95,19 @@ for(const reduced of [false,true])test(`empty thunder announces then shows no li
  const {board,animations}=view(),state=initial();state.board=state.board.map(p=>p?.type==='K'?p:null);applyParadoxEvent(state,'thunder',()=>0);
  let done=false;const task=runParadoxEvent(board,state,0).then(()=>done=true);
  const caption=()=>document.body.children[0]?.children.find(el=>el.className?.startsWith('paradox-cinema-title'));
- for(let i=0;i<20&&!caption();i++){t.mock.timers.tick(50);await Promise.resolve();await Promise.resolve();}
+ for(let i=0;i<40&&!caption();i++){t.mock.timers.tick(50);await Promise.resolve();await Promise.resolve();}
  assert.equal(caption().textContent,'オセショ様が雷雲を呼ぶ');t.mock.timers.tick(1200);await Promise.resolve();await Promise.resolve();
  assert.equal(caption().textContent,'しかし雷は落ちなかった');assert.equal(caption().classes.has('during'),false);
  for(let i=0;i<40&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
  await task;assert.equal(document.body.children.length,0);assert.ok(animations.every(a=>a.options.duration===650));
+});
+
+for(const reduced of [false,true])test(`wind animation removes only selected non-kings and cleans up (reduced: ${reduced})`,async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});t.mock.method(globalThis,'matchMedia',()=>({matches:reduced}));
+ const {board}=view(),state=initial();applyParadoxEvent(state,'wind',()=>3);const saved=structuredClone(state),controller=new AbortController();let done=false;
+ const task=runParadoxEvent(board,state,0,controller.signal).then(()=>done=true);
+ const tokens=document.body.children[0].children[0].children;
+ for(let i=0;i<120&&!done;i++){t.mock.timers.tick(50);await Promise.resolve();await Promise.resolve();}
+ await task;assert.equal(tokens.filter(t=>t.style.visibility==='hidden').length,state.paradoxEvent.pieces.length);
+ assert.ok(tokens.filter(t=>t.children[0]?.textContent==='玉').every(t=>t.style.visibility!=='hidden'));assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);
 });
