@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocalAIStore,localAIStorageKey} from '../dist/local-ai-game.js';
 import {helperRemaining} from '../dist/challenge-options.js';
-import {moves,initial,paradoxEventTiming} from '../dist/engine.js';
+import {moves,initial,empty,play,applyParadoxEvent,collapseAfterMove,collapseTargets,paradoxEventTiming} from '../dist/engine.js';
 import {clockBudget,movePresentationAllowance,finishClockMove} from '../dist/match-options.js';
 import {api} from '../worker/api.js';
 import {localDB} from '../worker/local-db.js';
@@ -54,4 +54,16 @@ test('victory client caches lobby counts and reloaded report without repeated re
  let c=createChallengeWins({storage:()=>storage,fetchImpl});await Promise.all([c.count(),c.count()]);assert.equal(calls,1);await c.count();assert.equal(calls,1);
  const data={room:'a'.repeat(32),round:1,state:{result:'後手の勝ち（王を取った）',ply:10}};await Promise.all([c.report(data),c.report(data)]);assert.equal(calls,2);
  c=createChallengeWins({storage:()=>storage,fetchImpl});assert.equal((await c.report(data)).ordinal,8);assert.equal(calls,2);
+});
+
+test('drop clock allowance identifies the one-square move record, including a dropped piece destroyed by a gust',()=>{
+ for(const type of ['R','B','G','P'])for(const event of [null,'wind','promote','destroy']){
+  const before=empty();before.moveLimit=false;before.paradoxAt=0;before.board[4]={type:'K',side:1,prom:false};before.board[76]={type:'K',side:0,prom:false};before.hands[0][type]=1;
+  const next=play(before,{drop:type,to:40});if(event==='destroy')collapseAfterMove(next,()=>collapseTargets(next).indexOf(40));else if(event)applyParadoxEvent(next,event,()=>3);
+  assert.deepEqual(next.last,[40]);
+  const expected=(['R','B'].includes(type)?650:280)+1000+250+(event==='destroy'?1700:event?120+paradoxEventTiming(next.paradoxEvent).totalMs:0);
+  assert.equal(movePresentationAllowance(before,next),expected,type+' '+event);
+  const data={kind:'friend',state:next,settings:{timeControl:'sudden3'},clock:{remaining:[180000,180000],since:0},takebacks:[{state:before}]};finishClockMove(data,0,1000);
+  assert.equal(clockBudget(data,1,1000+expected+2500),180000);assert.equal(clockBudget(data,1,data.clock.since+1000),179000);
+ }
 });
