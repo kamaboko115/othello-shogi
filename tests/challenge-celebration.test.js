@@ -1,17 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {victoryShareData,shareVictory} from '../dist/challenge-celebration.js';
-test('victory sharing uses a public URL and the global ordinal, never a local match link',async()=>{
- let copied='';assert.equal(await shareVictory(42,{clipboard:{writeText:async text=>copied=text}}),'copied');
- assert.match(copied,/全プレイヤー合計で42回目/);assert.match(copied,/https:\/\/oshogi-games.pages.dev\//);assert.doesNotMatch(copied,/#ai=|localhost|127\.0\.0\.1/);
- assert.throws(()=>victoryShareData(-1));
+import {victoryShareData,victoryTweetURL} from '../dist/challenge-celebration.js';
+test('X victory text matches the requested wording and includes the public URL only',()=>{
+ const data=victoryShareData(42),url=new URL(victoryTweetURL(42));
+ assert.equal(data.text,'私はオセショ様に42回目に勝ったプレイヤーです！');
+ assert.equal(url.origin,'https://x.com');assert.equal(url.pathname,'/intent/tweet');
+ assert.equal(url.searchParams.get('text'),data.text);assert.equal(url.searchParams.get('url'),'https://oshogi-games.pages.dev/');
+ assert.doesNotMatch(url.href,/#ai=|localhost|127\.0\.0\.1/);
 });
-test('cancelling native share does not silently copy to clipboard',async()=>{
- let copies=0;const platform={share:async()=>{throw Object.assign(new Error(),{name:'AbortError'});},clipboard:{writeText:async()=>copies++}};
- assert.equal(await shareVictory(1,platform),'cancelled');assert.equal(copies,0);
-});
-test('unavailable native sharing falls back to clipboard while successful sharing does not',async()=>{
- let copies=0;const platform={share:async()=>{throw new Error('unsupported');},clipboard:{writeText:async()=>copies++}};
- assert.equal(await shareVictory(2,platform),'copied');assert.equal(copies,1);platform.share=async()=>{};
- assert.equal(await shareVictory(2,platform),'shared');assert.equal(copies,1);
+test('invalid victory ordinals cannot become shared achievements',()=>{
+ for(const n of [-1,0,1.5,NaN,Infinity,'<script>',Number.MAX_SAFE_INTEGER+1])assert.throws(()=>victoryTweetURL(n),RangeError);
+ assert.match(victoryShareData(1).text,/1回目/);
 });

@@ -87,3 +87,4 @@ html[data-ui-theme=dark] #challengeVictory.challenge-crowned{background:radial-g
 @keyframes challenge-rays{to{transform:rotate(100deg)}}
 @keyframes challenge-spark{0%{opacity:0;transform:rotate(var(--spark-angle)) translateY(-40px)}20%{opacity:1}100%{opacity:0;transform:rotate(var(--spark-angle)) translateY(-280px) rotate(140deg)}}
 @media(prefers-reduced-motion:reduce){#challengeVictory.challenge-crowned,#challengeVictory.challenge-crowned::before,.challenge-number,.challenge-sparks i{animation:none}.challenge-sparks{display:none}}
+#challengeVictory a.challenge-share{display:block;box-sizing:border-box;text-decoration:none;text-align:center}
