@@ -1,4 +1,5 @@
-import {mkdir,writeFile,cp,rm} from 'node:fs/promises';
+import {writeBuildInfo,injectBuildInfo} from './scripts/build-info.mjs';
+import {mkdir,readFile,writeFile,cp,rm} from 'node:fs/promises';
 import {dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {textAssets,binaryAssets} from './worker/static-assets.js';
@@ -8,9 +9,11 @@ const root=dirname(fileURLToPath(import.meta.url));
 // Pages checks that the output stays within its configured project root.
 const out=join(root,'pages/.sites-runtime/pages');
 await mkdir(out,{recursive:true});
+const buildInfo=await writeBuildInfo();
 for(const name of [...textAssets,...binaryAssets]){
  await mkdir(dirname(join(out,name)),{recursive:true});
- await cp(join(root,'dist',name),join(out,name));
+ if(name==='index.html')await writeFile(join(out,name),injectBuildInfo(await readFile(join(root,'dist',name),'utf8'),buildInfo));
+ else await cp(join(root,'dist',name),join(out,name));
 }
 // The API Function lives in pages/functions, so Pages Git integration finds it
 // independently of the static asset output directory.

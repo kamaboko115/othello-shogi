@@ -43,3 +43,15 @@ export function initRecordViewer(document,recordLine){
   if(dialog.open&&old!==logs&&(old.length!==logs.length||old.some((line,i)=>line!==logs[i])))paint();
  }};
 }
+
+export function buildInfoText(info){
+ const date=new Date(info?.builtAt);
+ if(!info?.builtAt||Number.isNaN(date.getTime()))return '更新日時：不明（ビルド情報なし）';
+ const time=new Intl.DateTimeFormat('ja-JP',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).format(date);
+ const revision=/^[a-f0-9]{7,40}$/i.test(info.revision||'')?info.revision.slice(0,7):'不明';
+ return `最終更新（ビルド）：${time}（日本時間）\nバージョン：${revision}${info.dirty===true?'（未コミットの変更あり）':''}`;
+}
+export function initBuildInfo(document){
+ let info;try{info=JSON.parse(document.querySelector('meta[name="app-build"]')?.content||'null');}catch{}
+ document.getElementById('buildInfo').textContent=buildInfoText(info);
+}

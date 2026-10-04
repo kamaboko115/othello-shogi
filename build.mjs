@@ -1,12 +1,13 @@
+import {writeBuildInfo,injectBuildInfo} from './scripts/build-info.mjs';
 import {readFile,mkdir,writeFile,rename,cp} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {textAssets,binaryAssets} from './worker/static-assets.js';
 const out='.sites-runtime/release/dist';
 await mkdir(out+'/server',{recursive:true});await mkdir(out+'/.openai/drizzle/meta',{recursive:true});
-const assets={},binary={},etags={};
+const assets={},binary={},etags={},buildInfo=await writeBuildInfo();
 const etag=bytes=>'"'+createHash('sha256').update(bytes).digest('hex')+'"';
 for(const name of textAssets){
- const bytes=await readFile('dist/'+name);assets['/'+name]=bytes.toString('utf8');etags['/'+name]=etag(bytes);
+ let bytes=await readFile('dist/'+name);if(name==='index.html')bytes=Buffer.from(injectBuildInfo(bytes.toString('utf8'),buildInfo));assets['/'+name]=bytes.toString('utf8');etags['/'+name]=etag(bytes);
 }
 assets['/']=assets['/index.html'];etags['/']=etags['/index.html'];
 for(const name of binaryAssets){

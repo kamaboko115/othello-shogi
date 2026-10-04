@@ -1,7 +1,7 @@
 import {collapseSteps,initCollapseSlider} from './collapse-options.js';
 import {showChallengeCelebration} from './challenge-celebration.js';
 import {createChallengeWins} from './challenge-wins.js';
-import {challengeSettings,helperRemaining,isOseshoChallenge} from './challenge-options.js';
+import {allowsTakeback,challengeSettings,helperRemaining,isOseshoChallenge} from './challenge-options.js';
 import {runParadoxEvent} from './paradox-event.js';
 import {initMusic} from './music.js';
 import {initReplayViewer} from './replay-view.js';
@@ -25,7 +25,7 @@ import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js'
 import {startAI} from './ai-client.js';
 import {createLocalAIStore} from './local-ai-game.js';
 import {createRoomTransport,createRoomPoller} from './room-network.js';
-import {initBoardPreview,shareInvitation,initRecordViewer} from './lobby-tools.js';
+import {initBuildInfo,initBoardPreview,shareInvitation,initRecordViewer} from './lobby-tools.js';
 import {createClockWarning} from './clock-warning.js';
 import {playClockWarning} from './sound.js';
 import {playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
@@ -133,6 +133,7 @@ $('closeSettings').onclick=()=>{$('settingsDialog').close();syncAI();};
 initCredits(document);
 createDevAccess({document}).guardDeveloperTools();
 initBoardPreview(document);
+initBuildInfo(document);
 const recordViewer=initRecordViewer(document,recordLine);
 const replayViewer=initReplayViewer(document,async()=>{if(!online)throw Error('対局がありません。');return online.local?localAI.replay(online.room):request('/'+online.room+'/replay',online.token);});
 $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
@@ -223,7 +224,8 @@ function render(){
  const scores=points(state);$('scores').hidden=!state.mode;$('scores').textContent=`盤上：先手 ${scores[0]}枚　／　後手 ${scores[1]}枚`;
  $('message').textContent=message.replaceAll('▲','●').replaceAll('▽','○');
  $('reset').hidden=!online;
- $('requestUndo').disabled=!online?.canUndo||busy||!connected||!!online?.undoOffer;
+ $('requestUndo').title=allowsTakeback(online)?'':'対オセショ様では待ったを使えません。';
+ $('requestUndo').disabled=!allowsTakeback(online)||!online?.canUndo||busy||!connected||!!online?.undoOffer;
  $('undoPanel').hidden=!online?.undoOffer;
  const undoMine=online?.undoOffer?.seat===(online?.seat??online?.side);
  $('undoText').textContent=online?.undoOffer?(undoMine?'待ったの承諾を待っています。':'相手が待ったを希望しています。')+' '+online.undoOffer.ply+'手終了時の盤面へ戻します。':'';
