@@ -1,3 +1,4 @@
+import {normalizeCollapseAt} from '../dist/collapse-options.js';
 import {challengeWinSchema,validChallengeWin,challengeWinCount,recordChallengeWin} from './challenge-wins.js';
 import {challengeSettings,helperRemaining,recordHelperUse} from '../dist/challenge-options.js';
 import {normalizeMoveLimit} from '../dist/judge-options.js';
@@ -55,9 +56,8 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
    let row=await env.DB.prepare(activeHostRoomQuery).bind(tokenHash,now).first();
    if(row)return json({...view(row,0),invite:body.invite});
    if(body.kind==='ai'&&!allowServerAI)fail('AI対局はブラウザ内で作成してください。',410);
-   if(body.settings?.paradoxAt!==undefined&&body.settings.paradoxAt!==false&&(!Number.isInteger(body.settings.paradoxAt)||body.settings.paradoxAt<1||body.settings.paradoxAt>1000))fail('崩壊開始は1〜1000手で指定してください。');
    let timeControl;try{timeControl=normalizeTime(body.settings?.timeControl);}catch{fail('時間設定が不正です。');}
-   const settings={timeControl:body.kind!=='ai'?timeControl:'none',handicap:Object.hasOwn(handicapOptions,body.settings?.handicap)?body.settings.handicap:'none',paradoxAt:body.settings?.paradoxAt??150,moveLimit:normalizeMoveLimit(body.settings?.moveLimit),noDrops:body.settings?.noDrops===true};if(body.kind==='ai'){settings.helperUnlimited=body.settings?.helperUnlimited===true;settings.handicapSide=body.settings?.handicapSide==='human'?'human':'ai';settings.aiLevel=['weak','normal','strong','expert','osesho'].includes(body.settings?.aiLevel)?body.settings.aiLevel:'normal';settings.thinkMs=[500,1000,3000,5000].includes(body.settings?.thinkMs)?body.settings.thinkMs:1000;}
+   const settings={timeControl:body.kind!=='ai'?timeControl:'none',handicap:Object.hasOwn(handicapOptions,body.settings?.handicap)?body.settings.handicap:'none',paradoxAt:normalizeCollapseAt(body.settings?.paradoxAt),moveLimit:normalizeMoveLimit(body.settings?.moveLimit),noDrops:body.settings?.noDrops===true};if(body.kind==='ai'){settings.helperUnlimited=body.settings?.helperUnlimited===true;settings.handicapSide=body.settings?.handicapSide==='human'?'human':'ai';settings.aiLevel=['weak','normal','strong','expert','osesho'].includes(body.settings?.aiLevel)?body.settings.aiLevel:'normal';settings.thinkMs=[500,1000,3000,5000].includes(body.settings?.thinkMs)?body.settings.thinkMs:1000;}
    Object.assign(settings,challengeSettings(settings,body.kind));
    const id=random().slice(0,32),data={state:setupState(settings),settings,kind:body.kind==='ai'?'ai':'friend',logs:[],offer:null};
    if(data.kind==='ai'){data.toss=matchToss(settings);data.round=1;data.rematch=null;applyHandicap(data.state,settings.handicapSide==='human'?data.toss.hostSide:1-data.toss.hostSide,settings.handicap);}

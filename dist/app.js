@@ -1,3 +1,5 @@
+import {collapseSteps,initCollapseSlider} from './collapse-options.js';
+import {showChallengeCelebration} from './challenge-celebration.js';
 import {createChallengeWins} from './challenge-wins.js';
 import {challengeSettings,helperRemaining,isOseshoChallenge} from './challenge-options.js';
 import {runParadoxEvent} from './paradox-event.js';
@@ -32,12 +34,12 @@ const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=
 const localAI=createLocalAIStore();
 const challengeWins=createChallengeWins();
 let challengeCountShown=false,challengeReportKey='';
-function showChallengeCount(){if(challengeCountShown)return;challengeCountShown=true;challengeWins.count().then(total=>{$('challengeWins').textContent=`オセショ様への通算勝利：${total}局`;} ).catch(()=>{$('challengeWins').textContent='通算勝利数は現在確認できません';});}
+function showChallengeCount(){if(challengeCountShown)return;challengeCountShown=true;challengeWins.count().then(total=>{$('challengeWins').textContent=`全プレイヤー合計：オセショ様に${total}勝`;} ).catch(()=>{$('challengeWins').textContent='全プレイヤーの合計勝利数は現在確認できません';});}
 function showChallengeVictory(data){
  const el=$('challengeVictory'),eligible=challengeWins.eligible(data);el.hidden=!eligible;if(!eligible){el.classList.remove('challenge-crowned');return;}
  const key=data.room+':'+data.round;if(challengeReportKey===key)return;challengeReportKey=key;
- el.textContent='オセショ様に勝利！ 通算勝利数を集計しています…';$('retryChallengeWin').hidden=true;
- challengeWins.report(data).then(({ordinal})=>{if(challengeReportKey===key){el.textContent=`オセショ様への通算${ordinal}勝目！`;el.classList.add('challenge-crowned');}}).catch(()=>{if(challengeReportKey===key){el.textContent='オセショ様に勝利！ 集計に接続できませんでした。';$('retryChallengeWin').hidden=false;}});
+ el.textContent='オセショ様に勝利！ 全プレイヤーの勝利数に加算しています…';$('retryChallengeWin').hidden=true;
+ challengeWins.report(data).then(({ordinal})=>{if(challengeReportKey===key){showChallengeCelebration(el,ordinal);}}).catch(()=>{if(challengeReportKey===key){el.textContent='オセショ様に勝利！ 集計に接続できませんでした。';$('retryChallengeWin').hidden=false;}});
 }
 $('retryChallengeWin').onclick=()=>{challengeReportKey='';showChallengeVictory(online);};
 const winAds=createWinAdBreak();
@@ -134,18 +136,12 @@ initBoardPreview(document);
 const recordViewer=initRecordViewer(document,recordLine);
 const replayViewer=initReplayViewer(document,async()=>{if(!online)throw Error('対局がありません。');return online.local?localAI.replay(online.room):request('/'+online.room+'/replay',online.token);});
 $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
-function syncDebugCollapseOption(){
- const enabled=$('debugCollapseOption').checked,option=$('paradoxAt').querySelector('option[value="2"]');
- option.hidden=!enabled;option.disabled=!enabled;
- if(!enabled&&$('paradoxAt').value==='2')$('paradoxAt').value='150';
-}
-$('debugCollapseOption').onchange=()=>{syncDebugCollapseOption();render();};
-syncDebugCollapseOption();
+const updateCollapseSlider=initCollapseSlider($('paradoxAt'),$('paradoxAtValue'));
 
 const tutorialTools=initDeveloper(()=>({state,side:online?.side??0}));
 function stone(side){const el=document.createElement('span');el.className='stone '+(side===0?'black':'white');el.setAttribute('aria-hidden','true');return el;}
 function recordLine(text){const el=document.createElement('div');for(const part of text.split(/([▲▽])/)){if(part==='▲'||part==='▽'){const mark=stone(part==='▲'?0:1);mark.removeAttribute('aria-hidden');mark.setAttribute('aria-label',part==='▲'?'先手':'後手');el.append(mark);}else el.append(document.createTextNode(part));}return el;}
-const selectedSettings=()=>challengeSettings({timeControl:selectedKind==='friend'&&Number($('mainTime').value)<minuteSteps.length?{minutes:minuteSteps[Number($('mainTime').value)],increment:Number($('incrementTime').value),byoyomi:byoyomiSteps[Number($('byoyomiTime').value)]}:'none',handicap:selectedKind==='friend'?$('handicap').value:$('aiHandicap').value,paradoxAt:$('paradoxAt').value==='none'?false:Number($('paradoxAt').value),moveLimit:false,noDrops:$('allowDrops').value==='no',...(selectedKind==='ai'?{helperUnlimited:$('helperUnlimited').checked,handicapSide:$('aiHandicapSide').value,aiLevel:$('aiLevel').value,thinkMs:Number($('thinkTime').value)}:{})},selectedKind);
+const selectedSettings=()=>challengeSettings({timeControl:selectedKind==='friend'&&Number($('mainTime').value)<minuteSteps.length?{minutes:minuteSteps[Number($('mainTime').value)],increment:Number($('incrementTime').value),byoyomi:byoyomiSteps[Number($('byoyomiTime').value)]}:'none',handicap:selectedKind==='friend'?$('handicap').value:$('aiHandicap').value,paradoxAt:collapseSteps[Number($('paradoxAt').value)],moveLimit:false,noDrops:$('allowDrops').value==='no',...(selectedKind==='ai'?{helperUnlimited:$('helperUnlimited').checked,handicapSide:$('aiHandicapSide').value,aiLevel:$('aiLevel').value,thinkMs:Number($('thinkTime').value)}:{})},selectedKind);
 // A collapse can change ownership/positions after the move animation. Do not
 // allow moves or helper searches against that temporary presentation board.
 const canAct=()=>!state.result&&!busy&&!!online&&connected&&online.joined&&online.side===state.turn&&!collapseEffect&&!((comboActive||comboPreparing)&&(online.state?.paradoxEvent||online.state?.destroyed||online.state?.spawned||online.state?.paradoxStarted));
@@ -221,8 +217,8 @@ function render(){
  const turnName=oseshoMatch&&state.turn!==online.side?'オセショ様':side(state.turn);$('turn').textContent=state.result||` ${turnName}の番`;if(!state.result)$('turn').prepend(stone(state.turn));
  $('boardProgress').hidden=!state.mode;
  const collapseAt=state.paradoxAt===false?null:(state.paradoxAt??150);
- $('boardProgress').innerHTML=collapseAt?`終末まで ${state.ply}/${collapseAt}${state.ply>=collapseAt?' · <span class="paradox-active-label">盤面崩壊中</span>':''}${adjudicationLimit(state)===false?'':` ／ 決着まで ${Math.min(state.ply,adjudicationLimit(state))}/${adjudicationLimit(state)}`}`:adjudicationLimit(state)===false?`${state.ply}手目`:`決着まで ${Math.min(state.ply,adjudicationLimit(state))}/${adjudicationLimit(state)}`;
- $('boardProgress').title=collapseAt?`盤面崩壊までの手数（${collapseAt}手から開始）`:'';
+ $('boardProgress').innerHTML=collapseAt!==null?`${collapseAt===0?state.ply+'手目':`終末まで ${state.ply}/${collapseAt}`}${state.ply>=collapseAt?' · <span class="paradox-active-label">盤面崩壊中</span>':''}${adjudicationLimit(state)===false?'':` ／ 決着まで ${Math.min(state.ply,adjudicationLimit(state))}/${adjudicationLimit(state)}`}`:adjudicationLimit(state)===false?`${state.ply}手目`:`決着まで ${Math.min(state.ply,adjudicationLimit(state))}/${adjudicationLimit(state)}`;
+ $('boardProgress').title=collapseAt===0?'最初の1手から盤面崩壊が発動します':collapseAt!==null?`盤面崩壊までの手数（${collapseAt}手から開始）`:'';
  $('count').textContent='オセロ将棋';
  const scores=points(state);$('scores').hidden=!state.mode;$('scores').textContent=`盤上：先手 ${scores[0]}枚　／　後手 ${scores[1]}枚`;
  $('message').textContent=message.replaceAll('▲','●').replaceAll('▽','○');
@@ -397,8 +393,9 @@ function syncChallengeControls(){
  const challenge=selectedKind==='ai'&&$('aiLevel').value==='osesho';
  const ids=['thinkTime','paradoxAt','allowDrops','aiHandicap','aiHandicapSide'];
  if(challenge&&!normalAIControls)normalAIControls=Object.fromEntries(ids.map(id=>[id,$(id).value]));
- if(challenge){$('thinkTime').value='5000';$('paradoxAt').value='200';$('allowDrops').value='yes';$('aiHandicap').value='none';}
+ if(challenge){$('thinkTime').value='5000';$('paradoxAt').value=String(collapseSteps.indexOf(200));$('allowDrops').value='yes';$('aiHandicap').value='none';}
  else if(normalAIControls){for(const [id,value] of Object.entries(normalAIControls))$(id).value=value;normalAIControls=null;}
+ updateCollapseSlider();
  for(const id of ids)$(id).disabled=challenge;
  $('aiLevel').classList.toggle('osesho-level',challenge);
  $('helperUnlimitedLabel').textContent=challenge?'オセショ様に3回頼む':'オセショ様を無限に';

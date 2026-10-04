@@ -6,15 +6,6 @@ import vm from 'node:vm';
 import {initial,movementTargets,moves,label,applyParadoxEvent,beforeParadox} from '../dist/engine.js';
 
 const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
-test('開発者ツールONでロビーの2手崩壊を選べ、OFFなら150手へ戻る',()=>{
- const option={hidden:true,disabled:true};
- const elements={debugCollapseOption:{checked:false},paradoxAt:{value:'150',querySelector:()=>option}};
- const context={$:id=>elements[id]};vm.createContext(context);
- const code=source.slice(source.indexOf('function syncDebugCollapseOption()'),source.indexOf("$('debugCollapseOption').onchange"));
- vm.runInContext(code,context);context.syncDebugCollapseOption();assert.equal(option.disabled,true);
- elements.debugCollapseOption.checked=true;context.syncDebugCollapseOption();assert.equal(option.hidden,false);assert.equal(option.disabled,false);
- elements.paradoxAt.value='2';elements.debugCollapseOption.checked=false;context.syncDebugCollapseOption();assert.equal(option.hidden,true);assert.equal(elements.paradoxAt.value,'150');
-});
 test('通常演出は操作できるが盤面崩壊の反映前・相手番・通信中・終了後は操作できない',()=>{
  const canAct=source.match(/const canAct=\(\)=>[^;]+;/)[0];
  const context={comboActive:true,comboPreparing:true,effectsActive:true,collapseEffect:null,state:{turn:0,result:''},busy:false,connected:true,online:{joined:true,side:0}};

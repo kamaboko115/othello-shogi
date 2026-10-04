@@ -20,7 +20,7 @@ export function initDeveloper(getCurrent){
  let updateTutorialArrow=()=>{};
  if(typeof ResizeObserver!=='undefined')new ResizeObserver(()=>updateTutorialArrow()).observe($('devBoardFrame'));
  const copyCurrent=()=>{const current=getCurrent(),s=structuredClone(current.state);if(current.side===1){s.board.reverse();s.board.forEach(p=>{if(p)p.side=1-p.side;});s.hands.reverse();s.turn=1-s.turn;}return s;};
- const reset=(s,remember=true,preserveDebug=false)=>{if(remember)history.push(structuredClone(state));controller?.abort();working=false;state=structuredClone(s);state.result='';state.flipped=[];state.last=[];state.moveLimit=false;if(!tutorial){if(preserveDebug)$('devCollapseEarly').checked=state.paradoxAt===2;else{state.ply=0;state.destroyed=null;state.spawned=null;delete state.paradoxEvent;state.paradoxStarted=false;}}state.paradoxAt=tutorial&&lessons[lesson].collapse?150:!tutorial&&$('devCollapseEarly').checked?2:false;collapsePhase='ash';selected=null;$('devTurn').value=String(state.turn);draw();};
+ const reset=(s,remember=true,preserveDebug=false)=>{if(remember)history.push(structuredClone(state));controller?.abort();working=false;state=structuredClone(s);state.result='';state.flipped=[];state.last=[];state.moveLimit=false;if(!tutorial&&!preserveDebug){state.ply=0;state.destroyed=null;state.spawned=null;delete state.paradoxEvent;state.paradoxStarted=false;}state.paradoxAt=tutorial&&lessons[lesson].collapse?150:false;collapsePhase='ash';selected=null;$('devTurn').value=String(state.turn);draw();};
  function draw(){
   document.querySelectorAll('#developerDialog select,#developerDialog input,.dev-buttons button').forEach(el=>el.disabled=working);
   $('devUndo').disabled=working||!history.length;
@@ -53,7 +53,6 @@ export function initDeveloper(getCurrent){
   }
   paintCollapse(board,state.destroyed,{phase:collapsePhase,eventKey:state.ply});
   if(state.spawned&&working)paintArrival(board,state,collapsePhase==='breaking');
-  if(!tutorial&&$('devCollapseEarly').checked)$('devStatus').textContent=(state.result||'デバッグ：'+state.ply+'手目 ／ 2手目に予告・3手目から盤面崩壊')+(state.destroyed?' ／ '+label(state.destroyed.piece)+'が崩壊':state.spawned?' ／ '+arrivalSummary(state):state.paradoxEvent?' ／ '+paradoxSummary(state):'');
  }
  async function click(i){
   if(working)return;
@@ -73,7 +72,7 @@ export function initDeveloper(getCurrent){
   else if(!slide&&!capture&&!state.result)playMoveSound();
   if(current.signal.aborted)return;
   if(state.paradoxEvent?.kind==='rebirth'){await runParadoxEvent($('devBoard'),state,0,current.signal);collapsePhase='ash';draw();}
-  else if(tutorial&&lessons[lesson].collapse||!tutorial&&$('devCollapseEarly').checked){
+  else if(tutorial&&lessons[lesson].collapse){
    const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);current.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);current.signal.addEventListener('abort',done,{once:true});if(current.signal.aborted)done();});
    const collapse=async()=>{
     if(tutorial){collapseLesson(state,collapseTrial);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state,undefined,undefined,mover);
@@ -104,13 +103,12 @@ export function initDeveloper(getCurrent){
   working=false;$('devTurn').value=String(state.turn);draw();
   if(tutorial&&(completed||(lessons[lesson].collapse&&state.result))){$('lessonCompleteNext').textContent=lesson===lessons.length-1?'チュートリアルを終える':'次へ';$('lessonComplete').showModal();}
  }
- $('openDeveloper').onclick=()=>{tutorial=false;$('devCollapseEarly').checked=false;$('developerDialog').classList.remove('tutorial-mode');$('tutorialLesson').hidden=true;$('settingsDialog').close();history=[];reset(copyCurrent(),false);$('devTransfer').hidden=true;$('devStatus').textContent='練習専用の盤面です。配置・陣営・成りを自由に変更できます。';$('developerDialog').showModal();};
+ $('openDeveloper').onclick=()=>{tutorial=false;$('developerDialog').classList.remove('tutorial-mode');$('tutorialLesson').hidden=true;$('settingsDialog').close();history=[];reset(copyCurrent(),false);$('devTransfer').hidden=true;$('devStatus').textContent='練習専用の盤面です。配置・陣営・成りを自由に変更できます。';$('developerDialog').showModal();};
  $('closeDeveloper').onclick=()=>$('developerDialog').close();
  $('developerDialog').addEventListener('close',()=>{controller?.abort();working=false;$('lessonComplete').close();});
  $('devCopy').onclick=()=>reset(copyCurrent());$('devInitial').onclick=()=>reset(initial());$('devClear').onclick=()=>reset(empty());
  $('devTurn').onchange=()=>{if(working)return;history.push(structuredClone(state));state.turn=Number($('devTurn').value);state.result='';selected=null;draw();};
  $('devUndo').onclick=()=>{if(working||!history.length)return;const previous=history.pop();reset(previous,false,true);$('devStatus').textContent='1手戻しました。';};
- $('devCollapseEarly').onchange=()=>{if(working||tutorial)return;history.push(structuredClone(state));state.paradoxAt=$('devCollapseEarly').checked?2:false;state.ply=0;state.destroyed=null;state.spawned=null;delete state.paradoxEvent;state.paradoxStarted=false;selected=null;draw();if(!state.paradoxAt)$('devStatus').textContent='デバッグの盤面崩壊をオフにしました。';};
  $('devExport').onclick=async()=>{const code=encodeBoard(state);$('devTransfer').hidden=false;$('devCode').value=code;try{await navigator.clipboard.writeText(code);$('devStatus').textContent='盤面をコピーしました。ペーストで復元できます。';}catch{$('devCode').focus();$('devCode').select();$('devStatus').textContent='盤面データを選択しました。コピーして保存できます。';}};
  $('devPaste').onclick=async()=>{$('devTransfer').hidden=false;try{$('devCode').value=await navigator.clipboard.readText();}catch{$('devCode').value='';}$('devCode').focus();$('devStatus').textContent='貼り付けた内容を「この盤面を読み込む」で反映します。';};
  $('devImport').onclick=()=>{if(working)return;try{const next=decodeBoard($('devCode').value);reset(next);$('devStatus').textContent='盤面を読み込みました。';}catch(e){$('devStatus').textContent=e.message;}};

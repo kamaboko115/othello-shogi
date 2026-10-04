@@ -80,17 +80,11 @@ test('完了案内から終了するとロビーへ戻り、最初から練習�
  get('openTutorial').onclick();assert.match(get('lessonTitle').textContent,/1 \/ /);assert.equal(get('lessonComplete').open,false);get('lessonExit').onclick();
 });
 
-test('開発者の早期崩壊は2手目から発動し、待った・オフ・チュートリアルへ漏れない',async t=>{
- t.mock.method(crypto,'getRandomValues',array=>{array.fill(76922999);return array;});
+test('開発者の練習盤は崩壊せず、待ったで盤面を戻せる',async()=>{
  const {get,clickSquare}=view();get('openDeveloper').onclick();get('devMode').value='play';
- get('devCollapseEarly').checked=true;get('devCollapseEarly').onchange();
  const count=()=>get('devBoard').children.filter(cell=>cell.children.some(el=>el.className.startsWith('piece'))).length;
- await clickSquare(54);await clickSquare(45);assert.equal(count(),40,'1手目は破壊しない');
- await clickSquare(55);await clickSquare(46);assert.equal(count(),40,'2手目は開始の予告のみ');assert.match(get('devStatus').textContent,/2手目.*崩壊/);
- await clickSquare(56);await clickSquare(47);assert.equal(count(),39,'3手目から1枚破壊');
- get('devUndo').onclick();assert.equal(count(),40,'待ったで破壊前の盤面に戻る');assert.equal(get('devCollapseEarly').checked,true);
- get('devCollapseEarly').checked=false;get('devCollapseEarly').onchange();
- await clickSquare(55);await clickSquare(46);assert.equal(count(),40,'オフにすると破壊しない');
- get('closeDeveloper').onclick();get('openTutorial').onclick();assert.match(get('lessonTitle').textContent,/1 \/ /);get('lessonExit').onclick();
- get('openDeveloper').onclick();assert.equal(get('devCollapseEarly').checked,false,'開き直すと通常の練習盤');get('closeDeveloper').onclick();
+ for(const [from,to] of [[54,45],[55,46],[56,47]]){await clickSquare(from);await clickSquare(to);assert.equal(count(),40);}
+ get('devUndo').onclick();assert.ok(get('devBoard').querySelector('[data-square="56"]').children.length);
+ assert.equal(count(),40);get('closeDeveloper').onclick();
+ get('openTutorial').onclick();assert.match(get('lessonTitle').textContent,/1 \/ /);get('lessonExit').onclick();
 });

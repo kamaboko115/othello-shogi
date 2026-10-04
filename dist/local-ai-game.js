@@ -1,3 +1,4 @@
+import {normalizeCollapseAt} from './collapse-options.js';
 import {challengeSettings,helperRemaining,recordHelperUse} from './challenge-options.js';
 import {normalizeMoveLimit} from './judge-options.js';
 import {normalizeTime,handicapOptions,applyHandicap,startClock,clockBudget,chargeClock,finishClockMove} from './match-options.js';
@@ -13,9 +14,8 @@ export const localAIStorageKey=id=>'hanten-local-ai-v1-'+id;
 export const localAIStorageWarning='ブラウザに保存できません。このページを閉じるとAI対局は失われます。';
 
 function normalizeSettings(input={}){
- if(input.paradoxAt!==undefined&&input.paradoxAt!==false&&(!Number.isInteger(input.paradoxAt)||input.paradoxAt<1||input.paradoxAt>1000))fail('崩壊開始は1〜1000手で指定してください。');
  try{normalizeTime(input.timeControl);}catch{fail('時間設定が不正です。');}
- return challengeSettings({timeControl:'none',handicap:Object.hasOwn(handicapOptions,input.handicap)?input.handicap:'none',paradoxAt:input.paradoxAt??150,moveLimit:normalizeMoveLimit(input.moveLimit),noDrops:input.noDrops===true,helperUnlimited:input.helperUnlimited===true,handicapSide:input.handicapSide==='human'?'human':'ai',aiLevel:['weak','normal','strong','expert','osesho'].includes(input.aiLevel)?input.aiLevel:'normal',thinkMs:[500,1000,3000,5000].includes(input.thinkMs)?input.thinkMs:1000});
+ return challengeSettings({timeControl:'none',handicap:Object.hasOwn(handicapOptions,input.handicap)?input.handicap:'none',paradoxAt:normalizeCollapseAt(input.paradoxAt),moveLimit:normalizeMoveLimit(input.moveLimit),noDrops:input.noDrops===true,helperUnlimited:input.helperUnlimited===true,handicapSide:input.handicapSide==='human'?'human':'ai',aiLevel:['weak','normal','strong','expert','osesho'].includes(input.aiLevel)?input.aiLevel:'normal',thinkMs:[500,1000,3000,5000].includes(input.thinkMs)?input.thinkMs:1000});
 }
 function setupState(settings){const s=initial(true);s.noDrops=!!settings.noDrops;s.moveLimit=normalizeMoveLimit(settings.moveLimit,60);s.paradoxAt=settings.paradoxAt;return s;}
 function undoIndex(data){return (data.takebacks||[]).findLastIndex(x=>x.state.turn===data.toss.hostSide);}
