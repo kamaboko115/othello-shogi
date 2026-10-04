@@ -8,3 +8,5 @@ export const helperLimit=settings=>isOseshoChallenge(settings)?(settings.helperU
 export const helperUses=data=>data?.helperUsedRound===(data?.round||1)?(data.helperUsedCount??1):0;
 export const helperRemaining=data=>Math.max(0,helperLimit(data?.settings)-helperUses(data));
 export function recordHelperUse(data){const used=helperUses(data);data.helperUsedRound=data.round||1;data.helperUsedCount=used+1;}
+
+export const allowsTakeback=data=>!(data?.kind==='ai'&&isOseshoChallenge(data.settings));

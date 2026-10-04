@@ -24,7 +24,7 @@ test('local match creation and every action match the existing server rules, for
    for(let i=0;i<6&&!local.state.result;i++)await action(local.state.turn===local.side?(i===local.side?'helper-move':'move'):'ai-move',firstMove(local.state));
    assert.equal(local.state.paradoxAt,aiLevel==='osesho'?200:2);if(aiLevel!=='osesho')assert.ok(local.logs.some(log=>log.includes('崩壊')||log.includes('降臨')));
    const resumed=createLocalAIStore({storage:disk}).read(local.room);assert.deepEqual(comparable(resumed),comparable(local));
-   await action('offer-undo');await action('resign');await action('offer-rematch');
+   if(aiLevel!=='osesho')await action('offer-undo');else{assert.equal(local.canUndo,false);for(const name of ['offer-undo','accept-undo','decline-undo']){const version=local.version;assert.throws(()=>client.action(local.room,{action:name,version}),{status:403});const response=await server(db,'/'+remote.room+'/action',{action:name,version:remote.version});assert.equal(response.status,403);assert.match(response.data.error,/待ったを使えません/);assert.deepEqual(comparable(client.read(local.room)),comparable(local));assert.equal((await server(db,'/'+remote.room)).data.version,remote.version);}}await action('resign');await action('offer-rematch');
    assert.equal(local.round,2);assert.equal(local.canUndo,false);assert.equal(local.state.ply,0);
    if(local.state.turn!==local.side)await action('ai-move',firstMove(local.state));
    await action('helper-move',firstMove(local.state));await action('offer-draw');await action('decline-rematch');await action('leave');

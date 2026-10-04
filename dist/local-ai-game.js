@@ -1,5 +1,5 @@
 import {normalizeCollapseAt} from './collapse-options.js';
-import {challengeSettings,helperRemaining,recordHelperUse} from './challenge-options.js';
+import {allowsTakeback,challengeSettings,helperRemaining,recordHelperUse} from './challenge-options.js';
 import {normalizeMoveLimit} from './judge-options.js';
 import {normalizeTime,handicapOptions,applyHandicap,startClock,clockBudget,chargeClock,finishClockMove} from './match-options.js';
 import {initial,play,collapseAfterMove,label,names,moves,arrivalSummary,paradoxSummary} from './engine.js';
@@ -40,7 +40,7 @@ export function createLocalAIStore({storage=()=>globalThis.localStorage,now=Date
   if(record.data.state.mode===false)fail('通常将棋モードは終了しました。新しい対局を作成してください。',410);
   return structuredClone(record);
  }
- function view(record){const data=structuredClone(record.data),canUndo=undoIndex(data)>=0;delete data.takebacks;delete data.replay;return {serverNow:now(),canUndo,room:record.room,seat:0,side:data.toss.hostSide,version:record.version,joined:true,expires:record.expires,...data,local:true,storageWarning:warning};}
+ function view(record){const data=structuredClone(record.data),canUndo=allowsTakeback(data)&&undoIndex(data)>=0;delete data.takebacks;delete data.replay;return {serverNow:now(),canUndo,room:record.room,seat:0,side:data.toss.hostSide,version:record.version,joined:true,expires:record.expires,...data,local:true,storageWarning:warning};}
  function toss(settings){const coins=Array.from(random(new Uint8Array(5)),n=>n%2),hostSide=coins.reduce((a,b)=>a+b,0)>=3?0:1;if(settings.aiLevel==='osesho'&&hostSide===0)return {coins:[0,0,0,0,0],originalCoins:coins,hostSide:1,intervened:true};return {coins,hostSide};}
  function freshRound(data){data.state=setupState(data.settings);data.replay=null;data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=toss(data.settings);data.round=(data.round||0)+1;applyHandicap(data.state,data.settings.handicapSide==='human'?data.toss.hostSide:1-data.toss.hostSide,data.settings.handicap);startClock(data,now());rememberReplay(data);}
  function expire(record){const data=record.data;if(!data.state.result&&data.clock&&clockBudget(data,data.state.turn,now())<=0){chargeClock(data,now());data.state.result=sideName(1-data.state.turn)+'の勝ち（時間切れ）';record.version++;save(record);return true;}return false;}
@@ -66,6 +66,7 @@ export function createLocalAIStore({storage=()=>globalThis.localStorage,now=Date
     data.closed=true;data.offer=null;data.undoOffer=null;data.rematch=null;record.version++;save(record);const final=view(record);remove(id);return final;
    }
    if(['offer-undo','accept-undo','decline-undo'].includes(body.action)){
+    if(!allowsTakeback(data))fail('対オセショ様では待ったを使えません。',403);
     if(body.action==='offer-undo'){const index=undoIndex(data);if(index<0)fail('戻せる手がありません。',409);chargeClock(data,now());rewind(data,index);if(data.clock)data.clock.since=now();}
     else if(body.action==='accept-undo')fail('相手の待った申請がありません。',409);
     else{if(!data.undoOffer)return view(record);data.undoOffer=null;}

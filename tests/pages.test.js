@@ -12,7 +12,9 @@ const output=new URL('../pages/.sites-runtime/pages/',import.meta.url);
 
 test('Pages serves the same public assets and keeps preview/server files private',async()=>{
  for(const name of [...textAssets,...binaryAssets]){
-  assert.deepEqual(await readFile(new URL(name,output)),await readFile(new URL('../dist/'+name,import.meta.url)));
+  let actual=await readFile(new URL(name,output));
+  if(name==='index.html')actual=Buffer.from(actual.toString('utf8').replace(/<meta name="app-build" content="[^"]*">/,'<meta name="app-build" content="">'));
+  assert.deepEqual(actual,await readFile(new URL('../dist/'+name,import.meta.url)));
  }
  const files=await readdir(output);
  assert.ok(!files.some(name=>/(preview|comparison|puzzles)\.html$/.test(name)||name==='server'));

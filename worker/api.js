@@ -1,6 +1,6 @@
 import {normalizeCollapseAt} from '../dist/collapse-options.js';
 import {challengeWinSchema,validChallengeWin,challengeWinCount,recordChallengeWin} from './challenge-wins.js';
-import {challengeSettings,helperRemaining,recordHelperUse} from '../dist/challenge-options.js';
+import {allowsTakeback,challengeSettings,helperRemaining,recordHelperUse} from '../dist/challenge-options.js';
 import {normalizeMoveLimit} from '../dist/judge-options.js';
 import {normalizeTime,timeOptions,handicapOptions,applyHandicap,startClock,clockBudget,chargeClock,finishClockMove} from '../dist/match-options.js';
 import {initial,play,collapseAfterMove,label,names,moves,arrivalSummary,paradoxSummary} from '../dist/engine.js';
@@ -27,7 +27,7 @@ function setupState(settings){const state=initial(true);state.noDrops=!!settings
 function remember(data){rememberReplay(data);data.takebacks||=[];data.takebacks.push({state:structuredClone(data.state),logs:[...data.logs]});if(data.takebacks.length>128)data.takebacks.shift();data.undoOffer=null;}
 function undoIndex(data,side){return (data.takebacks||[]).findLastIndex(x=>x.state.turn===side);}
 function rewind(data,index){const snapshot=data.takebacks?.[index];if(!snapshot)fail('戻せる手がありません。',409);data.state=snapshot.state;data.logs=snapshot.logs;rewindReplay(data);data.takebacks=data.takebacks.slice(0,index);data.undoOffer=null;data.offer=null;data.rematch=null;}
-const view=(row,seat)=>{const data=JSON.parse(row.data);const playerSide=seat===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0);const canUndo=undoIndex(data,playerSide)>=0;delete data.takebacks;delete data.replay;return {serverNow:Date.now(),canUndo,room:row.id,seat,side:seat===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0),version:row.version,joined:!!row.guest_hash,expires:row.expires,...data};};
+const view=(row,seat)=>{const data=JSON.parse(row.data);const playerSide=seat===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0);const canUndo=allowsTakeback(data)&&undoIndex(data,playerSide)>=0;delete data.takebacks;delete data.replay;return {serverNow:Date.now(),canUndo,room:row.id,seat,side:seat===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0),version:row.version,joined:!!row.guest_hash,expires:row.expires,...data};};
 const fail=(message,status=400)=>{throw Object.assign(new Error(message),{status});};
 // Entrypoints supply a trusted IP: CF-Connecting-IP in Workers, socket IP locally.
 // The default is for in-process callers; production requires its burst binding.
@@ -138,6 +138,7 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
   if(!Number.isInteger(body.version)||body.version!==row.version)fail('盤面が更新されています。最新の盤面で操作してください。',409);
   const data=JSON.parse(row.data),s=data.state,playingSide=side===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0);
   if(['offer-undo','accept-undo','decline-undo'].includes(body.action)){
+    if(!allowsTakeback(data))fail('対オセショ様では待ったを使えません。',403);
    if(body.action==='offer-undo'){const index=undoIndex(data,playingSide);if(index<0)fail('戻せる手がありません。',409);if(data.kind==='ai'){chargeClock(data,now);rewind(data,index);if(data.clock)data.clock.since=now;}else{if(data.undoOffer&&data.undoOffer.seat!==side)fail('相手の待ったに返答してください。',409);data.undoOffer={seat:side,index,ply:data.takebacks[index].state.ply};}}
    else if(body.action==='accept-undo'){if(!data.undoOffer||data.undoOffer.seat!==1-side)fail('相手の待った申請がありません。',409);chargeClock(data,now);rewind(data,data.undoOffer.index);if(data.clock)data.clock.since=now;}
    else{if(!data.undoOffer)return json(view(row,side));data.undoOffer=null;}

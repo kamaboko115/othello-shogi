@@ -9,12 +9,12 @@ import {localDB} from '../worker/local-db.js';
 import {createChallengeWins} from '../dist/challenge-wins.js';
 const disk=()=>{const map=new Map();return {getItem:k=>map.get(k),setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)};};
 const first=s=>[...s.board.flatMap((p,i)=>p?.side===s.turn?[i]:[]),...Object.keys(s.hands[s.turn])].flatMap(i=>moves(s,i))[0];
-test('public challenge fixes all competitive rules; three helpers survive undo/reload and reset on rematch',()=>{
+test('public challenge fixes all competitive rules; three helpers survive reload and reset on rematch',()=>{
  const storage=disk(),client=createLocalAIStore({storage,random:b=>b.fill(1)});let d=client.create({aiLevel:'osesho',thinkMs:500,noDrops:true,moveLimit:60,paradoxAt:false,handicap:'six',helperUnlimited:true});
  assert.equal(d.settings.thinkMs,5000);assert.equal(d.state.noDrops,false);assert.equal(d.state.moveLimit,false);assert.equal(d.state.paradoxAt,200);assert.equal(d.state.board.filter(Boolean).length,40);assert.equal(d.side,1);assert.deepEqual(d.settings.timeControl,{minutes:20,increment:5,byoyomi:0});
  const action=(name)=>d=client.action(d.room,{version:d.version,action:name,...(name.endsWith('move')?{move:first(d.state)}:{})});
  action('ai-move');
- for(let i=0;i<3;i++){assert.equal(helperRemaining(d),3-i);action('helper-move');action('offer-undo');d=createLocalAIStore({storage}).read(d.room);}
+ for(let i=0;i<3;i++){assert.equal(helperRemaining(d),3-i);action('helper-move');assert.equal(d.canUndo,false);assert.throws(()=>action('offer-undo'),/待ったを使えません/);action('ai-move');d=createLocalAIStore({storage}).read(d.room);}
  assert.equal(helperRemaining(d),0);assert.throws(()=>action('helper-move'),/使い切り|使い切/);
  action('resign');action('offer-rematch');assert.equal(helperRemaining(d),3);assert.equal(d.clock.remaining[1],1200000);
 });
