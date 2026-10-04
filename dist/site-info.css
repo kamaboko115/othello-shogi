@@ -1,3 +1,5 @@
+html:has(body.information-page),body.information-page{background:var(--color-paper);color:var(--color-ink);font-family:var(--font-body)}
+body.information-page header{background:var(--color-paper);color:var(--color-ink);border-color:var(--color-rule)}
 body.information-page main{display:block;max-width:760px;margin:48px auto;padding:0 24px;color:var(--color-ink)}
 .information-page article{font-size:16px;line-height:1.9}
 .information-page article h1{font-size:28px;line-height:1.5;color:var(--color-ink)}
@@ -6,3 +8,14 @@ body.information-page main{display:block;max-width:760px;margin:48px auto;paddin
 .information-page .updated{color:var(--color-muted);font-size:14px}
 .site-info-link{display:inline-block;padding:8px 0}
 @media(max-width:600px){body.information-page main{margin:24px auto}}
+
+/* Information pages must keep their heading visible on mobile too. */
+body.information-page article h1{display:block}
+.site-footer{max-width:1280px;margin:36px auto 0;padding:24px;border-top:1px solid var(--color-rule,#64796c);color:var(--color-ink,#e4ece5);font-size:14px;line-height:1.8}
+.site-footer nav{display:flex;flex-wrap:wrap;gap:8px 24px}
+.site-footer a{color:inherit;padding:8px 0;text-underline-offset:4px}
+.site-footer small{display:block;color:var(--color-muted,#b1c2b7);margin-top:10px}
+.information-page .info-list{color:inherit;font-size:inherit;line-height:inherit}
+.information-page .info-list li{margin:8px 0}
+.information-page #contact{scroll-margin-top:24px}
+@media(max-width:600px){.information-page header{height:auto;min-height:70px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px}.site-footer{margin-top:24px;padding:20px}.site-footer nav{gap:4px 20px}}
