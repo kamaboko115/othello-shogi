@@ -14,7 +14,7 @@ test('every interval has exact odds and selection includes both boundaries',()=>
   start+=weight;
  }
  assert.equal(start,paradoxTotal);for(const value of [-1,paradoxTotal,NaN,1.5])assert.throws(()=>chooseParadoxEvent(()=>value));
- for(const [kind,odds]of Object.entries({promote:90,arrival:12,warp:12,flip:20,shuffle:90,thunder:40,wind:120,windRows:120,invert:120,supply:80,extra:120,annihilate:500,dragons:300,wings:300}))assert.equal(paradoxWeights[kind]*odds,paradoxTotal);
+ for(const [kind,odds]of Object.entries({promote:90,arrival:12,warp:12,flip:20,shuffle:90,thunder:40,wind:120,windRows:120,invert:120,supply:80,extra:120,annihilate:400,dragons:300,wings:300}))assert.equal(paradoxWeights[kind]*odds,paradoxTotal);
 });
 
 test('all-promotion affects both sides but never kings, golds, hands or already promoted pieces',()=>{
@@ -133,7 +133,7 @@ test('cut-in count follows actual odds at the 1/40 and 1/120 boundaries',()=>{
  for(const kind of ['arrival','warp','flip','destroy'])assert.equal(paradoxCutinCount(kind),0);
  for(const kind of ['thunder'])assert.equal(paradoxCutinCount(kind),1);
  assert.equal(paradoxCutinCount('supply'),2);assert.equal(paradoxCutinCount('promote'),2);assert.equal(paradoxCutinCount('shuffle'),2);assert.equal(paradoxCutinCount('invert'),3);assert.equal(paradoxCutinCount('extra'),3);assert.equal(paradoxCutinCount('dragons'),4);assert.equal(paradoxCutinCount('annihilate'),5);assert.equal(paradoxCutinCount('unknown'),0);
- for(const [denominator,count]of [[39,0],[40,1],[79,1],[80,2],[119,2],[120,3],[199,3],[200,4],[499,4],[500,5],[999,5]])assert.equal(paradoxCutinCount('supply',{supply:1,rest:denominator-1}),count);
+ for(const [denominator,count]of [[39,0],[40,1],[79,1],[80,2],[119,2],[120,3],[199,3],[200,4],[299,4],[300,4],[301,5],[400,5],[499,5],[500,5],[999,5]])assert.equal(paradoxCutinCount('supply',{supply:1,rest:denominator-1}),count);
  for(const kind of ['promote','supply']){const t=paradoxEventTiming({kind});assert.deepEqual(t.cutins,['middle','upper']);assert.equal(t.totalMs,t.cutins.length*t.cutinMs+t.noticeMs+t.motionMs+t.tailMs);}
 });
 
