@@ -398,3 +398,7 @@ html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 }
 
 .paradox-thunder-cloud{position:absolute;inset:-12% -5% auto;height:30%;pointer-events:none;z-index:5;background:radial-gradient(ellipse at 25% 40%,#343f58ed,transparent 58%),radial-gradient(ellipse at 72% 40%,#45506bf2,transparent 60%);filter:drop-shadow(0 8px 12px #111b35aa)}
+
+.paradox-wind-column{position:absolute;pointer-events:none;z-index:4;border-inline:2px solid #b7fffcb3;background:repeating-linear-gradient(165deg,transparent 0 24px,#d6fffa99 26px,transparent 29px 66px),linear-gradient(90deg,transparent,#69ebdb44,transparent);background-size:100% 132px,100% 100%;box-shadow:0 0 16px #72edda55;animation:paradox-wind-flow .25s linear infinite}@keyframes paradox-wind-flow{to{background-position:0 -132px,0 0}}@media(prefers-reduced-motion:reduce){.paradox-wind-column{animation:none}}
+
+.paradox-wind-row{border-inline:0;border-block:2px solid #b7fffcb3;background:repeating-linear-gradient(75deg,transparent 0 24px,#d6fffa99 26px,transparent 29px 66px),linear-gradient(0deg,transparent,#69ebdb44,transparent);background-size:132px 100%,100% 100%;animation-name:paradox-wind-row-flow}@keyframes paradox-wind-row-flow{to{background-position:132px 0,0 0}}

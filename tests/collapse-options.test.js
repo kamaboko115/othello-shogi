@@ -40,7 +40,7 @@ test('AI settings preserve zero and unlimited through persistence and rematches'
 
 test('friend room shares zero through invitation, executes first-move collapse, and does not redraw on reads',async t=>{
  const original=crypto.getRandomValues.bind(crypto);
- t.mock.method(crypto,'getRandomValues',bytes=>bytes instanceof Uint32Array?(bytes.fill(76922999),bytes):original(bytes));
+ t.mock.method(crypto,'getRandomValues',bytes=>bytes instanceof Uint32Array?(bytes.fill(153845999),bytes):original(bytes));
  const db=localDB(),host='a'.repeat(64),guest='b'.repeat(64),invite='c'.repeat(64);
  const call=async(path,body,token=host)=>{
   const response=await api(new Request('https://test.local/api/rooms'+path,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined}),{DB:db});
