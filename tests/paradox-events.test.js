@@ -14,7 +14,7 @@ test('every interval has exact odds and selection includes both boundaries',()=>
   start+=weight;
  }
  assert.equal(start,paradoxTotal);for(const value of [-1,paradoxTotal,NaN,1.5])assert.throws(()=>chooseParadoxEvent(()=>value));
- for(const [kind,odds]of Object.entries({promote:77,arrival:12,warp:12,flip:20,shuffle:60,invert:120,supply:60,extra:120,annihilate:999,dragons:500,wings:300}))assert.equal(paradoxWeights[kind]*odds,paradoxTotal);
+ for(const [kind,odds]of Object.entries({promote:77,arrival:12,warp:12,flip:20,shuffle:60,invert:120,supply:60,extra:120,annihilate:500,dragons:300,wings:300}))assert.equal(paradoxWeights[kind]*odds,paradoxTotal);
 });
 
 test('all-promotion affects both sides but never kings, golds, hands or already promoted pieces',()=>{
@@ -133,6 +133,6 @@ test('cut-in count follows actual odds at the 1/40 and 1/120 boundaries',()=>{
  for(const kind of ['arrival','warp','flip','destroy'])assert.equal(paradoxCutinCount(kind),0);
  for(const kind of ['shuffle','promote','supply'])assert.equal(paradoxCutinCount(kind),1);
  assert.equal(paradoxCutinCount('invert'),3);assert.equal(paradoxCutinCount('extra'),3);assert.equal(paradoxCutinCount('dragons'),4);assert.equal(paradoxCutinCount('annihilate'),5);assert.equal(paradoxCutinCount('unknown'),0);
- for(const [denominator,count]of [[39,0],[40,1],[119,1],[120,3],[121,3],[499,3],[500,4],[998,4],[999,5],[1000,5]])assert.equal(paradoxCutinCount('supply',{supply:1,rest:denominator-1}),count);
+ for(const [denominator,count]of [[39,0],[40,1],[79,1],[80,2],[119,2],[120,3],[199,3],[200,4],[499,4],[500,5],[999,5]])assert.equal(paradoxCutinCount('supply',{supply:1,rest:denominator-1}),count);
  for(const kind of ['promote','supply']){const t=paradoxEventTiming({kind});assert.deepEqual(t.cutins,['middle']);assert.equal(t.totalMs,t.cutinMs+t.noticeMs+t.motionMs+t.tailMs);}
 });

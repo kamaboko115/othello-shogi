@@ -117,12 +117,12 @@ export const arrivalSummary=s=>arrivals(s).map(d=>(d.piece.side?'後手':'先手
 export const collapseTargets=s=>s.board.flatMap((p,i)=>!p?[]:Array(p.type==='K'?1:10).fill(i));
 // LCM of the configured odds: every probability is an exact integer ticket count.
 export const paradoxTotal=76923000;
-const rareOdds={arrival:12,warp:12,flip:20,shuffle:60,invert:120,promote:77,supply:60,extra:120,annihilate:999,dragons:500,wings:300};
+const rareOdds={arrival:12,warp:12,flip:20,shuffle:60,invert:120,promote:77,supply:60,extra:120,annihilate:500,dragons:300,wings:300};
 export const paradoxWeights=Object.freeze({...Object.fromEntries(Object.entries(rareOdds).map(([kind,odds])=>[kind,paradoxTotal/odds])),destroy:paradoxTotal-Object.values(rareOdds).reduce((sum,odds)=>sum+paradoxTotal/odds,0)});
 export function paradoxCutinCount(kind,weights=paradoxWeights){
  const weight=weights[kind],total=Object.values(weights).reduce((a,b)=>a+b,0);
  if(!(weight>0))return 0;
- return total>=weight*999?5:total>=weight*500?4:total>=weight*120?3:total>=weight*40?1:0;
+ return total>=weight*500?5:total>=weight*200?4:total>=weight*120?3:total>=weight*80?2:total>=weight*40?1:0;
 }
 // Shared with the clock: presentation never consumes a player's thinking time.
 export function paradoxEventTiming(event){

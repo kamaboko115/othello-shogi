@@ -39,3 +39,12 @@ test('AdSenseの所有確認タグとads.txtを配信し、実広告スクリプ
  assert.equal(text.status,200);assert.match(text.headers.get('Content-Type'),/^text\/plain/);
  assert.equal((await text.text()).trim(),'google.com, pub-1514816413848325, DIRECT, f08c47fec0942fa0');
 });
+
+
+test('searchable rules, canonical metadata and sitemap are served without exposing previews',async()=>{
+ const page=await (await request('/')).text();assert.match(page,/rel="canonical" href="https:\/\/oshogi-games.pages.dev\/"/);assert.match(page,/name="description"/);assert.match(page,/href="rules.html"/);
+ const rules=await request('/rules.html');assert.equal(rules.status,200);assert.match(await rules.text(),/王を取るか、挟めば勝ち/);
+ const sitemap=await request('/sitemap.xml');assert.match(sitemap.headers.get('Content-Type'),/application\/xml/);const xml=await sitemap.text();assert.match(xml,/rules.html/);assert.doesNotMatch(xml,/preview|fixture|#ai/);
+ const robots=await request('/robots.txt');assert.match(robots.headers.get('Content-Type'),/text\/plain/);assert.match(await robots.text(),/Sitemap: https:\/\/oshogi-games.pages.dev\/sitemap.xml/);
+ for(const file of ['launch-fixture.html','launch-fixture.js'])assert.equal((await request('/'+file)).status,404);
+});

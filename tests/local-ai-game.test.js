@@ -22,7 +22,7 @@ test('local match creation and every action match the existing server rules, for
    assert.deepEqual(comparable(local),comparable(remote));
    const action=async(name,move)=>{local=client.action(local.room,{action:name,move,version:local.version});const response=await server(db,'/'+remote.room+'/action',{action:name,move,version:remote.version});assert.equal(response.status,200,name);remote=response.data;assert.deepEqual(comparable(local),comparable(remote),name);};
    for(let i=0;i<6&&!local.state.result;i++)await action(local.state.turn===local.side?(i===local.side?'helper-move':'move'):'ai-move',firstMove(local.state));
-   assert.equal(local.state.paradoxAt,2);assert.ok(local.logs.some(log=>log.includes('崩壊')||log.includes('降臨')));
+   assert.equal(local.state.paradoxAt,aiLevel==='osesho'?200:2);if(aiLevel!=='osesho')assert.ok(local.logs.some(log=>log.includes('崩壊')||log.includes('降臨')));
    const resumed=createLocalAIStore({storage:disk}).read(local.room);assert.deepEqual(comparable(resumed),comparable(local));
    await action('offer-undo');await action('resign');await action('offer-rematch');
    assert.equal(local.round,2);assert.equal(local.canUndo,false);assert.equal(local.state.ply,0);
@@ -33,11 +33,11 @@ test('local match creation and every action match the existing server rules, for
  }
 });
 
-test('forced Osesho toss preserves the original coins and handicap applies to the requested side',()=>{
+test('forced Osesho toss preserves the original coins and fixes the challenge to even material',()=>{
  for(const handicapSide of ['human','ai']){
   const client=createLocalAIStore({storage:storage(),random:bytes=>bytes.fill(1)}),d=client.create({aiLevel:'osesho',handicap:'two',handicapSide});
   assert.equal(d.side,1);assert.equal(d.toss.intervened,true);assert.deepEqual(d.toss.originalCoins,[1,1,1,1,1]);assert.deepEqual(d.toss.coins,[0,0,0,0,0]);
-  const dropped=handicapSide==='human'?d.side:1-d.side;assert.equal(d.state.board.filter(p=>p?.side===dropped).length,18);assert.equal(d.state.board.filter(p=>p?.side===1-dropped).length,20);
+  const dropped=handicapSide==='human'?d.side:1-d.side;assert.equal(d.state.board.filter(p=>p?.side===dropped).length,20);assert.equal(d.state.board.filter(p=>p?.side===1-dropped).length,20);
  }
 });
 

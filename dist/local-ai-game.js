@@ -1,5 +1,6 @@
+import {challengeSettings,helperRemaining,recordHelperUse} from './challenge-options.js';
 import {normalizeMoveLimit} from './judge-options.js';
-import {normalizeTime,handicapOptions,applyHandicap} from './match-options.js';
+import {normalizeTime,handicapOptions,applyHandicap,startClock,clockBudget,chargeClock,finishClockMove} from './match-options.js';
 import {initial,play,collapseAfterMove,label,names,moves,arrivalSummary,paradoxSummary} from './engine.js';
 import {rememberReplay,appendReplay,rewindReplay,replayRecord} from './replay-code.js';
 
@@ -14,7 +15,7 @@ export const localAIStorageWarning='ブラウザに保存できません。こ�
 function normalizeSettings(input={}){
  if(input.paradoxAt!==undefined&&input.paradoxAt!==false&&(!Number.isInteger(input.paradoxAt)||input.paradoxAt<1||input.paradoxAt>1000))fail('崩壊開始は1〜1000手で指定してください。');
  try{normalizeTime(input.timeControl);}catch{fail('時間設定が不正です。');}
- return {timeControl:'none',handicap:Object.hasOwn(handicapOptions,input.handicap)?input.handicap:'none',paradoxAt:input.paradoxAt??150,moveLimit:normalizeMoveLimit(input.moveLimit),noDrops:input.noDrops===true,helperUnlimited:input.helperUnlimited===true,handicapSide:input.handicapSide==='human'?'human':'ai',aiLevel:['weak','normal','strong','expert','osesho'].includes(input.aiLevel)?input.aiLevel:'normal',thinkMs:[500,1000,3000,5000].includes(input.thinkMs)?input.thinkMs:1000};
+ return challengeSettings({timeControl:'none',handicap:Object.hasOwn(handicapOptions,input.handicap)?input.handicap:'none',paradoxAt:input.paradoxAt??150,moveLimit:normalizeMoveLimit(input.moveLimit),noDrops:input.noDrops===true,helperUnlimited:input.helperUnlimited===true,handicapSide:input.handicapSide==='human'?'human':'ai',aiLevel:['weak','normal','strong','expert','osesho'].includes(input.aiLevel)?input.aiLevel:'normal',thinkMs:[500,1000,3000,5000].includes(input.thinkMs)?input.thinkMs:1000});
 }
 function setupState(settings){const s=initial(true);s.noDrops=!!settings.noDrops;s.moveLimit=normalizeMoveLimit(settings.moveLimit,60);s.paradoxAt=settings.paradoxAt;return s;}
 function undoIndex(data){return (data.takebacks||[]).findLastIndex(x=>x.state.turn===data.toss.hostSide);}
@@ -41,29 +42,31 @@ export function createLocalAIStore({storage=()=>globalThis.localStorage,now=Date
  }
  function view(record){const data=structuredClone(record.data),canUndo=undoIndex(data)>=0;delete data.takebacks;delete data.replay;return {serverNow:now(),canUndo,room:record.room,seat:0,side:data.toss.hostSide,version:record.version,joined:true,expires:record.expires,...data,local:true,storageWarning:warning};}
  function toss(settings){const coins=Array.from(random(new Uint8Array(5)),n=>n%2),hostSide=coins.reduce((a,b)=>a+b,0)>=3?0:1;if(settings.aiLevel==='osesho'&&hostSide===0)return {coins:[0,0,0,0,0],originalCoins:coins,hostSide:1,intervened:true};return {coins,hostSide};}
- function freshRound(data){data.state=setupState(data.settings);data.replay=null;data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=toss(data.settings);data.round=(data.round||0)+1;applyHandicap(data.state,data.settings.handicapSide==='human'?data.toss.hostSide:1-data.toss.hostSide,data.settings.handicap);rememberReplay(data);}
+ function freshRound(data){data.state=setupState(data.settings);data.replay=null;data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=toss(data.settings);data.round=(data.round||0)+1;applyHandicap(data.state,data.settings.handicapSide==='human'?data.toss.hostSide:1-data.toss.hostSide,data.settings.handicap);startClock(data,now());rememberReplay(data);}
+ function expire(record){const data=record.data;if(!data.state.result&&data.clock&&clockBudget(data,data.state.turn,now())<=0){chargeClock(data,now());data.state.result=sideName(1-data.state.turn)+'の勝ち（時間切れ）';record.version++;save(record);return true;}return false;}
  return {
   get warning(){return warning;},
   create(input){const settings=normalizeSettings(input),id=Array.from(random(new Uint8Array(16)),x=>x.toString(16).padStart(2,'0')).join(''),data={kind:'ai',settings};freshRound(data);const record={schema:1,room:id,version:0,expires:now()+lifetime,data};save(record);return view(record);},
-  read(id){return view(readRecord(id));},
+  read(id){const record=readRecord(id);expire(record);return view(record);},
   replay(id){return replayRecord(readRecord(id).data);},
   // Legacy GET responses do not contain takebacks. Start a new undo history at
   // the imported position, retaining the board, logs, round and helper usage.
   import(viewData){
    if(viewData.kind!=='ai'||viewData.seat!==0||!validId(viewData.room)||!Number.isFinite(viewData.expires)||viewData.expires<=now()||viewData.closed)fail('AI対局の保存データを読み込めません。');
    const data={kind:'ai',settings:normalizeSettings(viewData.settings),state:structuredClone(viewData.state),logs:[...viewData.logs],offer:viewData.offer??null,undoOffer:null,rematch:viewData.rematch??null,toss:structuredClone(viewData.toss),round:viewData.round||1,takebacks:[]};
-   if(viewData.helperUsedRound!==undefined)data.helperUsedRound=viewData.helperUsedRound;
+   if(viewData.helperUsedRound!==undefined)data.helperUsedRound=viewData.helperUsedRound;if(viewData.helperUsedCount!==undefined)data.helperUsedCount=viewData.helperUsedCount;if(viewData.clock)data.clock=structuredClone(viewData.clock);else startClock(data,now());
    const record={schema:1,room:viewData.room,version:viewData.version,expires:viewData.expires,data};save(record);return view(readRecord(record.room));
   },
   action(id,body){
    const record=readRecord(id),data=record.data,s=data.state,playingSide=data.toss.hostSide;
    if(!Number.isInteger(body.version)||body.version!==record.version)fail('盤面が更新されています。最新の盤面で操作してください。',409);
+   if(expire(record)&&body.action!=='leave')return view(record);
    if(body.action==='leave'){
     if(!s.result)s.result=`${sideName(1-playingSide)}の勝ち（投了）`;
     data.closed=true;data.offer=null;data.undoOffer=null;data.rematch=null;record.version++;save(record);const final=view(record);remove(id);return final;
    }
    if(['offer-undo','accept-undo','decline-undo'].includes(body.action)){
-    if(body.action==='offer-undo')rewind(data,undoIndex(data));
+    if(body.action==='offer-undo'){const index=undoIndex(data);if(index<0)fail('戻せる手がありません。',409);chargeClock(data,now());rewind(data,index);if(data.clock)data.clock.since=now();}
     else if(body.action==='accept-undo')fail('相手の待った申請がありません。',409);
     else{if(!data.undoOffer)return view(record);data.undoOffer=null;}
    }else if(['offer-rematch','accept-rematch','decline-rematch'].includes(body.action)){
@@ -81,12 +84,12 @@ export function createLocalAIStore({storage=()=>globalThis.localStorage,now=Date
     }else if(['move','ai-move','helper-move'].includes(body.action)){
      if(body.action==='ai-move'){if(s.turn===playingSide)fail('AIの手番ではありません。',403);}
      else if(s.turn!==playingSide)fail('相手の手番です。',403);
-     if(body.action==='helper-move'&&!data.settings.helperUnlimited&&data.helperUsedRound===(data.round||1))fail('オセショ様は1局に1回だけです。',403);
+     if(body.action==='helper-move'&&helperRemaining(data)<=0)fail('この対局の代打回数を使い切りました。',403);
      const m=body.move;if(!m||!Number.isInteger(m.to)||m.to<0||m.to>80)fail('指せない手です。');
      let normalized;
      if(m.drop){if(!['R','B','G','S','N','L','P'].includes(m.drop))fail('指せない手です。');normalized={drop:m.drop,to:m.to};}
      else{if(!Number.isInteger(m.from)||m.from<0||m.from>80||typeof m.prom!=='boolean')fail('指せない手です。');normalized={from:m.from,to:m.to,prom:m.prom};}
-     try{const next=collapseAfterMove(play(s,normalized));remember(data);data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?' ／ '+arrivalSummary(next):next.paradoxEvent?' ／ '+paradoxSummary(next):''));data.state=next;appendReplay(data);if(body.action==='helper-move')data.helperUsedRound=data.round||1;data.offer=null;}catch{fail('指せない手です。');}
+     try{const next=collapseAfterMove(play(s,normalized));remember(data);chargeClock(data,now());data.logs.push(notation(s,normalized)+(next.flipped.length?` ／ ${next.flipped.length}枚反転`:'')+(next.destroyed?` ／ ${sideName(next.destroyed.piece.side)}の${label(next.destroyed.piece)}が崩壊`:next.spawned?' ／ '+arrivalSummary(next):next.paradoxEvent?' ／ '+paradoxSummary(next):''));data.state=next;appendReplay(data);if(body.action==='helper-move')recordHelperUse(data);finishClockMove(data,s.turn,now());data.offer=null;}catch{fail('指せない手です。');}
     }else if(body.action==='resign'){s.result=`${sideName(1-playingSide)}の勝ち（投了）`;data.offer=null;}
     else if(body.action==='offer-draw'){s.result='合意による引き分け';}
     else if(body.action==='accept-draw')fail('相手からの引き分け提案はありません。');

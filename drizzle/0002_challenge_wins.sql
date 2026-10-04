@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS challenge_wins (match_key TEXT PRIMARY KEY, ordinal INTEGER NOT NULL UNIQUE, created INTEGER NOT NULL);
