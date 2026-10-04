@@ -5,7 +5,7 @@ import {allowsTakeback,challengeSettings,helperRemaining,isOseshoChallenge} from
 import {runParadoxEvent} from './paradox-event.js';
 import {initMusic} from './music.js';
 import {initReplayViewer} from './replay-view.js';
-import {createRewardAds} from './reward-ad.js';
+import {createRewardAds,rewardProviderEnabled} from './reward-ad.js';
 import {createWinAdBreak} from './ad-break.js';
 import {guideHTML,initBeginnerGuide,initTutorialMenu} from './novice-guide.js';
 import {initCredits} from './credits.js';
@@ -45,6 +45,7 @@ $('retryChallengeWin').onclick=()=>{challengeReportKey='';showChallengeVictory(o
 const winAds=createWinAdBreak();
 const music=initMusic(document);
 const rewardAds=createRewardAds({pause:()=>music.pause(),resume:()=>music.resume()});
+if(!rewardProviderEnabled&&!['localhost','127.0.0.1','::1','[::1]'].includes(location.hostname)){$('helperAd').disabled=true;$('helperAd').textContent='広告準備中';}
 const statusPanel=document.querySelector('.status'),statusParent=statusPanel.parentElement,statusNext=statusPanel.nextSibling;
 let comboActive=false,comboPreparing=false,comboController=null;
 function cancelCombo(){comboController?.abort();comboController=null;comboActive=false;comboPreparing=false;cancelEffects();}
