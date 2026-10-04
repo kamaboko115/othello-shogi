@@ -12,7 +12,7 @@ ${lineDiagram('multiple','まとめてはさむ',[[0,0,true],[1,1],[2,1],[3,1],[
 <figure data-example="eight-directions">${svg('中央に黒を置くと、縦・横・斜めの8方向それぞれで白1枚を黒ではさめます。',5,disc(2,2,0,true)+dirs.map(([x,y])=>disc(2+x,2+y,1)+disc(2+2*x,2+2*y,0)).join(''))}<figcaption><strong>縦・横・斜めの8方向</strong> この例では、一手で8枚を黒に変えられます。</figcaption></figure>
 ${lineDiagram('empty-gap','空きマスがあると失敗',[[0,0,true],[1,1],[3,0]],'黒・白・空き・黒。途中が空いているので、白は変わりません。この方向だけでは石を置けません。')}
 </div><p>少なくとも1方向ではさめる場所にだけ置けます。置ける場所がないときはパス。両者とも置けなくなると終了し、石の数が多い側の勝ちです。同数なら引き分けです。</p></section>
-<section class="guide-card guide-variant"><h3>オセロ将棋では？</h3><p>石を置く代わりに、将棋の駒を<strong>移動するか、持ち駒を打つ</strong>ことで、はさむ端を作ります。動かした駒・打った駒と別の味方の駒で、連続した敵の駒をはさむと寝返ります。</p><p>8方向を一度に調べます。空きマスで途切れると寝返りません。寝返った駒の<strong>位置と成り状態はそのまま</strong>で、向きと味方・敵だけが変わります。はさめない手も指せます。</p><p>普通のオセロのパスや終了条件は使いません。王を取る・はさむと勝ち。オセロジャッジが有効なら、設定した手で盤上の駒数を比べます（持ち駒は数えません）。</p></section>`;
+<section class="guide-card guide-variant"><h3>オセロ将棋では？</h3><p>石を置く代わりに、将棋の駒を<strong>移動するか、持ち駒を打つ</strong>ことで、はさむ端を作ります。動かした駒・打った駒と別の味方の駒で、連続した敵の駒をはさむと寝返ります。</p><p>8方向を一度に調べます。空きマスで途切れると寝返りません。寝返った駒の<strong>位置と成り状態はそのまま</strong>で、向きと味方・敵だけが変わります。はさめない手も指せます。</p><p>普通のオセロのパスや終了条件は使いません。王を取る・はさむと勝ち。盤面崩壊が有効なら、設定した手数を超えると駒の破壊などの特殊効果が起こります。</p></section>`;
 function arrow(dx,dy,long=false,jump=false){
  const x=100+dx*40,y=100+dy*40,angle=Math.atan2(dy,dx),endX=x-Math.cos(angle)*7,endY=y-Math.sin(angle)*7;
  const p=(a,r)=>`${(endX-Math.cos(a)*r).toFixed(2)},${(endY-Math.sin(a)*r).toFixed(2)}`;
