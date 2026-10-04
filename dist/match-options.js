@@ -58,8 +58,9 @@ export function finishClockMove(data,mover,now){
 // Sequential presentation stages must all finish before the next clock runs.
 // These are conservative upper bounds, shared by the server and local AI store.
 export function movePresentationAllowance(previous,next){
- const played=beforeParadox(next),[from,to]=next.last||[],piece=played.board[to],old=previous?.board[from];
- const drop=from===null||from===-1||from===undefined;
+ // Drops record only their destination; board moves record [from, to].
+ const played=beforeParadox(next),last=next.last||[],drop=last.length===1||last[0]===null||last[0]===-1||last[0]===undefined,to=last.at(-1),from=drop?undefined:last[0];
+ const piece=played.board[to]??(next.destroyed&&next.destroyed.square===to?next.destroyed.piece:null),old=previous?.board[from];
  let delay=drop?(piece&&['R','B'].includes(piece.type)?650:280):560;
  if(!drop&&piece?.prom&&!old?.prom)delay+=['R','B'].includes(piece.type)?980:400;
  const victim=previous?.board[to];
