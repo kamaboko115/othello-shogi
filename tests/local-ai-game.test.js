@@ -61,7 +61,7 @@ test('unlimited helper works repeatedly and usage resets by round while ended ma
 test('seven-day expiry, validation and browser storage denial never fall back to a server',()=>{
  let now=1000;const disk=storage(),client=createLocalAIStore({storage:disk,now:()=>now});const d=client.create({});assert.equal(d.expires,1000+7*86400000);
  now=d.expires;assert.throws(()=>createLocalAIStore({storage:disk,now:()=>now}).read(d.room),{status:404});assert.equal(disk.getItem(localAIStorageKey(d.room)),null);
- for(const settings of [{paradoxAt:0},{paradoxAt:1001},{moveLimit:42},{timeControl:{minutes:-1}}])assert.throws(()=>client.create(settings));
+ for(const settings of [{paradoxAt:-1},{paradoxAt:1001},{moveLimit:42},{timeControl:{minutes:-1}}])assert.throws(()=>client.create(settings));
  const denied=createLocalAIStore({storage:()=>{throw Error('disabled');},random:bytes=>bytes.fill(1)});let local=denied.create({});assert.equal(local.storageWarning,localAIStorageWarning);
  local=denied.action(local.room,{action:'move',version:local.version,move:firstMove(local.state)});assert.equal(denied.read(local.room).state.ply,1);
  local=denied.action(local.room,{action:'resign',version:local.version});assert.ok(local.state.result);local=denied.action(local.room,{action:'leave',version:local.version});assert.equal(local.closed,true);assert.throws(()=>denied.read(local.room),{status:404});

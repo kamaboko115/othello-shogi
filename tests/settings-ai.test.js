@@ -39,7 +39,7 @@ test('friend rooms reject client AI moves',async()=>{
 
 
 test('崩壊設定の検証・双方同期・再取得で再抽選しない・待った復元',async t=>{const random=crypto.getRandomValues.bind(crypto);t.mock.method(crypto,'getRandomValues',array=>array instanceof Uint32Array?(array.fill(1),array):random(array));const db=localDB();try{
- assert.equal((await call(db,'',{invite,settings:{paradoxAt:0}})).status,400);
+ assert.equal((await call(db,'',{invite,settings:{paradoxAt:-1}})).status,400);
  const d=(await call(db,'',{invite,settings:{paradoxAt:1,moveLimit:false}})).data,path='/'+d.room;
  const j=(await call(db,path+'/join',{invite},guest)).data;const first=j.side===0?guest:host,second=first===host?guest:host;
  const a=(await call(db,path+'/action',{action:'move',version:j.version,move:{from:54,to:45,prom:false}},first)).data;
