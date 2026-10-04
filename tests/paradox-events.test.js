@@ -14,7 +14,7 @@ test('every interval has exact odds and selection includes both boundaries',()=>
   start+=weight;
  }
  assert.equal(start,paradoxTotal);for(const value of [-1,paradoxTotal,NaN,1.5])assert.throws(()=>chooseParadoxEvent(()=>value));
- for(const [kind,odds]of Object.entries({promote:90,arrival:12,warp:12,flip:20,shuffle:90,thunder:60,wind:120,invert:120,supply:60,extra:120,annihilate:500,dragons:300,wings:300}))assert.equal(paradoxWeights[kind]*odds,paradoxTotal);
+ for(const [kind,odds]of Object.entries({promote:90,arrival:12,warp:12,flip:20,shuffle:90,thunder:40,wind:120,windRows:120,invert:120,supply:80,extra:120,annihilate:500,dragons:300,wings:300}))assert.equal(paradoxWeights[kind]*odds,paradoxTotal);
 });
 
 test('all-promotion affects both sides but never kings, golds, hands or already promoted pieces',()=>{
@@ -131,10 +131,10 @@ test('supply adds seven types only to the mover hand, including either side and 
 
 test('cut-in count follows actual odds at the 1/40 and 1/120 boundaries',()=>{
  for(const kind of ['arrival','warp','flip','destroy'])assert.equal(paradoxCutinCount(kind),0);
- for(const kind of ['thunder','supply'])assert.equal(paradoxCutinCount(kind),1);
- assert.equal(paradoxCutinCount('promote'),2);assert.equal(paradoxCutinCount('shuffle'),2);assert.equal(paradoxCutinCount('invert'),3);assert.equal(paradoxCutinCount('extra'),3);assert.equal(paradoxCutinCount('dragons'),4);assert.equal(paradoxCutinCount('annihilate'),5);assert.equal(paradoxCutinCount('unknown'),0);
+ for(const kind of ['thunder'])assert.equal(paradoxCutinCount(kind),1);
+ assert.equal(paradoxCutinCount('supply'),2);assert.equal(paradoxCutinCount('promote'),2);assert.equal(paradoxCutinCount('shuffle'),2);assert.equal(paradoxCutinCount('invert'),3);assert.equal(paradoxCutinCount('extra'),3);assert.equal(paradoxCutinCount('dragons'),4);assert.equal(paradoxCutinCount('annihilate'),5);assert.equal(paradoxCutinCount('unknown'),0);
  for(const [denominator,count]of [[39,0],[40,1],[79,1],[80,2],[119,2],[120,3],[199,3],[200,4],[499,4],[500,5],[999,5]])assert.equal(paradoxCutinCount('supply',{supply:1,rest:denominator-1}),count);
- for(const kind of ['promote','supply']){const t=paradoxEventTiming({kind});assert.deepEqual(t.cutins,kind==='promote'?['middle','upper']:['middle']);assert.equal(t.totalMs,t.cutins.length*t.cutinMs+t.noticeMs+t.motionMs+t.tailMs);}
+ for(const kind of ['promote','supply']){const t=paradoxEventTiming({kind});assert.deepEqual(t.cutins,['middle','upper']);assert.equal(t.totalMs,t.cutins.length*t.cutinMs+t.noticeMs+t.motionMs+t.tailMs);}
 });
 
 for(const count of [0,2,5,8])test(`thunder destroys up to five non-kings across both sides (${count} available)`,()=>{
@@ -154,15 +154,15 @@ for(const count of [0,2,5,8])test(`thunder destroys up to five non-kings across 
  finishClockMove(base,0,0);finishClockMove(event,0,0);assert.equal(event.clock.since-base.clock.since,120+paradoxEventTiming(s.paradoxEvent).totalMs);
 });
 
-test('wind selects each possible adjacent three-column band and preserves both kings and hands',()=>{
+for(const kind of ['wind','windRows'])test(kind+' selects each adjacent band and preserves kings and hands',()=>{
  for(let start=0;start<7;start++){
   const s=initial();s.ply=151;s.hands[0].R=1;s.board[4].wings=true;const old=structuredClone(s);
-  applyParadoxEvent(s,'wind',n=>{assert.equal(n,7);return start;});
-  assert.deepEqual(s.paradoxEvent.columns,[start,start+1,start+2]);
-  s.board.forEach((p,i)=>assert.deepEqual(p,old.board[i]?.type!=='K'&&i%9>=start&&i%9<=start+2?null:old.board[i]));
+  applyParadoxEvent(s,kind,n=>{assert.equal(n,7);return start;});
+  const key=kind==='windRows'?'rows':'columns',bandOf=i=>kind==='windRows'?Math.floor(i/9):i%9;assert.deepEqual(s.paradoxEvent[key],[start,start+1,start+2]);
+  s.board.forEach((p,i)=>assert.deepEqual(p,old.board[i]?.type!=='K'&&bandOf(i)>=start&&bandOf(i)<=start+2?null:old.board[i]));
   assert.deepEqual(s.hands,old.hands);assert.equal(s.turn,old.turn);assert.equal(s.result,'');
   const frame=packReplayState(s),restored=unpackReplayState(frame);assert.deepEqual(restored.paradoxEvent,s.paradoxEvent);assert.deepEqual(beforeParadox(restored).board,old.board);
-  for(const columns of [[0,2,4],[7,8,9],[0,0,1],[0,1]])assert.throws(()=>unpackReplayState({...frame,e:{...frame.e,columns}}));
+  for(const columns of [[0,2,4],[7,8,9],[0,0,1],[0,1]])assert.throws(()=>unpackReplayState({...frame,e:{...frame.e,[key]:columns}}));
  }
  assert.equal(paradoxCutinCount('wind'),3);
 });
@@ -172,4 +172,14 @@ test('wind on a king-only board completes without destroying or moving kings',()
  assert.deepEqual(unpackReplayState(packReplayState(s)).paradoxEvent,s.paradoxEvent);
  const base={settings:{timeControl:'none'},clock:{remaining:[300000,300000]},state:old},event=structuredClone(base);event.state=s;
  finishClockMove(base,0,0);finishClockMove(event,0,0);assert.equal(event.clock.since-base.clock.since,120+paradoxEventTiming(s.paradoxEvent).totalMs);
+});
+
+test('one cut-in remains 650ms and two through five share a 1300ms total budget',()=>{
+ for(const [kind,count]of [['thunder',1],['promote',2],['windRows',3],['dragons',4],['annihilate',5]]){
+  const e={kind,pieces:[],squares:[]},t=paradoxEventTiming(e);assert.equal(t.cutins.length,count);
+  assert.ok(Math.abs(t.cutinMs*count-(count===1?650:1300))<.001);
+  assert.equal(t.totalMs,t.cutinMs*count+t.noticeMs+t.motionMs+t.tailMs);
+  const base={settings:{timeControl:'none'},clock:{remaining:[300000,300000]},state:active()},event=structuredClone(base);event.state.paradoxEvent=e;
+  finishClockMove(base,0,0);finishClockMove(event,0,0);assert.equal(event.clock.since-base.clock.since,120+t.totalMs);
+ }
 });

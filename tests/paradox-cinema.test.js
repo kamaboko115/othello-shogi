@@ -58,14 +58,14 @@ test('supply presents seven pieces at the mover tray and cleans up',async t=>{
  applyParadoxEvent(state,'supply',()=>0);const saved=structuredClone(state);let done=false;
  const task=runParadoxEvent(board,state,0).then(()=>done=true);
  for(let i=0;i<100&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
- await task;assert.equal(animations.filter(a=>a.options.duration!==650).length,7);assert.equal(animations.filter(a=>a.options.duration===650).length,1);assert.ok(animations.every(a=>a.cancelled));assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);
+ await task;assert.equal(animations.filter(a=>a.options.duration!==650).length,7);assert.equal(animations.filter(a=>a.options.duration===650).length,2);assert.ok(animations.every(a=>a.cancelled));assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);
 });
 
-for(const [kind,count]of [['wind',3],['thunder',1],['extra',3],['annihilate',5],['dragons',4],['wings',4]])test(kind+' plays the configured cut-ins and leaves no overlays or modified authoritative state',async t=>{
+for(const [kind,count]of [['promote',2],['windRows',3],['wind',3],['thunder',1],['extra',3],['annihilate',5],['dragons',4],['wings',4]])test(kind+' plays the configured cut-ins and leaves no overlays or modified authoritative state',async t=>{
  t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});const {board,animations,cutins}=view(),state=initial();applyParadoxEvent(state,kind,()=>0);const saved=structuredClone(state);let done=false;
  const task=runParadoxEvent(board,state,0).then(()=>done=true);
  for(let i=0;i<160&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
- await task;assert.equal(cutins.length,count);assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);assert.ok(animations.every(a=>a.cancelled));
+ await task;assert.equal(cutins.length,count);assert.ok(Math.abs(animations.slice(0,count).reduce((sum,a)=>sum+a.options.duration,0)-(count===1?650:1300))<.001);assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);assert.ok(animations.every(a=>a.cancelled));
 });
 
 test('rebirth explodes the occupant, restores the king visually and cleans up on abort',async t=>{
@@ -102,9 +102,9 @@ for(const reduced of [false,true])test(`empty thunder announces then shows no li
  await task;assert.equal(document.body.children.length,0);assert.ok(animations.every(a=>a.options.duration===650));
 });
 
-for(const reduced of [false,true])test(`wind animation removes only selected non-kings and cleans up (reduced: ${reduced})`,async t=>{
+for(const kind of ['wind','windRows'])for(const reduced of [false,true])test(`${kind} animation removes only selected non-kings and cleans up (reduced: ${reduced})`,async t=>{
  t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});t.mock.method(globalThis,'matchMedia',()=>({matches:reduced}));
- const {board}=view(),state=initial();applyParadoxEvent(state,'wind',()=>3);const saved=structuredClone(state),controller=new AbortController();let done=false;
+ const {board}=view(),state=initial();applyParadoxEvent(state,kind,()=>3);const saved=structuredClone(state),controller=new AbortController();let done=false;
  const task=runParadoxEvent(board,state,0,controller.signal).then(()=>done=true);
  const tokens=document.body.children[0].children[0].children;
  for(let i=0;i<120&&!done;i++){t.mock.timers.tick(50);await Promise.resolve();await Promise.resolve();}
