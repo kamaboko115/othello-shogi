@@ -30,7 +30,7 @@ export function unpackReplayState(frame){
  }
  if(frame.e!==undefined){
   const e=frame.e,validSquare=i=>Number.isInteger(i)&&i>=0&&i<81;
-  if(!e||!['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
+  if(!e||!['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth','thunder'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
   if(e.kind==='wings'){
    if(!validSquare(e.square)||s.board[e.square]?.type!=='K'||s.board[e.square].side!==e.side||!s.board[e.square].wings||typeof e.wasWinged!=='boolean')bad();
    s.paradoxEvent={kind:e.kind,side:e.side,square:e.square,wasWinged:e.wasWinged};
@@ -45,11 +45,11 @@ export function unpackReplayState(frame){
    });s.paradoxEvent={kind:e.kind,entries};
   }else if(e.kind==='extra'){
    if(e.side!==s.turn)bad();s.paradoxEvent={kind:e.kind,side:e.side};
-  }else if(e.kind==='annihilate'||e.kind==='dragons'){
-   if(e.side!==1-s.turn||!Array.isArray(e.pieces)||e.pieces.length>81||new Set(e.pieces.map(d=>d?.square)).size!==e.pieces.length)bad();
+  }else if(e.kind==='annihilate'||e.kind==='dragons'||e.kind==='thunder'){
+   if(e.side!==1-s.turn||!Array.isArray(e.pieces)||e.pieces.length>(e.kind==='thunder'?5:81)||new Set(e.pieces.map(d=>d?.square)).size!==e.pieces.length)bad();
    const pieces=e.pieces.map(d=>{
-    const p=d?.piece;if(!validSquare(d?.square)||!p||!handTypes.includes(p.type)||p.type.length!==1||typeof p.prom!=='boolean'||p.type==='G'&&p.prom||p.side!==(e.kind==='annihilate'?1-e.side:e.side))bad();
-    const now=s.board[d.square];if(e.kind==='annihilate'?now!==null:now?.type!=='R'||!now.prom||now.side!==e.side)bad();
+    const p=d?.piece;if(!validSquare(d?.square)||!p||!handTypes.includes(p.type)||p.type.length!==1||typeof p.prom!=='boolean'||p.type==='G'&&p.prom||(e.kind==='thunder'?![0,1].includes(p.side):p.side!==(e.kind==='annihilate'?1-e.side:e.side)))bad();
+    const now=s.board[d.square];if(e.kind!=='dragons'?now!==null:now?.type!=='R'||!now.prom||now.side!==e.side)bad();
     return {square:d.square,piece:{type:p.type,side:p.side,prom:p.prom}};
    });s.paradoxEvent={kind:e.kind,side:e.side,pieces};
   }else if(e.kind==='supply'){

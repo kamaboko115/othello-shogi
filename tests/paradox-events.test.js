@@ -14,7 +14,7 @@ test('every interval has exact odds and selection includes both boundaries',()=>
   start+=weight;
  }
  assert.equal(start,paradoxTotal);for(const value of [-1,paradoxTotal,NaN,1.5])assert.throws(()=>chooseParadoxEvent(()=>value));
- for(const [kind,odds]of Object.entries({promote:77,arrival:12,warp:12,flip:20,shuffle:60,invert:120,supply:60,extra:120,annihilate:500,dragons:300,wings:300}))assert.equal(paradoxWeights[kind]*odds,paradoxTotal);
+ for(const [kind,odds]of Object.entries({promote:77,arrival:12,warp:12,flip:20,shuffle:90,thunder:60,invert:120,supply:60,extra:120,annihilate:500,dragons:300,wings:300}))assert.equal(paradoxWeights[kind]*odds,paradoxTotal);
 });
 
 test('all-promotion affects both sides but never kings, golds, hands or already promoted pieces',()=>{
@@ -100,7 +100,7 @@ test('cinematic schedules match the requested durations and clock allowance',()=
   const e={kind,...(['flip','invert','promote'].includes(kind)?{squares:[1,2,3,4,5]}:{moves:[{from:9,to:4}]})},timing=paradoxEventTiming(e);
   const base={settings:{timeControl:'none'},clock:{remaining:[300000,300000]},state:active()},event=structuredClone(base);
   event.state.paradoxEvent=e;finishClockMove(base,0,0);finishClockMove(event,0,0);assert.equal(event.clock.since-base.clock.since,120+timing.totalMs);
-  if(kind==='shuffle'){assert.equal(timing.tailMs,1500);assert.ok(timing.motionMs<=3000);assert.deepEqual(timing.cutins,['middle']);assert.ok(timing.noticeMs>=1500);}
+  if(kind==='shuffle'){assert.equal(timing.tailMs,1500);assert.ok(timing.motionMs<=3000);assert.deepEqual(timing.cutins,['middle','upper']);assert.ok(timing.noticeMs>=1500);}
   if(kind==='invert'){assert.equal(timing.flipMs,4000);assert.deepEqual(timing.cutins,['middle','upper','lower']);}
   if(kind==='flip')assert.ok(timing.flipMs>=1000);
  }
@@ -131,8 +131,25 @@ test('supply adds seven types only to the mover hand, including either side and 
 
 test('cut-in count follows actual odds at the 1/40 and 1/120 boundaries',()=>{
  for(const kind of ['arrival','warp','flip','destroy'])assert.equal(paradoxCutinCount(kind),0);
- for(const kind of ['shuffle','promote','supply'])assert.equal(paradoxCutinCount(kind),1);
- assert.equal(paradoxCutinCount('invert'),3);assert.equal(paradoxCutinCount('extra'),3);assert.equal(paradoxCutinCount('dragons'),4);assert.equal(paradoxCutinCount('annihilate'),5);assert.equal(paradoxCutinCount('unknown'),0);
+ for(const kind of ['thunder','promote','supply'])assert.equal(paradoxCutinCount(kind),1);
+ assert.equal(paradoxCutinCount('shuffle'),2);assert.equal(paradoxCutinCount('invert'),3);assert.equal(paradoxCutinCount('extra'),3);assert.equal(paradoxCutinCount('dragons'),4);assert.equal(paradoxCutinCount('annihilate'),5);assert.equal(paradoxCutinCount('unknown'),0);
  for(const [denominator,count]of [[39,0],[40,1],[79,1],[80,2],[119,2],[120,3],[199,3],[200,4],[499,4],[500,5],[999,5]])assert.equal(paradoxCutinCount('supply',{supply:1,rest:denominator-1}),count);
  for(const kind of ['promote','supply']){const t=paradoxEventTiming({kind});assert.deepEqual(t.cutins,['middle']);assert.equal(t.totalMs,t.cutinMs+t.noticeMs+t.motionMs+t.tailMs);}
+});
+
+for(const count of [0,2,5,8])test(`thunder destroys up to five non-kings across both sides (${count} available)`,()=>{
+ const s=empty();s.turn=1;s.ply=151;s.hands[0].R=2;s.hands[1].P=3;
+ s.board[4]={type:'K',side:1,prom:false,wings:true};s.board[76]={type:'K',side:0,prom:false};
+ for(let i=0;i<count;i++)s.board[30+i]={type:i%2?'R':'P',side:i%2,prom:i%2===1};
+ const old=structuredClone(s);applyParadoxEvent(s,'thunder',n=>n-1);
+ assert.equal(s.paradoxEvent.pieces.length,Math.min(5,count));assert.equal(new Set(s.paradoxEvent.pieces.map(d=>d.square)).size,Math.min(5,count));
+ assert.deepEqual(s.board[4],old.board[4]);assert.deepEqual(s.board[76],old.board[76]);
+ assert.equal(s.board.filter(Boolean).length,2+Math.max(0,count-5));assert.deepEqual(s.hands,old.hands);assert.equal(s.turn,old.turn);assert.equal(s.result,'');
+ if(count>1)assert.equal(new Set(s.paradoxEvent.pieces.map(d=>d.piece.side)).size,2);
+ const restored=unpackReplayState(packReplayState(s));assert.deepEqual(restored.paradoxEvent,s.paradoxEvent);assert.deepEqual(beforeParadox(restored).board,old.board);
+ if(!count)assert.match(paradoxSummary(s),/しかし雷は落ちなかった/);
+ const frame=packReplayState(s);
+ for(const pieces of [[{square:4,piece:old.board[4]}],Array(6).fill({square:20,piece:{type:'P',side:0,prom:false}}),[{square:20,piece:{type:'P',side:2,prom:false}}]])assert.throws(()=>unpackReplayState({...frame,e:{kind:'thunder',side:0,pieces}}));
+ const base={settings:{timeControl:'none'},clock:{remaining:[300000,300000]},state:old},event=structuredClone(base);event.state=s;
+ finishClockMove(base,0,0);finishClockMove(event,0,0);assert.equal(event.clock.since-base.clock.since,120+paradoxEventTiming(s.paradoxEvent).totalMs);
 });
