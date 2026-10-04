@@ -237,7 +237,10 @@ export function playParadoxRareSound(kind){
   g.gain.setValueAtTime(0,at+start);g.gain.linearRampToValueAtTime(volume,at+start+.008);g.gain.exponentialRampToValueAtTime(.0001,at+start+length);
   o.connect(g);g.connect(master);o.start(at+start);o.stop(at+start+length+.01);nodes.push(o,g);sources.push(o);
  };
- if(kind==='extra'){
+ if(kind==='wings'||kind==='rebirth'){
+  if(kind==='rebirth'){note(110,0,.5,.5,'triangle',35);note(1900,0,.25,.15,'triangle',120);}
+  for(const [i,f]of [659,880,1109,1319,1760,2217].entries())note(f,(kind==='rebirth'?.4:0)+i*.09,1.15,.2/(1+i*.2));
+ }else if(kind==='extra'){
   note(480,0,.15,.35,'sine',2200);for(const [i,f]of [1319,1976,2637,3951].entries())note(f,.08+i*.035,.8,.2/(1+i*.25));
  }else if(kind==='annihilate'){
   note(2100,0,.36,.18,'triangle',180);note(95,.38,.8,.6,'triangle',35);for(const [i,f]of [330,551,873].entries())note(f,.4+i*.09,.55,.11,'triangle',f*.4);

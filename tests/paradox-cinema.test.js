@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initial,applyParadoxEvent} from '../dist/engine.js';
+import {initial,applyParadoxEvent,empty,play} from '../dist/engine.js';
 globalThis.Audio=class{addEventListener(){}load(){}play(){return Promise.resolve();}};
 globalThis.window={addEventListener(){},removeEventListener(){}};
 globalThis.matchMedia=()=>({matches:false});
@@ -61,9 +61,16 @@ test('supply presents seven pieces at the mover tray and cleans up',async t=>{
  await task;assert.equal(animations.filter(a=>a.options.duration!==650).length,7);assert.equal(animations.filter(a=>a.options.duration===650).length,1);assert.ok(animations.every(a=>a.cancelled));assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);
 });
 
-for(const [kind,count]of [['extra',3],['annihilate',5],['dragons',4]])test(kind+' plays the configured cut-ins and leaves no overlays or modified authoritative state',async t=>{
+for(const [kind,count]of [['extra',3],['annihilate',5],['dragons',4],['wings',3]])test(kind+' plays the configured cut-ins and leaves no overlays or modified authoritative state',async t=>{
  t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});const {board,animations,cutins}=view(),state=initial();applyParadoxEvent(state,kind,()=>0);const saved=structuredClone(state);let done=false;
  const task=runParadoxEvent(board,state,0).then(()=>done=true);
  for(let i=0;i<160&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();}
  await task;assert.equal(cutins.length,count);assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);assert.ok(animations.every(a=>a.cancelled));
+});
+
+test('rebirth explodes the occupant, restores the king visually and cleans up on abort',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date'],now:1000});
+ for(const abort of [false,true]){const {board,animations}=view(),s=empty();s.moveLimit=false;s.board[4]={type:'K',side:1,prom:false,wings:true};s.board[13]={type:'R',side:0,prom:false};s.board[76]={type:'K',side:0,prom:false};const state=play(s,{from:13,to:4,prom:false}),saved=structuredClone(state),controller=new AbortController();let done=false;const task=runParadoxEvent(board,state,0,controller.signal).then(()=>done=true);
+ for(let i=0;i<80&&!done;i++){t.mock.timers.tick(100);await Promise.resolve();await Promise.resolve();if(abort&&i===5)controller.abort();}
+ await task;assert.deepEqual(state,saved);assert.equal(document.body.children.length,0);assert.equal(board.classes.has('paradox-cinema-hidden'),false);assert.ok(animations.every(a=>a.cancelled));}
 });

@@ -1,3 +1,4 @@
+import {raw} from './engine.js';
 import {adjudicationLimit} from './judge-options.js';
 // Othello-shogi search uses the same rules as engine.js, with reversible moves.
 // Piece codes: type (1..8), promoted (16), side (32). Zero is an empty square.
@@ -53,7 +54,7 @@ export class SearchPosition {
   s.board.forEach((p,i)=>{if(p)this.set(i,TYPES.indexOf(p.type)|(p.prom?16:0)|(p.side<<5));});
   for(let n=0;n<2;n++)for(let t=1;t<=7;t++)this.hand(n,t,s.hands[n][TYPES[t]]||0);
   if(this.turn){this.hash^=z1[SIDE_HASH];this.lock^=z2[SIDE_HASH];}
-  this.noDrops=!!s.noDrops;
+  this.noDrops=!!s.noDrops;this.wings=0;for(const p of s.board)if(p?.wings)this.wings|=1<<p.side;this.hash^=Math.imul(this.wings,0x51a92d7b);this.lock^=Math.imul(this.wings,0x74dc6193);
  }
  set(sq,p){
   const old=this.board[sq];
@@ -66,6 +67,18 @@ export class SearchPosition {
   this.hash^=handHash(z1,index,old)^handHash(z1,index,amount);this.lock^=handHash(z2,index,old)^handHash(z2,index,amount);this.hands[index]=amount;
  }
  make(m){
+  // Rare winged positions share the authoritative revival/collision rules.
+  // Ordinary positions retain the fast reversible path.
+  if(this.wings){
+   const saved={slow:true,board:this.board.slice(),hands:this.hands.slice(),kings:this.kings.slice(),count:this.count.slice(),material:this.material.slice(),wings:this.wings,hash:this.hash,lock:this.lock,turn:this.turn,ply:this.ply};this.stack.push(saved);
+   const state={board:Array.from(this.board,p=>p?{type:TYPES[p&15],prom:!!(p&16),side:p>>5,...((p&15)===8&&(this.wings&(1<<(p>>5)))?{wings:true}:{})}:null),hands:[0,1].map(n=>Object.fromEntries(TYPES.slice(1,8).map((t,i)=>[t,this.hands[n*8+i+1]]))),turn:this.turn,ply:this.ply,mode:this.mode};
+   const next=raw(state,objectMove(m));
+   this.hash^=Math.imul(this.wings,0x51a92d7b);this.lock^=Math.imul(this.wings,0x74dc6193);this.wings=0;
+   next.board.forEach((p,i)=>{this.set(i,p?TYPES.indexOf(p.type)|(p.prom?16:0)|(p.side<<5):0);if(p?.wings)this.wings|=1<<p.side;});
+   for(let n=0;n<2;n++)for(let t=1;t<=7;t++)this.hand(n,t,next.hands[n][TYPES[t]]||0);
+   this.kings[0]=next.board.findIndex(p=>p?.type==='K'&&p.side===0);this.kings[1]=next.board.findIndex(p=>p?.type==='K'&&p.side===1);
+   this.hash^=Math.imul(this.wings,0x51a92d7b);this.lock^=Math.imul(this.wings,0x74dc6193);this.turn=next.turn;this.ply=next.ply;this.hash^=z1[SIDE_HASH];this.lock^=z2[SIDE_HASH];return;
+  }
   const to=m&127,from=m>>7&127,n=this.turn,board=this.board,captured=board[to];
   const u={m,captured,piece:from<81?board[from]:0,flips:[],k0:this.kings[0],k1:this.kings[1]};this.stack.push(u);
   if(from>=81){const t=from-80;this.hand(n,t,this.hands[n*8+t]-1);this.set(to,t|(n<<5));}
@@ -82,7 +95,7 @@ export class SearchPosition {
   this.turn^=1;this.ply++;this.hash^=z1[SIDE_HASH];this.lock^=z2[SIDE_HASH];
  }
  unmake(){
-  const u=this.stack.pop(),m=u.m,to=m&127,from=m>>7&127;this.turn^=1;this.ply--;
+  const u=this.stack.pop();if(u.slow){for(const k of ['board','hands','kings','count','material','wings','hash','lock','turn','ply'])this[k]=u[k];return;}const m=u.m,to=m&127,from=m>>7&127;this.turn^=1;this.ply--;
   this.hash^=z1[SIDE_HASH];this.lock^=z2[SIDE_HASH];
   for(const sq of u.flips)this.set(sq,this.board[sq]^32);
   this.set(to,u.captured);
@@ -124,6 +137,7 @@ export class SearchPosition {
  }
  // Includes king flips, and excludes the vacated origin as a closing anchor.
  gain(m){
+  if(this.wings){const side=this.turn,before=this.material[side]-this.material[1-side];this.make(m);let score;try{score=this.kings[side]<0?-WIN:this.kings[1-side]<0?WIN:this.material[side]-this.material[1-side]-before;}finally{this.unmake();}return score;}
   const to=m&127,from=m>>7&127,n=this.turn,b=this.board;
   let score=b[to]?((b[to]&15)===8?WIN:value(b[to])*(this.noDrops?1:1.8)):0;
   if(m&16384)score+=value(b[from]|16)-value(b[from]);
@@ -137,7 +151,7 @@ export class SearchPosition {
 const controls=new Uint8Array(162),cheap=new Int32Array(162);
 function evaluate(p){
  controls.fill(0);cheap.fill(30000);const b=p.board;
- const scores=[p.material[0],p.material[1]];
+ const scores=[p.material[0]+(p.wings&1?1300:0),p.material[1]+(p.wings&2?1300:0)];
  for(let from=0;from<81;from++){
   const piece=b[from];if(!piece)continue;const n=piece>>5,v=value(piece),type=piece&15;
   let mobility=0;
@@ -151,7 +165,7 @@ function evaluate(p){
  for(let sq=0;sq<81;sq++){
   const piece=b[sq];if(!piece)continue;const n=piece>>5,enemy=1-n,t=piece&15;
   if(t===8){
-   if(controls[enemy*81+sq])scores[n]-=n===p.turn?80:24000;
+   if(controls[enemy*81+sq])scores[n]-=p.wings&(1<<n)?40:n===p.turn?80:24000;
    for(const to of steps[piece][sq]){if(controls[enemy*81+to])scores[n]-=20;if(b[to]&&(b[to]>>5)===n&&[4,5].includes(b[to]&15))scores[n]+=18;}
   }else{
    const v=value(piece);if(controls[enemy*81+sq]){
@@ -187,7 +201,7 @@ export function chooseOsesho(state,thinkMs=5000,onBest=()=>{},onStats=()=>{}){
  const idx=()=>((p.hash^(p.limit?Math.imul(p.ply,0x9e3779b9):0))&mask);
  const historyIndex=m=>p.turn*128*81+(m>>7&127)*81+(m&127);
  function ordered(list,hint,height){
-  return list.map(m=>({m,gain:p.gain(m)})).map(x=>({...x,order:x.m===hint?3000000:x.gain>0?100000+x.gain:killers[height]?.includes(x.m)?80000:history[historyIndex(x.m)]})).sort((a,b)=>b.order-a.order);
+  return list.map(m=>{if(p.wings)check();return {m,gain:p.gain(m)};}).map(x=>({...x,order:x.m===hint?3000000:x.gain>0?100000+x.gain:killers[height]?.includes(x.m)?80000:history[historyIndex(x.m)]})).sort((a,b)=>b.order-a.order);
  }
  // Detect every direct or bracket king win, including legal drops.
  function threatened(){
@@ -196,7 +210,7 @@ export function chooseOsesho(state,thinkMs=5000,onBest=()=>{},onStats=()=>{}){
   p.turn^=1;return yes;
  }
  function qsearch(alpha,beta,height,left){
-  nodes++;if((nodes&127)===0)check();
+  nodes++;if(p.wings||(nodes&127)===0)check();
   const terminal=p.terminal(height);if(terminal!==null)return terminal;
   const list=p.generate(),choices=ordered(list,0,height);
   if(!list.length)return -WIN+height;
@@ -213,7 +227,7 @@ export function chooseOsesho(state,thinkMs=5000,onBest=()=>{},onStats=()=>{}){
   return alpha;
  }
  function search(depth,alpha,beta,height,pv){
-  nodes++;if((nodes&127)===0)check();
+  nodes++;if(p.wings||(nodes&127)===0)check();
   const terminal=p.terminal(height);if(terminal!==null)return terminal;
   if(height>=MAX_PLY-1)return evaluate(p);
   // Repeated positions are neutral inside this search, not adjudicated game results.

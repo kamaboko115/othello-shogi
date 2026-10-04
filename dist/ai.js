@@ -137,7 +137,7 @@ export function chooseAI(s,level='normal',thinkMs=1000,onBest=()=>{},onStats=()=
  for(const src of [...s.board.flatMap((p,i)=>p?.side===s.turn?[i]:[]),...Object.keys(s.hands[s.turn])]){const first=moves(s,src)[0];if(first){best=first;onBest(best);break;}}
  if(!best)return null;
  const table=new Map();
- function stateKey(p){return p.turn+'|'+p.ply+'|'+p.board.map(x=>x?x.side+x.type+(x.prom?'+':''):'_').join(',')+'|'+JSON.stringify(p.hands);}
+ function stateKey(p){return p.turn+'|'+p.ply+'|'+p.board.map(x=>x?x.side+x.type+(x.prom?'+':'')+(x.wings?'w':''):'_').join(',')+'|'+JSON.stringify(p.hands);}
  function ordered(p,hint){const list=candidates(p,checkBudget);if(hint)list.sort((a,b)=>(moveKey(b.move)===hint?2*WIN:0)+b.order-((moveKey(a.move)===hint?2*WIN:0)+a.order));return list;}
  function quiet(p,alpha,beta,left){
   checkBudget();nodes++;const stand=evaluate(p,p.turn);if(Math.abs(stand)>=900000||left===0)return stand;

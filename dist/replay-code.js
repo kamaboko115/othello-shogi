@@ -5,7 +5,7 @@ export const replayLimit=4096;
 // One small snapshot per ply; no duplicated logs or AI search state.
 export function packReplayState(s){
  const extra=arrivals(s).slice(1).map(d=>d.square);
- return {b:s.board.map(p=>p?String.fromCharCode(65+types.indexOf(p.type)+8*p.side+(p.prom?16:0)):'.').join(''),h:s.hands.map(h=>Array.from(handTypes,t=>h[t]||0)),t:s.turn,p:s.ply,l:s.last||[],f:s.flipped||[],d:s.destroyed?.square??null,u:s.spawned?.square??null,...(extra.length?{a:extra}:{}),...(s.paradoxEvent?{e:structuredClone(s.paradoxEvent)}:{})};
+ return {b:s.board.map(p=>p?String.fromCharCode(65+types.indexOf(p.type)+8*p.side+(p.prom?16:0)):'.').join(''),h:s.hands.map(h=>Array.from(handTypes,t=>h[t]||0)),t:s.turn,p:s.ply,l:s.last||[],f:s.flipped||[],d:s.destroyed?.square??null,u:s.spawned?.square??null,...(extra.length?{a:extra}:{}),...(s.board.some(p=>p?.wings)?{w:s.board.flatMap((p,i)=>p?.wings?[i]:[])}:{}),...(s.paradoxEvent?{e:structuredClone(s.paradoxEvent)}:{})};
 }
 export function unpackReplayState(frame){
  const bad=()=>{throw Error('棋譜データの形式が正しくありません。');};
@@ -16,6 +16,7 @@ export function unpackReplayState(frame){
   const code=c.charCodeAt(0)-65;if(code<0||code>31)bad();
   const p={type:types[code%8],side:Math.floor(code/8)%2,prom:code>=16};if(p.prom&&['G','K'].includes(p.type))bad();return p;
  });
+ if(frame.w!==undefined){if(!Array.isArray(frame.w)||frame.w.length>81||new Set(frame.w).size!==frame.w.length||frame.w.some(i=>!Number.isInteger(i)||i<0||i>80||s.board[i]?.type!=='K'))bad();for(const i of frame.w)s.board[i].wings=true;}
  if(!Array.isArray(frame.h)||frame.h.length!==2)bad();
  s.hands=frame.h.map(h=>{if(!Array.isArray(h)||h.length!==7||h.some(n=>!Number.isInteger(n)||n<0||n>81+4*Math.min(frame.p,100000)))bad();return Object.fromEntries(Array.from(handTypes,(t,i)=>[t,h[i]]));});
  for(const [name,max]of [['l',2],['f',81]]){if(!Array.isArray(frame[name])||frame[name].length>max||frame[name].some(i=>!Number.isInteger(i)||i<0||i>80))bad();}
@@ -29,8 +30,20 @@ export function unpackReplayState(frame){
  }
  if(frame.e!==undefined){
   const e=frame.e,validSquare=i=>Number.isInteger(i)&&i>=0&&i<81;
-  if(!e||!['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
-  if(e.kind==='extra'){
+  if(!e||!['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings','rebirth'].includes(e.kind)||frame.d!==null||frame.u!==null)bad();
+  if(e.kind==='wings'){
+   if(!validSquare(e.square)||s.board[e.square]?.type!=='K'||s.board[e.square].side!==e.side||!s.board[e.square].wings||typeof e.wasWinged!=='boolean')bad();
+   s.paradoxEvent={kind:e.kind,side:e.side,square:e.square,wasWinged:e.wasWinged};
+  }else if(e.kind==='rebirth'){
+   if(!Array.isArray(e.entries)||!e.entries.length||e.entries.length>2||new Set(e.entries.map(r=>r?.square)).size!==e.entries.length)bad();
+   const entries=e.entries.map(r=>{
+    if(!r||!validSquare(r.square)||![0,1].includes(r.side)||!['capture','flip','destroy','warp'].includes(r.cause)||s.board[r.square]?.type!=='K'||s.board[r.square].side!==r.side||s.board[r.square].wings)bad();
+    const p=r.displaced;if(p!==null&&(!p||!types.includes(p.type)||p.type.length!==1||![0,1].includes(p.side)||typeof p.prom!=='boolean'||p.prom&&['G','K'].includes(p.type)||p.wings!==undefined&&(p.wings!==true||p.type!=='K')))bad();
+    if(r.from!==undefined&&(!validSquare(r.from)||r.cause!=='warp'||s.board[r.from]?.type!=='K'))bad();
+    if(r.rewoundFrom!==undefined&&(!validSquare(r.rewoundFrom)||r.rewoundFrom===r.square||s.board[r.rewoundFrom]?.type!=='K'||!s.board[r.rewoundFrom].wings))bad();
+    return {square:r.square,side:r.side,cause:r.cause,displaced:p?{type:p.type,side:p.side,prom:p.prom,...(p.wings?{wings:true}:{})}:null,...(r.from!==undefined?{from:r.from}:{}),...(r.rewoundFrom!==undefined?{rewoundFrom:r.rewoundFrom}:{})};
+   });s.paradoxEvent={kind:e.kind,entries};
+  }else if(e.kind==='extra'){
    if(e.side!==s.turn)bad();s.paradoxEvent={kind:e.kind,side:e.side};
   }else if(e.kind==='annihilate'||e.kind==='dragons'){
    if(e.side!==1-s.turn||!Array.isArray(e.pieces)||e.pieces.length>81||new Set(e.pieces.map(d=>d?.square)).size!==e.pieces.length)bad();

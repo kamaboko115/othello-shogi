@@ -20,7 +20,32 @@ export function inCheck(s,side){const k=s.board.findIndex(p=>p?.side===side&&p.t
 export function flip(s,to){const side=s.board[to].side,out=[];for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;let r=Math.floor(to/9)+dr,c=to%9+dc,run=[];while(inside(r,c)){const i=r*9+c,p=s.board[i];if(!p)break;if(p.side===side){if(run.length)out.push(...run);break;}run.push(i);r+=dr;c+=dc;}}for(const i of out)s.board[i].side=side;return out;}
 const zone=(side,r)=>side===0?r<=2:r>=6;
 const dead=(t,side,r)=>((t==='P'||t==='L')&&(side===0?r===0:r===8))||(t==='N'&&(side===0?r<=1:r>=7));
-export function raw(s,m){const n=clone(s);n.flipped=[];n.destroyed=null;n.spawned=null;n.paradoxStarted=false;delete n.paradoxEvent;if(m.drop){n.board[m.to]={type:m.drop,side:s.turn,prom:false};n.hands[s.turn][m.drop]--;}else{const p=n.board[m.from],q=n.board[m.to];if(q&&q.type!=='K')n.hands[s.turn][q.type]=(n.hands[s.turn][q.type]||0)+1;n.board[m.to]=p;n.board[m.from]=null;if(m.prom)p.prom=true;}if(s.mode)n.flipped=flip(n,m.to);n.last=m.drop?[m.to]:[m.from,m.to];n.turn=1-s.turn;n.ply++;return n;}
+// Revival is resolved before victory. Its record is also the reversible visual state.
+export function reviveKing(s,square,king,cause){
+ const displaced=s.board[square]?{...s.board[square]}:null;
+ const piece={type:'K',side:king.side,prom:false};
+ s.board[square]=piece;s.destroyed=null;s.spawned=null;
+ const entries=s.paradoxEvent?.kind==='rebirth'?s.paradoxEvent.entries:[];
+ entries.push({square,side:king.side,cause,displaced});s.paradoxEvent={kind:'rebirth',entries};
+}
+export function raw(s,m){
+ const n=clone(s);n.flipped=[];n.destroyed=null;n.spawned=null;n.paradoxStarted=false;delete n.paradoxEvent;
+ const captured=n.board[m.to];
+ if(m.drop){n.board[m.to]={type:m.drop,side:s.turn,prom:false};n.hands[s.turn][m.drop]--;}
+ else{const p=n.board[m.from];if(captured&&captured.type!=='K')n.hands[s.turn][captured.type]=(n.hands[s.turn][captured.type]||0)+1;n.board[m.to]=p;n.board[m.from]=null;if(m.prom)p.prom=true;}
+ if(s.mode)n.flipped=flip(n,m.to);
+ if(captured?.type==='K'&&captured.wings){
+  const attacker=n.board[m.to];
+  // Collision exception: the defender consumes its wings and escapes; the attacker stays.
+  if(attacker?.type==='K'&&attacker.wings){
+   const safe=safeArrivalSquares(n,{type:'K',side:captured.side,prom:false});
+   if(safe.length){reviveKing(n,safe[0],captured,'warp');n.paradoxEvent.entries[0].from=m.to;}
+   else{n.board[m.from]=attacker;reviveKing(n,m.to,captured,'capture');n.paradoxEvent.entries[0].rewoundFrom=m.from;n.paradoxEvent.entries[0].displaced={...attacker};}
+  }else reviveKing(n,m.to,captured,'capture');
+ }
+ for(const square of n.flipped){const king=s.board[square];if(king?.type==='K'&&king.wings)reviveKing(n,square,king,'flip');}
+ n.last=m.drop?[m.to]:[m.from,m.to];n.turn=1-s.turn;n.ply++;return n;
+}
 export function moves(s,source,skipPawnMate=false){if(s.result||(typeof source==='string'&&s.noDrops))return [];let out=[];const drop=typeof source==='string',p=drop?{type:source,side:s.turn,prom:false}:s.board[source];if(!p||p.side!==s.turn||(drop&&!s.hands[s.turn][source]))return out;for(let to=0;to<81;to++){const q=s.board[to],r=Math.floor(to/9);if(drop){if(q||dead(p.type,p.side,r))continue;if(p.type==='P'&&s.board.some((v,i)=>i%9===to%9&&v?.side===s.turn&&v.type==='P'&&!v.prom))continue;}else if(q?.side===s.turn||(!s.mode&&q?.type==='K')||!reaches(s,source,to))continue;let opts=[false];if(!drop&&!p.prom&&promoted[p.type]&&(zone(p.side,Math.floor(source/9))||zone(p.side,r)))opts=dead(p.type,p.side,r)?[true]:[false,true];for(const prom of opts){const m=drop?{drop:source,to}:{from:source,to,prom};const n=s.mode?null:raw(s,m);if(!s.mode&&inCheck(n,s.turn))continue;if(!s.mode&&drop&&source==='P'&&!skipPawnMate){const k=n.board.findIndex(v=>v?.side===n.turn&&v.type==='K');if(reaches(n,to,k)&&!hasMove(n,true))continue;}out.push(m);}}return out;}
 export function hasMove(s,skip=false){for(let i=0;i<81;i++)if(s.board[i]?.side===s.turn&&moves(s,i,skip).length)return true;for(const t of Object.keys(s.hands[s.turn]))if(moves(s,t,skip).length)return true;return false;}
 // Inspection does not change the turn or create a playable selection.
@@ -41,7 +66,8 @@ export function play(s,m){
  const n=raw(s,m),winner=s.turn===0?'先手':'後手';
  if(s.mode){
   const enemyKing=n.board.some(p=>p?.type==='K'&&p.side===n.turn);
-  if(!enemyKing)n.result=`${winner}の勝ち（${n.flipped.some(i=>n.board[i].type==='K')?'王を反転':'王を取った'}）`;
+  if(s.board.some(p=>p?.type==='K'&&p.side===s.turn)&&!n.board.some(p=>p?.type==='K'&&p.side===s.turn))n.result=`${s.turn?'先手':'後手'}の勝ち（復活の爆発で王が崩壊）`;
+  else if(!enemyKing)n.result=`${winner}の勝ち（${n.flipped.some(i=>n.board[i].type==='K')?'王を反転':'王を取った'}）`;
   else if(adjudicationLimit(n)!==false&&n.ply>=adjudicationLimit(n)){const [a,b]=points(n);n.result=`${a===b?'引き分け':a>b?'先手の勝ち':'後手の勝ち'}（${adjudicationLimit(n)}手・先手${a}枚／後手${b}枚）`;}
   return n;
  }
@@ -91,7 +117,7 @@ export const arrivalSummary=s=>arrivals(s).map(d=>(d.piece.side?'後手':'先手
 export const collapseTargets=s=>s.board.flatMap((p,i)=>!p?[]:Array(p.type==='K'?1:10).fill(i));
 // LCM of the configured odds: every probability is an exact integer ticket count.
 export const paradoxTotal=76923000;
-const rareOdds={arrival:12,warp:12,flip:20,shuffle:60,invert:120,promote:77,supply:60,extra:120,annihilate:999,dragons:500};
+const rareOdds={arrival:12,warp:12,flip:20,shuffle:60,invert:120,promote:77,supply:60,extra:120,annihilate:999,dragons:500,wings:300};
 export const paradoxWeights=Object.freeze({...Object.fromEntries(Object.entries(rareOdds).map(([kind,odds])=>[kind,paradoxTotal/odds])),destroy:paradoxTotal-Object.values(rareOdds).reduce((sum,odds)=>sum+paradoxTotal/odds,0)});
 export function paradoxCutinCount(kind,weights=paradoxWeights){
  const weight=weights[kind],total=Object.values(weights).reduce((a,b)=>a+b,0);
@@ -101,15 +127,17 @@ export function paradoxCutinCount(kind,weights=paradoxWeights){
 // Shared with the clock: presentation never consumes a player's thinking time.
 export function paradoxEventTiming(event){
  const kind=event?.kind,count=paradoxCutinCount(kind),cutins=['middle','upper','lower','middle','upper'].slice(0,count);
- const cutinMs=650,noticeMs=['extra','annihilate','dragons'].includes(kind)?1200:kind==='invert'||kind==='shuffle'?1600:kind==='supply'?600:kind==='promote'?800:kind==='flip'?500:200;
+ const cutinMs=650,noticeMs=kind==='wings'?1800:kind==='rebirth'?350:['extra','annihilate','dragons','wings'].includes(kind)?1200:kind==='invert'||kind==='shuffle'?1600:kind==='supply'?600:kind==='promote'?800:kind==='flip'?500:200;
  const flipMs=kind==='invert'?4000:kind==='promote'?1200:1100,staggerMs=280,tailMs=kind==='warp'?1400:kind==='shuffle'&&!event.skipped?1500:350;
- const motionMs=kind==='extra'?700:kind==='annihilate'?1500:kind==='dragons'?2600:kind==='supply'?1800:kind==='shuffle'?2800:kind==='invert'?4000:kind==='promote'?flipMs:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
+ const motionMs=kind==='wings'?1500:kind==='rebirth'?1800:kind==='extra'?700:kind==='annihilate'?1500:kind==='dragons'?2600:kind==='supply'?1800:kind==='shuffle'?2800:kind==='invert'?4000:kind==='promote'?flipMs:kind==='flip'?flipMs+Math.max(0,(event.squares?.length||1)-1)*staggerMs:800;
  return {cutins,cutinMs,noticeMs,flipMs,staggerMs,motionMs,tailMs,totalMs:cutins.length*cutinMs+noticeMs+motionMs+tailMs};
 }
 export function chooseParadoxEvent(pick){let roll=pick(Object.values(paradoxWeights).reduce((a,b)=>a+b,0));if(!Number.isInteger(roll)||roll<0)throw Error('Invalid paradox roll');for(const [kind,weight]of Object.entries(paradoxWeights)){if(roll<weight)return kind;roll-=weight;}throw Error('Invalid paradox roll');}
 const shuffle=(items,pick)=>{for(let i=items.length-1;i>0;i--){const j=pick(i+1);[items[i],items[j]]=[items[j],items[i]];}return items;};
 export function paradoxSummary(s){
  const e=s.paradoxEvent;if(!e)return '';
+ if(e.kind==='wings')return 'オセショ様が再誕の翼を王に与え、一度のみ復活できる！';
+ if(e.kind==='rebirth')return e.entries.map(e=>(e.side?'後手':'先手')+'の王が再誕の翼で復活！').join('・');
  if(e.kind==='extra')return 'オセショ様の力により追加ターンを得る';
  if(e.kind==='annihilate')return 'オセショ様の禁断の槍がすべてを焦がす';
  if(e.kind==='dragons')return 'オセショ様が滅ぼした龍の時代が訪れる...';
@@ -122,6 +150,8 @@ export function paradoxSummary(s){
 // Reconstruct the just-played position for move animations, before the random event.
 export function beforeParadox(s){
  const e=s.paradoxEvent;if(!e)return s;const n={...s,board:s.board.slice()};delete n.paradoxEvent;
+ if(e.kind==='wings'){n.board[e.square]={...n.board[e.square]};if(!e.wasWinged)delete n.board[e.square].wings;}
+ if(e.kind==='rebirth'){for(const r of [...e.entries].reverse()){n.board[r.square]=r.displaced?{...r.displaced}:null;if(r.rewoundFrom!==undefined)n.board[r.rewoundFrom]=null;}n.result='';}
  if(e.kind==='extra')n.turn=1-e.side;
  if(e.pieces)for(const {square,piece}of e.pieces)n.board[square]={...piece};
  if(e.kind==='supply')n.hands=s.hands.map((h,side)=>{const old={...h};if(side===e.side)for(const type of 'PLNSGBR')old[type]--;return old;});
@@ -130,8 +160,9 @@ export function beforeParadox(s){
  return n;
 }
 export function applyParadoxEvent(s,kind,pick,mover=1-s.turn){
- if(!['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons'].includes(kind))throw Error('Invalid paradox event');
+ if(!['warp','flip','shuffle','invert','promote','supply','extra','annihilate','dragons','wings'].includes(kind))throw Error('Invalid paradox event');
  s.destroyed=null;s.spawned=null;
+ if(kind==='wings'){const square=s.board.findIndex(p=>p?.type==='K'&&p.side===mover);if(square<0)return s;const wasWinged=!!s.board[square].wings;s.board[square]={...s.board[square],wings:true};s.paradoxEvent={kind,side:mover,square,wasWinged};return s;}
  if(kind==='extra'){s.turn=mover;s.paradoxEvent={kind,side:mover};return s;}
  if(kind==='annihilate'||kind==='dragons'){
   const target=kind==='annihilate'?1-mover:mover,pieces=s.board.flatMap((p,square)=>p&&p.side===target&&p.type!=='K'?[{square,piece:{...p}}]:[]);
@@ -180,7 +211,8 @@ export function applyParadoxEvent(s,kind,pick,mover=1-s.turn){
 // Resolve randomness once, in the authoritative match engine.
 export function collapseAfterMove(s,pick,spawn,mover=1-s.turn){
  const threshold=s.paradoxAt??150;
- if(threshold===false||!s.mode||s.result||s.ply<threshold)return s;
+ // A revival replaces this move's random collapse so a spent wing cannot die twice in one move.
+ if(threshold===false||!s.mode||s.result||s.ply<threshold||s.paradoxEvent?.kind==='rebirth')return s;
  s.paradoxStarted=s.ply===threshold;
  // Activation is an announcement only: the first random event is the next move.
  if(s.paradoxStarted){s.destroyed=null;s.spawned=null;delete s.paradoxEvent;return s;}
@@ -203,6 +235,7 @@ export function collapseAfterMove(s,pick,spawn,mover=1-s.turn){
  }
  const index=pick(choices.length);if(!Number.isInteger(index)||index<0||index>=choices.length)throw Error('Invalid random choice');
  const square=choices[index],piece={...s.board[square]};s.board[square]=null;
+ if(piece.type==='K'&&piece.wings){reviveKing(s,square,piece,'destroy');return s;}
  s.destroyed={square,piece};s.spawned=null;
  if(piece.type==='K')s.result=(piece.side===1?'先手':'後手')+'の勝ち（パラドックスで王が崩壊）';
  return s;
