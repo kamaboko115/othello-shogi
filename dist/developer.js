@@ -2,12 +2,12 @@ import {runParadoxEvent} from './paradox-event.js';
 import {paintCollapse,paintArrival,collapseStrikeDuration,collapseStrikeDelay} from './collapse-view.js';
 import {lessons,lessonState,collapseReply,tutorialMoves,collapseLesson} from './tutorial-lessons.js';
 import {kingCaptureSquare,runKingImpact} from './impact.js';
-import {paradoxSound} from './paradox.js';
+import {paradoxSound,prepareParadoxSounds} from './paradox.js';
 import {encodeBoard,decodeBoard} from './board-code.js';
 import {initial,empty,moves,play,label,collapseAfterMove,arrivalSummary,paradoxSummary,beforeParadox} from './engine.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide,runSword} from './combo.js';
 import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js';
-import {playParadoxArrival,playMoveSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue} from './sound.js';
+import {prepareMoveSound,playParadoxArrival,playMoveSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue} from './sound.js';
 export function initDeveloper(getCurrent){
  const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0,collapseTrial=0,collapsePhase='ash';
  for(const side of [1,0]){const tray=document.createElement('div');tray.id='devHand'+side;tray.className='dev-capture-hand';tray.setAttribute('aria-label',side?'相手の駒台':'自分の駒台');$('devBoardFrame').insertAdjacentElement(side?'beforebegin':'afterend',tray);}
@@ -103,7 +103,7 @@ export function initDeveloper(getCurrent){
   working=false;$('devTurn').value=String(state.turn);draw();
   if(tutorial&&(completed||(lessons[lesson].collapse&&state.result))){$('lessonCompleteNext').textContent=lesson===lessons.length-1?'チュートリアルを終える':'次へ';$('lessonComplete').showModal();}
  }
- $('openDeveloper').onclick=()=>{tutorial=false;$('developerDialog').classList.remove('tutorial-mode');$('tutorialLesson').hidden=true;$('settingsDialog').close();history=[];reset(copyCurrent(),false);$('devTransfer').hidden=true;$('devStatus').textContent='練習専用の盤面です。配置・陣営・成りを自由に変更できます。';$('developerDialog').showModal();};
+ $('openDeveloper').onclick=()=>{prepareMoveSound();tutorial=false;$('developerDialog').classList.remove('tutorial-mode');$('tutorialLesson').hidden=true;$('settingsDialog').close();history=[];reset(copyCurrent(),false);$('devTransfer').hidden=true;$('devStatus').textContent='練習専用の盤面です。配置・陣営・成りを自由に変更できます。';$('developerDialog').showModal();};
  $('closeDeveloper').onclick=()=>$('developerDialog').close();
  $('developerDialog').addEventListener('close',()=>{controller?.abort();working=false;$('lessonComplete').close();});
  $('devCopy').onclick=()=>reset(copyCurrent());$('devInitial').onclick=()=>reset(initial());$('devClear').onclick=()=>reset(empty());
@@ -115,6 +115,7 @@ export function initDeveloper(getCurrent){
  $('devMode').onchange=()=>{selected=null;draw();};
  $('devDemo').onclick=()=>{const s=empty(),count=Number($('devDemoCount').value),to=37+count,from=to+9;for(const [i,type,side] of [[76,'K',0],[4,'K',1],[36,'P',0],[from,'P',0]])s.board[i]={type,side,prom:false};const types=['P','N','S','G','B','R'].slice(-count);types.forEach((type,j)=>s.board[37+j]={type,side:1,prom:false});reset(s);$('devMode').value='play';$('devStatus').textContent=(9-from%9)+'列6段の歩を1マス上へ動かすと'+count+'枚反転します。';};
  function loadLesson(){
+  prepareMoveSound();prepareParadoxSounds(!!lessons[lesson].collapse);
   $('lessonComplete').close();$('lessonAdvice').hidden=!lessons[lesson].collapse;
   $('developerDialog').classList.toggle('tutorial-drop',!!lessons[lesson].move.drop);
   history=[];collapseTrial=0;$('devMode').value='play';reset(lessonState(lesson),false);

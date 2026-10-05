@@ -1,4 +1,4 @@
-import {raw} from './engine.js';
+import {raw,MAX_GAME_PLIES} from './engine.js';
 import {adjudicationLimit} from './judge-options.js';
 // Othello-shogi search uses the same rules as engine.js, with reversible moves.
 // Piece codes: type (1..8), promoted (16), side (32). Zero is an empty square.
@@ -71,7 +71,7 @@ export class SearchPosition {
   // Ordinary positions retain the fast reversible path.
   if(this.wings){
    const saved={slow:true,board:this.board.slice(),hands:this.hands.slice(),kings:this.kings.slice(),count:this.count.slice(),material:this.material.slice(),wings:this.wings,hash:this.hash,lock:this.lock,turn:this.turn,ply:this.ply};this.stack.push(saved);
-   const state={board:Array.from(this.board,p=>p?{type:TYPES[p&15],prom:!!(p&16),side:p>>5,...((p&15)===8&&(this.wings&(1<<(p>>5)))?{wings:true}:{})}:null),hands:[0,1].map(n=>Object.fromEntries(TYPES.slice(1,8).map((t,i)=>[t,this.hands[n*8+i+1]]))),turn:this.turn,ply:this.ply,mode:this.mode};
+   const state={board:Array.from(this.board,p=>p?{type:TYPES[p&15],prom:!!(p&16),side:p>>5,...((p&15)===8&&(this.wings&(1<<(p>>5)))?{wings:true}:{})}:null),hands:[0,1].map(n=>Object.fromEntries(TYPES.slice(1,8).map((t,i)=>[t,this.hands[n*8+i+1]]))),turn:this.turn,ply:this.ply,mode:this.mode,noDrops:this.noDrops};
    const next=raw(state,objectMove(m));
    this.hash^=Math.imul(this.wings,0x51a92d7b);this.lock^=Math.imul(this.wings,0x74dc6193);this.wings=0;
    next.board.forEach((p,i)=>{this.set(i,p?TYPES.indexOf(p.type)|(p.prom?16:0)|(p.side<<5):0);if(p?.wings)this.wings|=1<<p.side;});
@@ -107,6 +107,7 @@ export class SearchPosition {
   if(this.kings[this.turn]<0)return -WIN+height;
   if(this.kings[1-this.turn]<0)return WIN-height;
   if(this.limit&&this.ply>=this.limit)return Math.sign(this.count[this.turn]-this.count[1-this.turn])*(WIN-1000);
+  if(this.ply>=MAX_GAME_PLIES)return 0;
   return null;
  }
  generate(){
@@ -185,6 +186,8 @@ export function evaluateOsesho(state,side=0){
  const position=new SearchPosition(state);
  if(position.kings[side]<0)return -WIN;
  if(position.kings[1-side]<0)return WIN;
+ const terminal=position.terminal();
+ if(terminal!==null)return position.turn===side?terminal:-terminal;
  const score=evaluate(position);return position.turn===side?score:-score;
 }
 export function chooseOsesho(state,thinkMs=5000,onBest=()=>{},onStats=()=>{}){
@@ -198,7 +201,9 @@ export function chooseOsesho(state,thinkMs=5000,onBest=()=>{},onStats=()=>{}){
  const killers=Array.from({length:MAX_PLY},()=>[0,0]),history=new Int32Array(2*128*81),path=[];
  const expired={};
  const check=()=>{if(performance.now()>=deadline)throw expired;};
- const idx=()=>((p.hash^(p.limit?Math.imul(p.ply,0x9e3779b9):0))&mask);
+ // Near the forced draw, the same board at a different ply is not equivalent.
+ const plySensitive=()=>p.limit||p.ply>=MAX_GAME_PLIES-MAX_PLY;
+ const idx=()=>((p.hash^(plySensitive()?Math.imul(p.ply,0x9e3779b9):0))&mask);
  const historyIndex=m=>p.turn*128*81+(m>>7&127)*81+(m&127);
  function ordered(list,hint,height){
   return list.map(m=>{if(p.wings)check();return {m,gain:p.gain(m)};}).map(x=>({...x,order:x.m===hint?3000000:x.gain>0?100000+x.gain:killers[height]?.includes(x.m)?80000:history[historyIndex(x.m)]})).sort((a,b)=>b.order-a.order);
@@ -234,7 +239,7 @@ export function chooseOsesho(state,thinkMs=5000,onBest=()=>{},onStats=()=>{}){
   for(let i=height-2;i>=0;i-=2)if(path[i]?.[0]===p.hash&&path[i]?.[1]===p.lock)return 0;
   if(depth<=0)return qsearch(alpha,beta,height,3);
   const index=idx(),originalAlpha=alpha,key=p.hash,lock=p.lock;
-  const hit=bounds[index]&&keys[index]===key&&locks[index]===lock&&(!p.limit||ages[index]===p.ply);
+  const hit=bounds[index]&&keys[index]===key&&locks[index]===lock&&(!plySensitive()||ages[index]===p.ply);
   let hint=hit?ttMoves[index]:0;
   if(hit&&depths[index]>=depth&&!pv){
    const s=scores[index]>WIN-500?scores[index]-height:scores[index]<-WIN+500?scores[index]+height:scores[index];

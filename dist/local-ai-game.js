@@ -4,6 +4,7 @@ import {normalizeMoveLimit} from './judge-options.js';
 import {normalizeTime,handicapOptions,applyHandicap,startClock,clockBudget,chargeClock,finishClockMove} from './match-options.js';
 import {initial,play,collapseAfterMove,label,names,moves,arrivalSummary,paradoxSummary} from './engine.js';
 import {rememberReplay,appendReplay,rewindReplay,replayRecord} from './replay-code.js';
+import {packMatchData,unpackMatchData} from './match-storage.js';
 
 const lifetime=7*86400000;
 const validId=id=>typeof id==='string'&&/^[a-f0-9]{32}$/.test(id);
@@ -19,8 +20,8 @@ function normalizeSettings(input={}){
 }
 function setupState(settings){const s=initial(true);s.noDrops=!!settings.noDrops;s.moveLimit=normalizeMoveLimit(settings.moveLimit,60);s.paradoxAt=settings.paradoxAt;return s;}
 function undoIndex(data){return (data.takebacks||[]).findLastIndex(x=>x.state.turn===data.toss.hostSide);}
-function remember(data){rememberReplay(data);data.takebacks||=[];data.takebacks.push({state:structuredClone(data.state),logs:[...data.logs]});if(data.takebacks.length>128)data.takebacks.shift();data.undoOffer=null;}
-function rewind(data,index){const saved=data.takebacks?.[index];if(!saved)fail('戻せる手がありません。',409);data.state=saved.state;data.logs=saved.logs;rewindReplay(data);data.takebacks=data.takebacks.slice(0,index);data.undoOffer=null;data.offer=null;data.rematch=null;}
+function remember(data){rememberReplay(data);data.takebacks||=[];data.takebacks.push({state:structuredClone(data.state),logLength:data.logs.length});if(data.takebacks.length>128)data.takebacks.shift();data.undoOffer=null;}
+function rewind(data,index){const saved=data.takebacks?.[index];if(!saved)fail('戻せる手がありません。',409);data.state=saved.state;data.logs=saved.logs??data.logs.slice(0,saved.logLength);rewindReplay(data);data.takebacks=data.takebacks.slice(0,index);data.undoOffer=null;data.offer=null;data.rematch=null;}
 
 // This owns only the match state. AI search still runs through ai-client.js and
 // every move uses the same engine and collapse rules as online matches.
@@ -28,12 +29,12 @@ export function createLocalAIStore({storage=()=>globalThis.localStorage,now=Date
  const memory=new Map(),removed=new Set(),dirty=new Set();let warning='';
  const backend=()=>typeof storage==='function'?storage():storage;
  const storageFailed=()=>{warning=localAIStorageWarning;};
- function save(record){memory.set(record.room,structuredClone(record));removed.delete(record.room);try{backend().setItem(localAIStorageKey(record.room),JSON.stringify(record));dirty.delete(record.room);}catch{dirty.add(record.room);storageFailed();}}
+ function save(record){memory.set(record.room,structuredClone(record));removed.delete(record.room);try{backend().setItem(localAIStorageKey(record.room),JSON.stringify({...record,data:packMatchData(record.data)}));dirty.delete(record.room);}catch{dirty.add(record.room);storageFailed();}}
  function remove(id){memory.delete(id);removed.add(id);try{backend().removeItem(localAIStorageKey(id));}catch{storageFailed();}}
  function readRecord(id){
   if(!validId(id)||removed.has(id))fail('対局が見つからないか、すでに閉じられています。',404);
   let record=memory.get(id);
-  if(!dirty.has(id))try{const saved=backend().getItem(localAIStorageKey(id));if(saved)record=JSON.parse(saved);}catch{storageFailed();}
+  if(!dirty.has(id))try{const saved=backend().getItem(localAIStorageKey(id));if(saved){record=JSON.parse(saved);record.data=unpackMatchData(record.data);}}catch{storageFailed();}
   if(!record)fail('このブラウザにはAI対局の保存データがありません。',404);
   if(record.schema!==1||record.room!==id||!Number.isInteger(record.version)||!Number.isFinite(record.expires)||record.data?.kind!=='ai'||record.data?.state?.board?.length!==81||!Array.isArray(record.data.logs)||![0,1].includes(record.data.toss?.hostSide))fail('AI対局の保存データを読み込めません。',400);
   if(record.expires<=now()||record.data.closed){remove(id);fail('対局が見つからないか、すでに閉じられています。',404);}

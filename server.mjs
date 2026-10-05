@@ -2,8 +2,10 @@ import {writeBuildInfo,injectBuildInfo} from './scripts/build-info.mjs';
 import http from 'node:http';import {readFile,mkdir} from 'node:fs/promises';import path from 'node:path';
 import {api,cleanupRooms} from './worker/api.js';import {localDB,localRoomBurstLimiter} from './worker/local-db.js';
 import {securityHeaders} from './worker/security.js';
+import {localApiRateLimits} from './worker/action-limit.js';
 await mkdir('.sites-runtime',{recursive:true});const DB=localDB('.sites-runtime/rooms.sqlite');
 const ROOM_CREATE_BURST=localRoomBurstLimiter();
+const apiRateLimits=localApiRateLimits();
 setInterval(()=>cleanupRooms({DB}).catch(error=>console.error('Room cleanup failed:',error.message)),300000).unref();
 const root=path.resolve('dist');
 await writeBuildInfo();
@@ -26,7 +28,7 @@ const server=http.createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://'+req.headers.host);
  if(url.pathname.startsWith('/api/')){
   const request=new Request(url,{method:req.method,headers:req.headers,...(req.method==='GET'||req.method==='HEAD'?{}:{body:incomingBody(req),duplex:'half'})});
-  const result=await api(request,{DB,ROOM_CREATE_BURST},{clientIP:req.socket.remoteAddress,requireBurstLimiter:true});
+  const result=await api(request,{DB,ROOM_CREATE_BURST,...apiRateLimits},{clientIP:req.socket.remoteAddress,requireBurstLimiter:true});
   if(request.body&&!req.readableEnded){request.body.cancel().catch(()=>{});res.setHeader('Connection','close');}
   res.writeHead(result.status,Object.fromEntries(result.headers));res.end(await result.text());return;
  }

@@ -29,7 +29,7 @@ function client(){
   fetch:async(...args)=>{calls.push(args);return Response.json({room:'f'.repeat(32),kind:'friend',version:0});},AbortSignal,JSON,Date,URLSearchParams,Error,initial,
   storage:{get:k=>{const value=saved.get(k);return value?JSON.parse(value):null;},set:(k,v)=>saved.set(k,JSON.stringify(v))},localStorage:disk,
   history:{replaceState:(state,title,url)=>{hashes.push(url);context.location.hash=url.includes('#')?url.slice(url.indexOf('#')):'';}},location:{pathname:'/game',hash:''},
-  clearInspection(){},render(){},cancelCombo(){},cancelCollapse(){},stopAI(){context.aiJob=null;},clearSession(){context.online=null;context.connected=true;},start(s){context.state=s;},
+  prepareMoveSound(){},prepareParadoxSounds(){},clearInspection(){},render(){},cancelCombo(){},cancelCollapse(){},stopAI(){context.aiJob=null;},clearSession(){context.online=null;context.connected=true;},start(s){context.state=s;},
   clearTimeout(){},setTimeout(fn,ms){timers.push({fn,ms});return timers.length;},interruptMoveEffects(){},syncAutoHelper(){},side:n=>n?'後手':'先手',document:{hidden:false},clockBudget,clockOffset:0,
   window:{confirm:()=>true},homeMessage:'home',freshToken:()=> 'a'.repeat(64),
   adopt(d){context.online={...context.online,...d};context.state=d.state;context.logs=d.logs;},helperAvailable:()=>true,playHelperDeparture(){},

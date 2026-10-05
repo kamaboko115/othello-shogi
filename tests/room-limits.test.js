@@ -11,10 +11,13 @@ import {insertLimitedFriendRoom,roomCreationWindowMs} from '../worker/room-limit
 const ip='192.0.2.1',otherIP='192.0.2.2';
 const token=()=>randomBytes(32).toString('hex');
 const digest=value=>createHash('sha256').update(value).digest('hex');
+// These tests isolate the creation quota; action/IP budgets are covered by
+// action-limit.test.js. Production-like fixtures still supply every binding.
+const apiLimits={API_REQUEST_BURST:{async limit(){return {success:true};}},ROOM_ACTION_BURST:{async limit(){return {success:true};}}};
 async function call(db,{path='',host=token(),body={invite:token()},clientIP=ip,env={},required=false,headers={}}={}){
  return api(new Request('https://test.local/api/rooms'+path,{method:body?'POST':'GET',
   headers:{Authorization:'Bearer '+host,'Content-Type':'application/json',...headers},
-  body:body?JSON.stringify(body):undefined}),{DB:db,...env},{clientIP,requireBurstLimiter:required});
+  body:body?JSON.stringify(body):undefined}),{DB:db,...apiLimits,...env},{clientIP,requireBurstLimiter:required});
 }
 const quota=(db,clientIP=ip)=>db.prepare('SELECT * FROM room_creation_limits WHERE ip_hash = ?').bind(digest(clientIP)).first();
 
@@ -135,7 +138,7 @@ test('公開Workerはヘルパー定数をエントリーポイントとして�
 });
 test('公開WorkerはCloudflareのIPで制限・転送ヘッダーを信用せず未設定時は作成を拒否',async()=>{
  const db=localDB();try{
-  const keys=[],env={DB:db,ROOM_CREATE_BURST:{async limit({key}){keys.push(key);return {success:true};}}};
+  const keys=[],env={DB:db,...apiLimits,ROOM_CREATE_BURST:{async limit({key}){keys.push(key);return {success:true};}}};
   const request=headers=>new Request('https://game.test/api/rooms',{method:'POST',headers:{Authorization:'Bearer '+token(),'Content-Type':'application/json',...headers},body:JSON.stringify({invite:token()})});
   assert.equal((await worker.fetch(request({}),env)).status,503);
   assert.equal((await worker.fetch(request({'CF-Connecting-IP':ip}),{DB:db})).status,503);
@@ -149,12 +152,12 @@ test('公開版は旧AI作成での制限回避を拒否し、既存の旧AI対�
  const db=localDB();try{
   const host=token(),invite=token(),body={invite,kind:'ai'};
   const request=()=>new Request('https://game.test/api/rooms',{method:'POST',headers:{Authorization:'Bearer '+host,'Content-Type':'application/json','CF-Connecting-IP':ip},body:JSON.stringify(body)});
-  const env={DB:db,ROOM_CREATE_BURST:{limit(){assert.fail('旧AI対局の復帰で枠を消費しない');}}};
+  const env={DB:db,...apiLimits,ROOM_CREATE_BURST:{limit(){assert.fail('旧AI対局の復帰で枠を消費しない');}}};
   assert.equal((await worker.fetch(request(),env)).status,410);
   assert.equal((await db.prepare('SELECT COUNT(*) AS count FROM rooms').first()).count,0);
   const legacy=await (await call(db,{host,body})).json();
   const restored=await worker.fetch(request(),env);assert.equal(restored.status,200);assert.equal((await restored.json()).room,legacy.room);
-  assert.equal((await worker.fetch(new Request('https://game.test/api/rooms/'+legacy.room,{headers:{Authorization:'Bearer '+host}}),env)).status,200);
+  assert.equal((await worker.fetch(new Request('https://game.test/api/rooms/'+legacy.room,{headers:{Authorization:'Bearer '+host,'CF-Connecting-IP':ip}}),env)).status,200);
   assert.equal(await quota(db),null);
  }finally{db.close();}
 });

@@ -17,6 +17,7 @@ const engine=(await readFile('dist/judge-options.js','utf8'))+'\n'+(await readFi
 const apiSource=(await readFile('worker/api.js','utf8')).replace(/^import .*;\r?\n/gm,'');
 const limitsSource=(await readFile('worker/room-limits.js','utf8')).replace(/^import .*;\r?\n/gm,'');
 const securitySource=await readFile('worker/security.js','utf8');
+const actionLimitSource=(await readFile('worker/action-limit.js','utf8')).replace(/^import .*;\r?\n/gm,'');
 const staticWorker=`
 function matchesETag(value,etag){return value?.split(',').some(tag=>tag.trim()==='*'||tag.trim().replace(/^W\\//,'')===etag);}
 export default {
@@ -49,8 +50,8 @@ export default {
 // Only the default handler is a Workers entrypoint; helper module exports
 // (including numeric constants) must remain internal to the bundled Worker.
 const replaySource=(await readFile('dist/replay-code.js','utf8')).replace(/^import .*;\r?\n/gm,'');
-const helpers=[engine,(await readFile('dist/collapse-options.js','utf8')),(await readFile('dist/challenge-options.js','utf8')).replace(/^import .*;\r?\n/gm,''),replaySource,(await readFile('dist/match-options.js','utf8')).replace(/^import .*;\r?\n/gm,''),securitySource,limitsSource,(await readFile('worker/challenge-wins.js','utf8')),apiSource].join('\n').replace(/^export /gm,'');
-const worker=helpers+'\nconst assets='+JSON.stringify(assets)+';\nconst binary='+JSON.stringify(binary)+';\nconst etags='+JSON.stringify(etags)+';\n'+staticWorker;
+const helpers=[engine,(await readFile('dist/match-storage.js','utf8')),(await readFile('dist/collapse-options.js','utf8')),(await readFile('dist/challenge-options.js','utf8')).replace(/^import .*;\r?\n/gm,''),replaySource,(await readFile('dist/match-options.js','utf8')).replace(/^import .*;\r?\n/gm,''),securitySource,limitsSource,(await readFile('worker/challenge-wins.js','utf8')),apiSource].join('\n').replace(/^export /gm,'');
+const worker=helpers+'\n'+actionLimitSource.replace(/^export /gm,'')+'\nconst assets='+JSON.stringify(assets)+';\nconst binary='+JSON.stringify(binary)+';\nconst etags='+JSON.stringify(etags)+';\n'+staticWorker;
 // Tests and preview builds can run concurrently. Readers must never see a
 // truncated module while another build is replacing the same entrypoint.
 async function writeWorker(path){

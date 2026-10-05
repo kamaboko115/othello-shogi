@@ -41,6 +41,8 @@ Pagesのビルド中に`cd ..`すると、続くFunctions検出がルートの`f
 - Worker: `othello-shogi`
 - D1: `othello-shogi-db`、バインディング名`DB`
 - 短時間の作成制限: `ROOM_CREATE_BURST`
+- API入口の制限: `API_REQUEST_BURST`（IP別600回/60秒）
+- 参加者の操作制限: `ROOM_ACTION_BURST`（参加トークン別60回/60秒）
 - 期限切れの清掃: 5分ごとのCron
 - 本番ブランチ: `main`
 - ビルドコマンド: `npm test && npm run build`
@@ -49,6 +51,8 @@ Pagesのビルド中に`cd ..`すると、続くFunctions検出がルートの`f
 DBの更新に失敗した場合はデプロイも止めます。Cloudflare Buildsの既存トークンにはWorkerの公開権限とD1の編集権限が必要です。権限エラー時は管理者が必要なD1権限を確認してください。ローカルから公開する場合も、認証後に`npm run deploy`で検査・ビルド・DB更新・公開の順に実行できます。WranglerはCloudflare公式のnpmパッケージです。
 
 2026年10月2日の本番確認では`0001_room_creation_limits.sql`が未適用で、新規友人対局が500になっていました。D1 Consoleで同じテーブルと索引を追加し、上記の一連の対局操作が成功したことを確認しました。その後Cloudflare Buildsで新しい公開手順を実行し、0000・0001のマイグレーション履歴とデプロイの成功を確認しました。SQLは`IF NOT EXISTS`なので既存対局を保持します。
+
+レート制限のバインディングはコードと同時に公開します。Pagesは既存Worker経由で同じ制限を使います。欠落時の503、共有回線への配慮、WAFで追加できる対策は[APIの連打対策とCloudflare設定](security-limits.md)を参照してください。
 
 ## 通知と無料枠
 

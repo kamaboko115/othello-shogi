@@ -1,5 +1,5 @@
 import {adjudicationLimit} from './judge-options.js';
-import {moves,raw,reaches,points,inCheck} from './engine.js';
+import {moves,raw,reaches,points,inCheck,MAX_GAME_PLIES} from './engine.js';
 export const AI_LEVELS=['weak','normal','strong','expert'];
 const WIN=1000000,VALUE={K:20000,R:950,B:850,G:480,S:400,N:280,L:240,P:100};
 const value=p=>VALUE[p.type]+(p.prom?({R:300,B:300,S:100,N:200,L:240,P:380}[p.type]||0):0);
@@ -10,6 +10,7 @@ function terminal(s,side){
  if(!s.board.some(p=>p?.type==='K'&&p.side===side))return -WIN;
  if(!s.board.some(p=>p?.type==='K'&&p.side!==side))return WIN;
  if(adjudicationLimit(s)!==false&&s.ply>=adjudicationLimit(s)){const count=points(s);return Math.sign(count[side]-count[1-side])*900000;}
+ if(s.ply>=MAX_GAME_PLIES)return 0;
  return null;
 }
 function attacks(s){

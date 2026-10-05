@@ -1,7 +1,9 @@
 import {validateReplay,unpackReplayState} from './replay-code.js';
 import {label,arrivals} from './engine.js';
 
-const maxBytes=2*1024*1024;
+// A 1000-ply game can exceed 2 MB when destruction/shuffle metadata is expanded
+// for the portable v1 replay. Keep decompression bounded without rejecting it.
+const maxBytes=8*1024*1024;
 export function replayIndexAt(ratio,count){return Math.round(Math.max(0,Math.min(1,Number.isFinite(ratio)?ratio:0))*Math.max(0,count-1));}
 async function readBounded(stream){
  const reader=stream.getReader(),parts=[];let length=0;

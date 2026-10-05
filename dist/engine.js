@@ -1,4 +1,5 @@
 import {adjudicationLimit} from './judge-options.js';
+export const MAX_GAME_PLIES=1000;
 export const names={K:'玉',R:'飛',B:'角',G:'金',S:'銀',N:'桂',L:'香',P:'歩'};
 export const promoted={R:'龍',B:'馬',S:'成銀',N:'成桂',L:'成香',P:'と'};
 export const label=p=>p.prom?promoted[p.type]:names[p.type];
@@ -237,6 +238,11 @@ export function applyParadoxEvent(s,kind,pick,mover=1-s.turn){
 }
 // Resolve randomness once, in the authoritative match engine.
 export function collapseAfterMove(s,pick,spawn,mover=1-s.turn){
+ const next=resolveCollapse(s,pick,spawn,mover);
+ if(!next.result&&next.ply>=MAX_GAME_PLIES)next.result=`引き分け（${MAX_GAME_PLIES}手到達）`;
+ return next;
+}
+function resolveCollapse(s,pick,spawn,mover){
  const threshold=s.paradoxAt??150;
  // A revival replaces this move's random collapse so a spent wing cannot die twice in one move.
  if(threshold===false||!s.mode||s.result||s.ply<threshold||s.paradoxEvent?.kind==='rebirth')return s;
