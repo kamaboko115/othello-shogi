@@ -237,12 +237,12 @@ export function applyParadoxEvent(s,kind,pick,mover=1-s.turn){
  s.paradoxEvent={kind,squares};return s;
 }
 // Resolve randomness once, in the authoritative match engine.
-export function collapseAfterMove(s,pick,spawn,mover=1-s.turn){
- const next=resolveCollapse(s,pick,spawn,mover);
+export function collapseAfterMove(s,pick,spawn,mover=1-s.turn,options={}){
+ const next=resolveCollapse(s,pick,spawn,mover,options);
  if(!next.result&&next.ply>=MAX_GAME_PLIES)next.result=`引き分け（${MAX_GAME_PLIES}手到達）`;
  return next;
 }
-function resolveCollapse(s,pick,spawn,mover){
+function resolveCollapse(s,pick,spawn,mover,options){
  const threshold=s.paradoxAt??150;
  // A revival replaces this move's random collapse so a spent wing cannot die twice in one move.
  if(threshold===false||!s.mode||s.result||s.ply<threshold||s.paradoxEvent?.kind==='rebirth')return s;
@@ -266,8 +266,10 @@ function resolveCollapse(s,pick,spawn,mover){
   }
   if(batch.length)s.spawned={...batch[0],...(batch.length>1?{additional:batch.slice(1)}:{})};return s;
  }
- const index=pick(choices.length);if(!Number.isInteger(index)||index<0||index>=choices.length)throw Error('Invalid random choice');
- const square=choices[index],piece={...s.board[square]};s.board[square]=null;
+ const victims=options.protectKings?choices.filter(i=>s.board[i].type!=='K'):choices;
+ if(!victims.length){s.destroyed=null;s.spawned=null;return s;}
+ const index=pick(victims.length);if(!Number.isInteger(index)||index<0||index>=victims.length)throw Error('Invalid random choice');
+ const square=victims[index],piece={...s.board[square]};s.board[square]=null;
  if(piece.type==='K'&&piece.wings){reviveKing(s,square,piece,'destroy');return s;}
  s.destroyed={square,piece};s.spawned=null;
  if(piece.type==='K')s.result=(piece.side===1?'先手':'後手')+'の勝ち（パラドックスで王が崩壊）';

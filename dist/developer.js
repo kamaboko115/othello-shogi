@@ -9,7 +9,7 @@ import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShak
 import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js';
 import {prepareMoveSound,playParadoxArrival,playMoveSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue} from './sound.js';
 export function initDeveloper(getCurrent,onTutorialComplete=()=>{}){
- const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0,collapseTrial=0,collapsePhase='ash';
+ const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0,collapsePhase='ash';
  for(const side of [1,0]){const tray=document.createElement('div');tray.id='devHand'+side;tray.className='dev-capture-hand';tray.setAttribute('aria-label',side?'相手の駒台':'自分の駒台');$('devBoardFrame').insertAdjacentElement(side?'beforebegin':'afterend',tray);}
  const six=document.createElement('option');six.value='6';six.textContent='6枚';$('devDemoCount').append(six);
  const swordPreview=document.createElement('button');swordPreview.textContent='剣の演出を試す';$('devDemo').after(swordPreview);
@@ -74,8 +74,8 @@ export function initDeveloper(getCurrent,onTutorialComplete=()=>{}){
   if(state.paradoxEvent?.kind==='rebirth'){await runParadoxEvent($('devBoard'),state,0,current.signal);collapsePhase='ash';draw();}
   else if(tutorial&&lessons[lesson].collapse){
    const wait=ms=>new Promise(resolve=>{const done=()=>{clearTimeout(timer);current.signal.removeEventListener('abort',done);resolve();};const timer=setTimeout(done,ms);current.signal.addEventListener('abort',done,{once:true});if(current.signal.aborted)done();});
-   const collapse=async()=>{
-    if(tutorial){collapseLesson(state,collapseTrial);if(state.destroyed||state.spawned)collapseTrial++;}else collapseAfterMove(state,undefined,undefined,mover);
+   const collapse=async(movingSide)=>{
+    if(tutorial){collapseLesson(state,movingSide);}else collapseAfterMove(state,undefined,undefined,mover);
     if(!state.paradoxStarted&&!state.destroyed&&!state.spawned&&!state.paradoxEvent)return;
     collapsePhase='waiting';draw();
     if(state.paradoxEvent){await wait(120);if(current.signal.aborted)return;await runParadoxEvent($('devBoard'),state,0,current.signal);collapsePhase='ash';draw();return;}
@@ -88,10 +88,12 @@ export function initDeveloper(getCurrent,onTutorialComplete=()=>{}){
     }finally{note.remove();}
     draw();
    };
-   await collapse();
-   if(tutorial&&!state.result&&!current.signal.aborted){
-    await wait(450);if(current.signal.aborted)return;const reply=collapseReply(state,lessons[lesson].collapseSequence.slice(collapseTrial));
-    if(reply){state=play(state,reply);$('devStatus').textContent='相手が穴熊を守る手を指しました。';draw();playMoveSound();if(!current.signal.aborted)await collapse();}
+   await collapse(mover);
+   while(tutorial&&!state.result&&!current.signal.aborted&&state.turn!==mover){
+    await wait(450);if(current.signal.aborted)return;const reply=collapseReply(state);
+    if(!reply)break;
+    const replySide=state.turn;
+    if(reply){state=play(state,reply);$('devStatus').textContent='相手が指しました。';draw();playMoveSound();if(!current.signal.aborted)await collapse(replySide);}
    }
    effects.splice(0,effects.length,...moveEffects(state));
   }
@@ -118,7 +120,7 @@ export function initDeveloper(getCurrent,onTutorialComplete=()=>{}){
   prepareMoveSound();prepareParadoxSounds(!!lessons[lesson].collapse);
   $('lessonComplete').close();$('lessonAdvice').hidden=!lessons[lesson].collapse;
   $('developerDialog').classList.toggle('tutorial-drop',!!lessons[lesson].move.drop);
-  history=[];collapseTrial=0;$('devMode').value='play';reset(lessonState(lesson),false);
+  history=[];$('devMode').value='play';reset(lessonState(lesson),false);
   $('lessonTitle').textContent=(lesson+1)+' / '+lessons.length+'　'+lessons[lesson].title;
   $('lessonText').textContent=lessons[lesson].text;$('lessonNext').textContent=lesson===lessons.length-1?'仕上げの4問へ':'次へ';
   $('devStatus').textContent=lessons[lesson].collapse?'好きな駒を動かして、盤面崩壊を体験してみましょう。':lessons[lesson].move.drop?'駒台の金を選び、矢印の移動先へ打ってください。':'光る駒を選び、矢印の移動先を押してください。';
