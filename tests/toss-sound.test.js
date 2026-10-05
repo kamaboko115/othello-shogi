@@ -14,7 +14,7 @@ function audio(){
 }
 
 test('文字の破壊音は遅延なしで鳴り、破片の余韻後に音声ノードを解放する',()=>{
- const {context,nodes}=audio(),c={window:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);c.playTossShatterSound();
+ const {context,nodes}=audio(),c={effectsVolume:{output:context=>context.destination},window:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);c.playTossShatterSound();
  const crack=nodes.find(n=>n.kind==='source'),fragments=nodes.filter(n=>n.kind==='oscillator');
  assert.equal(crack.started,10);assert.equal(fragments.length,6);assert.equal(fragments[0].started,10);
  assert.ok(fragments.every(n=>n.stopped<11));assert.equal(nodes.find(n=>n.kind==='gain').gain.value,.6);
@@ -24,12 +24,12 @@ test('文字の破壊音は遅延なしで鳴り、破片の余韻後に音声�
 test('音声が使えない環境では演出を止めず、停止中は合成しない',()=>{
  for(const state of ['unsupported','suspended']){
   const {context,nodes}=audio();context.state=state;context.resume=()=>Promise.resolve();
-  const c={window:state==='unsupported'?{}:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);assert.doesNotThrow(()=>c.playTossShatterSound());assert.doesNotThrow(()=>c.playTossCutInSound());assert.equal(nodes.length,0);
+  const c={effectsVolume:{output:context=>context.destination},window:state==='unsupported'?{}:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);assert.doesNotThrow(()=>c.playTossShatterSound());assert.doesNotThrow(()=>c.playTossCutInSound());assert.equal(nodes.length,0);
  }
 });
 
 test('カットインの金属音はその瞬間に開始し、1秒以内の余韻後にノードを解放する',()=>{
- const {context,nodes}=audio(),c={window:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);c.playTossCutInSound();
+ const {context,nodes}=audio(),c={effectsVolume:{output:context=>context.destination},window:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);c.playTossCutInSound();
  const swish=nodes.find(n=>n.kind==='source'),tones=nodes.filter(n=>n.kind==='oscillator');
  assert.equal(swish.started,10);assert.equal(tones[0].started,10);assert.equal(tones.length,4);
  assert.ok(swish.buffer.getChannelData(0).some(value=>value!==0));assert.ok(tones.every(n=>n.stopped<11));
@@ -41,7 +41,7 @@ test('thunder and existing paradox sounds schedule ramps relative to the audio c
   const {context,nodes}=audio();const ramps=[];
   const gain=context.createGain;context.createGain=()=>{const n=gain();for(const method of ['setValueAtTime','linearRampToValueAtTime','exponentialRampToValueAtTime'])n.gain[method]=(value,at)=>{assert.ok(at>=context.currentTime,kind+' must not schedule a past ramp');ramps.push(at);};return n;};
   const filter=context.createBiquadFilter;context.createBiquadFilter=()=>{const n=filter();n.Q={value:0};return n;};
-  const c={window:{AudioContext:function(){return context;}}};vm.createContext(c);
+  const c={effectsVolume:{output:context=>context.destination},window:{AudioContext:function(){return context;}}};vm.createContext(c);
   vm.runInContext('let context;'+source.slice(source.indexOf('function prepare(){'),source.indexOf('function tone('))+source.slice(source.indexOf('let paradoxNoise;'),source.indexOf('// Original rare-event sounds')).replaceAll('export ',''),c);
   const stop=c.playParadoxMotionSound(kind,450,0);assert.ok(ramps.length>0);assert.equal(nodes.find(n=>n.kind==='source').started,10);stop();assert.ok(nodes.every(n=>n.disconnected));
  }
@@ -49,7 +49,7 @@ test('thunder and existing paradox sounds schedule ramps relative to the audio c
 
 for(const kind of ['charisma','summon','spear-rise'])test(kind+' audio starts immediately and releases every node on completion or interruption',()=>{
  for(const abort of [false,true]){
-  const {context,nodes}=audio(),c={window:{AudioContext:function(){return context;}}};vm.createContext(c);
+  const {context,nodes}=audio(),c={effectsVolume:{output:context=>context.destination},window:{AudioContext:function(){return context;}}};vm.createContext(c);
   vm.runInContext('let context;'+source.slice(source.indexOf('function prepare(){'),source.indexOf('function tone('))+source.slice(source.indexOf('export function playParadoxRareSound(')).replaceAll('export ',''),c);
   const stop=c.playParadoxRareSound(kind),tones=nodes.filter(n=>n.kind==='oscillator');assert.equal(tones[0].started,10);assert.ok(tones.length>=(kind==='spear-rise'?3:6));assert.ok(tones.every(n=>n.stopped>n.started&&n.stopped<=tones.at(-1).stopped));
   if(abort)stop();else tones.at(-1).onended();stop();assert.ok(nodes.every(n=>n.disconnected));

@@ -10,6 +10,16 @@
       "name": "ROOM_CREATE_BURST",
       "namespace_id": "731904115",
       "simple": { "limit": 5, "period": 60 }
+    },
+    {
+      "name": "API_REQUEST_BURST",
+      "namespace_id": "731904116",
+      "simple": { "limit": 600, "period": 60 }
+    },
+    {
+      "name": "ROOM_ACTION_BURST",
+      "namespace_id": "731904117",
+      "simple": { "limit": 60, "period": 60 }
     }
   ],
   "triggers": { "crons": ["*/5 * * * *"] },

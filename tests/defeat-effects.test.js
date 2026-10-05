@@ -40,7 +40,7 @@ function audio(state='running'){
  const param=()=>({value:0,setValueAtTime(v,t){this.initial=v;},linearRampToValueAtTime(){},exponentialRampToValueAtTime(v,t){ramps.push({from:this.initial,to:v,time:t});}});
  const make=kind=>{const n={kind,connect(){},disconnect(){this.disconnected=true;},start(t){this.started=t;},stop(t){if(t!==undefined)this.stopped=t;},frequency:param(),gain:param()};nodes.push(n);return n;};
  const context={state,currentTime:10,destination:{},resume:()=>Promise.resolve(),createGain:()=>make('gain'),createOscillator:()=>make('osc')};
- const c={window:state==='unsupported'?{}:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);return {c,nodes,ramps};
+ const c={effectsVolume:{output:context=>context.destination},window:state==='unsupported'?{}:{AudioContext:function(){return context;}}};vm.createContext(c);vm.runInContext(code,c);return {c,nodes,ramps};
 }
 test('敗北音は即時に下降する音を鳴らし、1.5秒以内に終わりノードを解放する',()=>{
  const {c,nodes,ramps}=audio();c.playResultSound(false);const voices=nodes.filter(n=>n.kind==='osc');

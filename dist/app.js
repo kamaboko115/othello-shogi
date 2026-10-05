@@ -1,3 +1,4 @@
+import {initEffectsVolume} from './audio-settings.js';
 import {collapseSteps,initCollapseSlider} from './collapse-options.js';
 import {showChallengeCelebration} from './challenge-celebration.js';
 import {createChallengeWins} from './challenge-wins.js';
@@ -19,7 +20,7 @@ import {minuteSteps,byoyomiSteps,clockRule,handicapOptions,clockBudget,clockSeco
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide} from './combo.js';
 import {initDeveloper} from './developer.js';
 import {resultView} from './result-view.js';
-import {paradoxSound,paradoxBanner} from './paradox.js';
+import {paradoxSound,paradoxBanner,prepareParadoxSounds} from './paradox.js';
 import {animateFlipLight} from './flip-light.js';
 import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js';
 import {startAI} from './ai-client.js';
@@ -28,7 +29,7 @@ import {createRoomTransport,createRoomPoller} from './room-network.js';
 import {initBuildInfo,initBoardPreview,shareInvitation,initRecordViewer} from './lobby-tools.js';
 import {createClockWarning} from './clock-warning.js';
 import {playClockWarning} from './sound.js';
-import {playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
+import {prepareMoveSound,playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
 import {initial,moves,movementTargets,label,names,points,beforeParadox} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const localAI=createLocalAIStore();
@@ -43,6 +44,7 @@ function showChallengeVictory(data){
 }
 $('retryChallengeWin').onclick=()=>{challengeReportKey='';showChallengeVictory(online);};
 const winAds=createWinAdBreak();
+initEffectsVolume(document);
 const music=initMusic(document);
 const rewardAds=createRewardAds({pause:()=>music.pause(),resume:()=>music.resume()});
 if(!rewardProviderEnabled&&!['localhost','127.0.0.1','::1','[::1]'].includes(location.hostname)){$('helperAd').disabled=true;$('helperAd').textContent='広告準備中';}
@@ -370,6 +372,7 @@ async function sendAction(action,move){
  finally{if(current()){busy=false;render();schedulePolling();}}
 }
 function enter(data,token,invite){
+ prepareMoveSound();prepareParadoxSounds(data.settings?.paradoxAt!==false);
  roomPoller.stop();cancelCombo();cancelCollapse();
  stopAI();aiTiming=null;clearInspection();online={...data,token,invite};state=data.state;logs=data.logs;stack=[];selected=null;legal=[];inviteRoom=null;connected=true;
  if(!data.local)storage.set('hanten-room-'+data.room,{token,invite});history.replaceState(null,'',location.pathname+(data.local?'#ai=':'#room=')+data.room);

@@ -1,18 +1,20 @@
+import {effectsVolume} from './audio-settings.js';
 // Load Shogi3 from its creator at runtime; do not redistribute the audio file.
 let context,flipBufferPromise=Promise.resolve(null);
 const shogiUrl='https://taira-komori.net/sound/playing01/Shogi3.mp3';
 // Skip the measured quiet lead-in; keep a short margin before the impact.
 const shogiStart=.55;
-let shogiSample;
-function prepareShogi(){try{if(shogiSample)return;shogiSample=new Audio(shogiUrl);shogiSample.preload='auto';shogiSample.addEventListener('loadedmetadata',()=>{shogiSample.currentTime=shogiStart;},{once:true});shogiSample.load();}catch{}}
-window.addEventListener('pointerdown',prepareShogi,{once:true,passive:true});
-window.addEventListener('keydown',prepareShogi,{once:true});
+let shogiSample,shogiRequested=false;
+function prepareShogi(){shogiRequested=true;try{if(shogiSample||effectsVolume.value===0)return;shogiSample=new Audio(shogiUrl);shogiSample.preload='auto';shogiSample.addEventListener('loadedmetadata',()=>{shogiSample.currentTime=shogiStart;},{once:true});shogiSample.load();}catch{}}
+export function prepareMoveSound(){prepareShogi();}
+effectsVolume.subscribe(value=>{if(value>0&&shogiRequested)prepareShogi();});
 function playShogi(rate=1,volume=.7){
- try{if(!shogiSample)prepareShogi();const sound=rate===1?shogiSample:shogiSample.cloneNode();sound.currentTime=shogiStart;sound.playbackRate=rate;sound.volume=volume;sound.play().catch(()=>tone(700,.06));}
+ if(effectsVolume.value===0)return;
+ try{if(!shogiSample)prepareShogi();const sound=rate===1?shogiSample:shogiSample.cloneNode();sound.currentTime=shogiStart;sound.playbackRate=rate;effectsVolume.audio(sound,volume);sound.play().catch(()=>tone(700,.06));}
  catch{tone(700,.06);}
 }
 function prepare(){try{context ||= new (window.AudioContext||window.webkitAudioContext)();if(context.state==='suspended')context.resume().catch(()=>{});}catch{}}
-function tone(freq,duration){prepare();if(!context||context.state!=='running')return;const o=context.createOscillator(),g=context.createGain(),at=context.currentTime;o.type='triangle';o.frequency.setValueAtTime(freq,at);o.frequency.exponentialRampToValueAtTime(freq*.45,at+duration);g.gain.setValueAtTime(.12,at);g.gain.exponentialRampToValueAtTime(.001,at+duration);o.connect(g);g.connect(context.destination);o.start(at);o.stop(at+duration);}
+function tone(freq,duration){prepare();if(!context||context.state!=='running')return;const o=context.createOscillator(),g=context.createGain(),at=context.currentTime;o.type='triangle';o.frequency.setValueAtTime(freq,at);o.frequency.exponentialRampToValueAtTime(freq*.45,at+duration);g.gain.setValueAtTime(.12,at);g.gain.exponentialRampToValueAtTime(.001,at+duration);o.connect(g);g.connect(effectsVolume.output(context));o.start(at);o.stop(at+duration);}
 export function playMoveSound(){playShogi();}
 window.addEventListener('pointerdown',prepare,{passive:true});
 window.addEventListener('keydown',prepare);
@@ -24,14 +26,14 @@ export function playClockWarning(urgent=false){
   const oscillator=context.createOscillator(),gain=context.createGain(),start=at+i*.12;
   oscillator.type='sine';oscillator.frequency.value=urgent?1200:1000;
   gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.16,start+.006);gain.gain.setValueAtTime(.16,start+.065);gain.gain.linearRampToValueAtTime(0,start+.085);
-  oscillator.connect(gain);gain.connect(context.destination);oscillator.start(start);oscillator.stop(start+.09);
+  oscillator.connect(gain);gain.connect(effectsVolume.output(context));oscillator.start(start);oscillator.stop(start+.09);
   oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
  }
 }
 // An original crack followed by falling, ringing fragments. No audio download.
 export function playTossShatterSound(){
  prepare();if(!context||context.state!=='running')return;
- const at=context.currentTime,output=context.createGain();output.gain.value=.6;output.connect(context.destination);
+ const at=context.currentTime,output=context.createGain();output.gain.value=.6;output.connect(effectsVolume.output(context));
  const noise=context.createBuffer(1,Math.ceil(context.sampleRate*.32),context.sampleRate),samples=noise.getChannelData(0);
  for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*Math.exp(-i/samples.length*8);
  const crack=context.createBufferSource(),filter=context.createBiquadFilter(),crackGain=context.createGain();crack.buffer=noise;filter.type='highpass';filter.frequency.value=1300;crackGain.gain.value=.32;
@@ -48,7 +50,7 @@ export function playTossShatterSound(){
 // A sharp rising blade sweep, followed by a bright metallic ring.
 export function playTossCutInSound(){
  prepare();if(!context||context.state!=='running')return;
- const at=context.currentTime,output=context.createGain();output.gain.value=.65;output.connect(context.destination);
+ const at=context.currentTime,output=context.createGain();output.gain.value=.65;output.connect(effectsVolume.output(context));
  const nodes=[],noise=context.createBuffer(1,Math.ceil(context.sampleRate*.18),context.sampleRate),samples=noise.getChannelData(0);
  for(let i=0;i<samples.length;i++)samples[i]=(Math.random()*2-1)*Math.exp(-i/samples.length*5);
  const swish=context.createBufferSource(),filter=context.createBiquadFilter(),swishGain=context.createGain();swish.buffer=noise;filter.type='highpass';filter.frequency.value=900;
@@ -69,7 +71,7 @@ export function playTossCutInSound(){
 }
 export function playSwordSound(signal){
  prepare();if(!context||context.state!=='running'||signal?.aborted)return ()=>{};
- const output=context.createGain();output.gain.value=.65;output.connect(context.destination);
+ const output=context.createGain();output.gain.value=.65;output.connect(effectsVolume.output(context));
  const nodes=[],at=context.currentTime;
  // Inharmonic partials give the clash a metallic edge; the bass lands with the blade.
  for(const [delay,freq,duration,volume] of [[.08,1650,.22,.07],[.12,2473,.28,.045],[.38,115,.18,.2],[.38,1831,.5,.1],[.38,2917,.43,.065],[.39,4271,.32,.025]]){
@@ -90,18 +92,18 @@ export function playVictorySound(){
   const osc=context.createOscillator(),gain=context.createGain(),at=start+i*.025;
   osc.type='sine';osc.frequency.setValueAtTime(freq*.65,at);osc.frequency.exponentialRampToValueAtTime(freq,at+.38);
   gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.045,at+.12);gain.gain.exponentialRampToValueAtTime(.001,at+1.7);
-  osc.connect(gain);gain.connect(context.destination);osc.start(at);osc.stop(at+1.75);
+  osc.connect(gain);gain.connect(effectsVolume.output(context));osc.start(at);osc.stop(at+1.75);
  }
  const buffer=context.createBuffer(1,Math.ceil(context.sampleRate*.65),context.sampleRate),data=buffer.getChannelData(0);
  for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
- const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();source.buffer=buffer;filter.type='bandpass';filter.Q.value=.7;filter.frequency.setValueAtTime(1000,start);filter.frequency.exponentialRampToValueAtTime(6500,start+.55);gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.11,start+.18);gain.gain.exponentialRampToValueAtTime(.001,start+.65);source.connect(filter);filter.connect(gain);gain.connect(context.destination);source.start(start);
+ const source=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();source.buffer=buffer;filter.type='bandpass';filter.Q.value=.7;filter.frequency.setValueAtTime(1000,start);filter.frequency.exponentialRampToValueAtTime(6500,start+.55);gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.11,start+.18);gain.gain.exponentialRampToValueAtTime(.001,start+.65);source.connect(filter);filter.connect(gain);gain.connect(effectsVolume.output(context));source.start(start);
 }
 
 // The win shimmer's counterpart: a short, falling silver chord, synthesized
 // locally. No extra audio asset or request is needed.
 export function playDefeatSound(signal){
  prepare();if(!context||context.state!=='running'||signal?.aborted)return;
- const output=context.createGain();output.gain.value=.65;output.connect(context.destination);
+ const output=context.createGain();output.gain.value=.65;output.connect(effectsVolume.output(context));
  const nodes=[],voices=[],start=context.currentTime;
  for(const [i,freq]of [1568,1174.7,932.3,622.3].entries()){
   const osc=context.createOscillator(),gain=context.createGain(),at=start+i*.045;
@@ -118,7 +120,7 @@ export function playResultSound(won,signal){if(won)playVictorySound();else playD
 // A short crowd applause made from overlapping, filtered hand-clap bursts.
 export function playApplauseSound(signal){
  prepare();if(!context||context.state!=='running'||signal?.aborted)return;
- const output=context.createGain();output.gain.value=.5;output.connect(context.destination);
+ const output=context.createGain();output.gain.value=.5;output.connect(effectsVolume.output(context));
  const nodes=[],start=context.currentTime;
  for(let i=0;i<18;i++){
   const duration=.065+Math.random()*.04,buffer=context.createBuffer(1,Math.ceil(context.sampleRate*duration),context.sampleRate),samples=buffer.getChannelData(0);
@@ -136,18 +138,18 @@ export function playArcadeCue(kind){
  prepare();if(!context||context.state!=='running')return;
  const patterns={tap:[[0,880,.055],[.04,1320,.07]],start:[[0,523,.1],[.09,659,.1],[.18,784,.1],[.3,1047,.3],[.3,1568,.28]],promote:[[0,660,.09],[.065,880,.09],[.13,1175,.11],[.21,1760,.24]],check:[[0,1568,.11],[.12,1175,.1],[.23,1568,.18]]};
  const notes=patterns[kind];if(!notes)return;const now=context.currentTime;
- for(const [offset,freq,duration] of notes){const osc=context.createOscillator(),gain=context.createGain(),at=now+offset;osc.type='triangle';osc.frequency.setValueAtTime(freq*.96,at);osc.frequency.exponentialRampToValueAtTime(freq,at+.025);gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(kind==='tap'?.025:.055,at+.006);gain.gain.exponentialRampToValueAtTime(.001,at+duration);osc.connect(gain);gain.connect(context.destination);osc.start(at);osc.stop(at+duration+.01);}
+ for(const [offset,freq,duration] of notes){const osc=context.createOscillator(),gain=context.createGain(),at=now+offset;osc.type='triangle';osc.frequency.setValueAtTime(freq*.96,at);osc.frequency.exponentialRampToValueAtTime(freq,at+.025);gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(kind==='tap'?.025:.055,at+.006);gain.gain.exponentialRampToValueAtTime(.001,at+duration);osc.connect(gain);gain.connect(effectsVolume.output(context));osc.start(at);osc.stop(at+duration+.01);}
 }
 export function playCaptureSound(major=false){
  prepare();if(!context||context.state!=='running')return;
  for(const [i,freq] of (major?[1200,1800,2400]:[1500,2250]).entries()){
-  const osc=context.createOscillator(),gain=context.createGain(),at=context.currentTime+i*.015;osc.type='sine';osc.frequency.setValueAtTime(freq,at);osc.frequency.exponentialRampToValueAtTime(freq*.75,at+.08);gain.gain.setValueAtTime(.055,at);gain.gain.exponentialRampToValueAtTime(.001,at+(major?.2:.1));osc.connect(gain);gain.connect(context.destination);osc.start(at);osc.stop(at+.22);
+  const osc=context.createOscillator(),gain=context.createGain(),at=context.currentTime+i*.015;osc.type='sine';osc.frequency.setValueAtTime(freq,at);osc.frequency.exponentialRampToValueAtTime(freq*.75,at+.08);gain.gain.setValueAtTime(.055,at);gain.gain.exponentialRampToValueAtTime(.001,at+(major?.2:.1));osc.connect(gain);gain.connect(effectsVolume.output(context));osc.start(at);osc.stop(at+.22);
  }
 }
 export const fireworkInterval=count=>Math.min(220,1100/Math.max(1,count-1));
 export function playFireworks(count=6){
  prepare();if(!context||context.state!=='running')return ()=>{};
- const output=context.createGain();output.gain.value=.55;output.connect(context.destination);const nodes=[],now=context.currentTime;
+ const output=context.createGain();output.gain.value=.55;output.connect(effectsVolume.output(context));const nodes=[],now=context.currentTime;
  const whistle=context.createOscillator(),wg=context.createGain();whistle.frequency.setValueAtTime(700,now);whistle.frequency.exponentialRampToValueAtTime(1800,now+.15);wg.gain.setValueAtTime(.025,now);wg.gain.exponentialRampToValueAtTime(.001,now+.18);whistle.connect(wg);wg.connect(output);whistle.start(now);whistle.stop(now+.19);nodes.push(whistle);
  for(let b=0;b<count;b++){
   const at=now+.15+b*fireworkInterval(count)/1000,buffer=context.createBuffer(1,Math.ceil(context.sampleRate*.35),context.sampleRate),data=buffer.getChannelData(0);
@@ -166,12 +168,12 @@ export function playSmallComboFinish(count){
   const osc=context.createOscillator(),gain=context.createGain(),at=context.currentTime+(index>=4?.2+(index-4)*.065:index*(count===2?.008:.028)),duration=count===2?.24:.48;
   osc.type='sine';osc.frequency.setValueAtTime(freq*1.025,at);osc.frequency.exponentialRampToValueAtTime(freq,at+.05);
   gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime((count===2?.12:.15)/tones.length,at+.004);gain.gain.exponentialRampToValueAtTime(.001,at+duration);
-  osc.connect(gain);gain.connect(context.destination);rememberComboGain(gain);osc.start(at);osc.stop(at+duration+.02);
+  osc.connect(gain);gain.connect(effectsVolume.output(context));rememberComboGain(gain);osc.start(at);osc.stop(at+duration+.02);
  }
 }
 export function playComboImpact(){
  prepare();if(!context||context.state!=='running')return;
- const osc=context.createOscillator(),gain=context.createGain(),at=context.currentTime;osc.type='sine';osc.frequency.setValueAtTime(100,at);osc.frequency.exponentialRampToValueAtTime(42,at+.16);gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.24,at+.008);gain.gain.exponentialRampToValueAtTime(.001,at+.22);osc.connect(gain);gain.connect(context.destination);rememberComboGain(gain);osc.start(at);osc.stop(at+.24);
+ const osc=context.createOscillator(),gain=context.createGain(),at=context.currentTime;osc.type='sine';osc.frequency.setValueAtTime(100,at);osc.frequency.exponentialRampToValueAtTime(42,at+.16);gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.24,at+.008);gain.gain.exponentialRampToValueAtTime(.001,at+.22);osc.connect(gain);gain.connect(effectsVolume.output(context));rememberComboGain(gain);osc.start(at);osc.stop(at+.24);
 }
 
 // Ascending combo tones: gold, platinum chime, then a brighter rainbow chord.
@@ -180,16 +182,16 @@ export async function playComboSound(count){
   const buffer=await flipBufferPromise;if(!context||context.state!=='running')return;
   const semitones=Math.min(19,(count-1)*3),rate=2**(semitones/12);
   playShogi(rate,.7);
-  if(buffer){const sound=context.createBufferSource(),gain=context.createGain();sound.buffer=buffer;sound.playbackRate.value=rate;gain.gain.value=.7;sound.connect(gain);gain.connect(context.destination);rememberComboGain(gain);sound.start();}
+  if(buffer){const sound=context.createBufferSource(),gain=context.createGain();sound.buffer=buffer;sound.playbackRate.value=rate;gain.gain.value=.7;sound.connect(gain);gain.connect(effectsVolume.output(context));rememberComboGain(gain);sound.start();}
   if(count<2)return;
   const base=440*rate,tones=count>=4?[1,1.25,1.5]:count===3?[1,2]:[1];
-  for(const [index,multiple] of tones.entries()){const osc=context.createOscillator(),gain=context.createGain(),at=context.currentTime+index*.025;osc.type=count===2?'triangle':'sine';osc.frequency.value=base*multiple;gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.18/tones.length,at+.008);gain.gain.exponentialRampToValueAtTime(.001,at+.23);osc.connect(gain);gain.connect(context.destination);rememberComboGain(gain);osc.start(at);osc.stop(at+.25);}
+  for(const [index,multiple] of tones.entries()){const osc=context.createOscillator(),gain=context.createGain(),at=context.currentTime+index*.025;osc.type=count===2?'triangle':'sine';osc.frequency.value=base*multiple;gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.18/tones.length,at+.008);gain.gain.exponentialRampToValueAtTime(.001,at+.23);osc.connect(gain);gain.connect(effectsVolume.output(context));rememberComboGain(gain);osc.start(at);osc.stop(at+.25);}
  }catch{}
 }
 
 export function playHelperDeparture(){
  prepare();if(!context||context.state!=='running')return;
- const at=context.currentTime,osc=context.createOscillator(),gain=context.createGain();osc.type='triangle';osc.frequency.setValueAtTime(280,at);osc.frequency.exponentialRampToValueAtTime(1500,at+.12);osc.frequency.exponentialRampToValueAtTime(100,at+.45);gain.gain.setValueAtTime(.001,at);gain.gain.linearRampToValueAtTime(.16,at+.04);gain.gain.exponentialRampToValueAtTime(.001,at+.46);osc.connect(gain);gain.connect(context.destination);osc.start(at);osc.stop(at+.48);osc.onended=()=>{osc.disconnect();gain.disconnect();};
+ const at=context.currentTime,osc=context.createOscillator(),gain=context.createGain();osc.type='triangle';osc.frequency.setValueAtTime(280,at);osc.frequency.exponentialRampToValueAtTime(1500,at+.12);osc.frequency.exponentialRampToValueAtTime(100,at+.45);gain.gain.setValueAtTime(.001,at);gain.gain.linearRampToValueAtTime(.16,at+.04);gain.gain.exponentialRampToValueAtTime(.001,at+.46);osc.connect(gain);gain.connect(effectsVolume.output(context));osc.start(at);osc.stop(at+.48);osc.onended=()=>{osc.disconnect();gain.disconnect();};
 }
 
 // A soft ascending major chord and bell harmonics for a fortunate arrival.
@@ -201,7 +203,7 @@ export function playParadoxArrival(){
    const oscillator=context.createOscillator(),gain=context.createGain(),start=at+i*.085;
    oscillator.type='sine';oscillator.frequency.setValueAtTime(frequency*ratio,start);
    gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(volume,start+.035);gain.gain.exponentialRampToValueAtTime(.0001,start+1.2);
-   oscillator.connect(gain);gain.connect(context.destination);oscillator.start(start);oscillator.stop(start+1.25);
+   oscillator.connect(gain);gain.connect(effectsVolume.output(context));oscillator.start(start);oscillator.stop(start+1.25);
   }
  });
 }
@@ -215,7 +217,7 @@ export function playParadoxMotionSound(kind,durationMs=180,index=0){
  source.buffer=paradoxNoise;source.loop=true;filter.type=rumble||thunder?'lowpass':'bandpass';filter.Q.value=rumble?.7:1.2;
  filter.frequency.setValueAtTime(rumble?230:thunder?4200:kind==='flip'?700+index*120:1700,at);filter.frequency.exponentialRampToValueAtTime(rumble?90:400,at+duration);
  gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(thunder?.4:rumble?.48:kind==='flip'?.18:.2,at+(thunder?.004:Math.min(.06,duration*.15)));gain.gain.setValueAtTime(rumble?.38:.11,at+duration*.65);gain.gain.linearRampToValueAtTime(0,at+duration);
- source.connect(filter);filter.connect(gain);gain.connect(context.destination);source.start(at);source.stop(at+duration+.02);
+ source.connect(filter);filter.connect(gain);gain.connect(effectsVolume.output(context));source.start(at);source.stop(at+duration+.02);
  const nodes=[source,filter,gain],sources=[source];
  if(rumble){
   const osc=context.createOscillator(),bass=context.createGain(),pulse=context.createOscillator(),depth=context.createGain();
@@ -231,7 +233,7 @@ export function playParadoxMotionSound(kind,durationMs=180,index=0){
 // Original rare-event sounds, synthesized locally with cancellable tails.
 export function playParadoxRareSound(kind){
  prepare();if(!context||context.state!=='running')return ()=>{};
- const at=context.currentTime,nodes=[],sources=[],master=context.createGain();master.gain.value=.42;master.connect(context.destination);nodes.push(master);
+ const at=context.currentTime,nodes=[],sources=[],master=context.createGain();master.gain.value=.42;master.connect(effectsVolume.output(context));nodes.push(master);
  const note=(freq,start,length,volume,type='sine',end=freq)=>{
   const o=context.createOscillator(),g=context.createGain();o.type=type;o.frequency.setValueAtTime(freq,at+start);o.frequency.exponentialRampToValueAtTime(end,at+start+length);
   g.gain.setValueAtTime(0,at+start);g.gain.linearRampToValueAtTime(volume,at+start+.008);g.gain.exponentialRampToValueAtTime(.0001,at+start+length);

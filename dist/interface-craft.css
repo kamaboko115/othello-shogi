@@ -95,3 +95,5 @@ html[data-ui-theme=dark] #challengeVictory.challenge-crowned{background:radial-g
 .lobby-introduction p{font-size:16px;line-height:1.9;margin:0 0 10px;overflow-wrap:anywhere}
 .lobby-introduction a{display:inline-block;color:inherit;font-size:14px;line-height:1.7;padding:6px 0;text-underline-offset:4px;text-decoration-thickness:1px}
 @media(max-width:480px){.lobby-introduction{margin-bottom:20px}.lobby-introduction h2{margin-bottom:10px}.lobby-introduction p{font-size:15px;line-height:1.85}}
+
+.effects-settings{margin-block:16px;padding:12px 16px}.effects-settings label{display:flex;justify-content:space-between;gap:16px}.effects-settings input{width:100%;margin-block:12px}.effects-settings output{font-variant-numeric:tabular-nums}

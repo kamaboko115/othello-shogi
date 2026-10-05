@@ -50,7 +50,7 @@ test('clock cues synthesize one beep or two spaced beeps and release their audio
  for(const urgent of [false,true]){
   const oscillators=[],gains=[],parameter=()=>({setValueAtTime(){},linearRampToValueAtTime(){}});
   const context={state:'running',currentTime:10,destination:{},createOscillator(){const node={frequency:{},connect(){},start(at){this.startAt=at;},stop(at){this.stopAt=at;},disconnect(){this.released=true;}};oscillators.push(node);return node;},createGain(){const node={gain:parameter(),connect(){},disconnect(){this.released=true;}};gains.push(node);return node;}};
-  const c={window:{AudioContext:function(){return context;}}};vm.runInNewContext(code+'globalThis.play=playClockWarning;',c);c.play(urgent);
+  const c={effectsVolume:{output:context=>context.destination},window:{AudioContext:function(){return context;}}};vm.runInNewContext(code+'globalThis.play=playClockWarning;',c);c.play(urgent);
   assert.equal(oscillators.length,urgent?2:1);assert.equal(oscillators[0].startAt,10);
   if(urgent)assert.equal(oscillators[1].startAt,10.12);
   for(const node of oscillators){assert.ok(node.stopAt-node.startAt<.1);node.onended();assert.ok(node.released);}
