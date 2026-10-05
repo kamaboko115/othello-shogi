@@ -129,7 +129,7 @@ header .brand span{color:#254b40}
 #resultActions #rematchPanel{border:0;background:none;padding:0;margin:0}
 #resultActions #rematchText{font-size:14px;color:#a5bab0;margin:0 0 10px}
 #resultActions button{background:transparent;border:0;border-radius:0;box-shadow:none;font:inherit;color:#eddfb4;padding:10px 16px;margin:0}
-#resultActions #closeResult{color:#b3c5b7}
+
 #resultActions button:disabled{opacity:.5}
 @media(max-width:700px){:root .game-ended main{padding:18px 12px}.game-ended .tabletop{grid-template-columns:1fr 1fr;gap:12px}.game-ended .player{width:112px}.game-ended .hand .piece{font-size:19px}.game-ended .hand{gap:4px;padding:5px}#resultHeading{margin-bottom:18px}}
 
