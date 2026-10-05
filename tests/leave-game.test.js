@@ -8,7 +8,7 @@ const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8');
 const leaving=source.slice(source.indexOf('async function resignAndLeave()'),source.indexOf("$('requestUndo').onclick"));
 const sending=source.slice(source.indexOf('async function sendAction('),source.indexOf('function enter('));
 function client(kind='friend'){
- const calls=[],elements={reset:{},closeResult:{}},state={result:'',turn:1};
+ const calls=[],elements={reset:{},closeResult:{},settingsLobby:{},settingsDialog:{open:true,close(){this.open=false;}}},state={result:'',turn:1};
  const context={winAds:{betweenMatches:async()=>({shown:false})},state,online:{room:'room',round:1,joined:true,kind,side:0,version:1,token:'token'},busy:false,message:'',routeVersion:0,
   $:id=>elements[id],interruptMoveEffects(){},render(){},confirm(title,fn){context.confirmAction=fn;},
   leaveGame(){calls.push('lobby');context.online=null;},adopt(data){calls.push('adopt');context.state=data.state;},
@@ -69,4 +69,16 @@ test('投了処理中の重複離脱、終了未確認の応答、別対局へ�
  context.busy=false;context.request=async()=>({state:{result:''}});await context.resignAndLeave();assert.equal(context.online.room,'room');
  context.request=async()=>{context.online={...context.online,round:2};return {closed:true,state:{result:'後手の勝ち（投了）'}};};
  await context.resignAndLeave();assert.equal(calls.includes('lobby'),false);
+});
+
+for(const kind of ['ai','friend'])test(`${kind}設定からのロビー復帰も投了確認と応答を待つ`,async()=>{
+ const {context,calls,elements}=client(kind);
+ elements.settingsLobby.onclick();
+ assert.equal(elements.settingsDialog.open,false);
+ assert.deepEqual(calls,[]);assert.equal(context.online.room,'room');
+ await context.confirmAction();assert.deepEqual(calls,['leave','adopt','lobby']);
+});
+test('処理中は設定からロビーへ移動しない',()=>{
+ const {context,calls,elements}=client();context.busy=true;elements.settingsLobby.onclick();
+ assert.equal(elements.settingsDialog.open,true);assert.equal(context.confirmAction,undefined);assert.deepEqual(calls,[]);
 });
