@@ -142,7 +142,7 @@ const replayViewer=initReplayViewer(document,async()=>{if(!online)throw Error('�
 $('autoHelper').onchange=()=>{autoHelperAttempt=null;syncAI();};
 const updateCollapseSlider=initCollapseSlider($('paradoxAt'),$('paradoxAtValue'));
 
-const tutorialTools=initDeveloper(()=>({state,side:online?.side??0}));
+const tutorialTools=initDeveloper(()=>({state,side:online?.side??0}),()=> $('tutorialPuzzleLaunch').click());
 function stone(side){const el=document.createElement('span');el.className='stone '+(side===0?'black':'white');el.setAttribute('aria-hidden','true');return el;}
 function recordLine(text){const el=document.createElement('div');for(const part of text.split(/([▲▽])/)){if(part==='▲'||part==='▽'){const mark=stone(part==='▲'?0:1);mark.removeAttribute('aria-hidden');mark.setAttribute('aria-label',part==='▲'?'先手':'後手');el.append(mark);}else el.append(document.createTextNode(part));}return el;}
 const selectedSettings=()=>challengeSettings({timeControl:selectedKind==='friend'&&Number($('mainTime').value)<minuteSteps.length?{minutes:minuteSteps[Number($('mainTime').value)],increment:Number($('incrementTime').value),byoyomi:byoyomiSteps[Number($('byoyomiTime').value)]}:'none',handicap:selectedKind==='friend'?$('handicap').value:$('aiHandicap').value,paradoxAt:collapseSteps[Number($('paradoxAt').value)],moveLimit:false,noDrops:$('allowDrops').value==='no',...(selectedKind==='ai'?{helperUnlimited:$('helperUnlimited').checked,handicapSide:$('aiHandicapSide').value,aiLevel:$('aiLevel').value,thinkMs:Number($('thinkTime').value)}:{})},selectedKind);
@@ -314,7 +314,9 @@ async function resignAndLeave(){
  if(data?.closed&&online?.room===room&&online.round===round){leaveGame();await winAds.betweenMatches();}
 }
 $('closeResult').onclick=()=>resignAndLeave();
-$('reset').onclick=()=>{if(busy)return;if(state.result||!online?.joined)resignAndLeave();else confirm('対局を離れますか？',resignAndLeave);};
+function requestLeave(){if(busy)return;if(state.result||!online?.joined)resignAndLeave();else confirm('対局を離れますか？',resignAndLeave);}
+$('reset').onclick=requestLeave;
+$('settingsLobby').onclick=()=>{if(busy)return;$('settingsDialog').close();requestLeave();};
 $('requestUndo').onclick=()=>sendAction('offer-undo');$('acceptUndo').onclick=()=>sendAction('accept-undo');$('declineUndo').onclick=()=>sendAction('decline-undo');
 $('resign').onclick=()=>{if(online&&!state.result)confirm('投了しますか？',()=>sendAction('resign'));};
 $('draw').onclick=()=>{if(online&&!state.result)sendAction('offer-draw');};

@@ -8,7 +8,7 @@ import {initial,empty,moves,play,label,collapseAfterMove,arrivalSummary,paradoxS
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide,runSword} from './combo.js';
 import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js';
 import {prepareMoveSound,playParadoxArrival,playMoveSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue} from './sound.js';
-export function initDeveloper(getCurrent){
+export function initDeveloper(getCurrent,onTutorialComplete=()=>{}){
  const $=id=>document.getElementById(id);let state=initial(),selected=null,working=false,controller=null,history=[],tutorial=false,lesson=0,collapseTrial=0,collapsePhase='ash';
  for(const side of [1,0]){const tray=document.createElement('div');tray.id='devHand'+side;tray.className='dev-capture-hand';tray.setAttribute('aria-label',side?'相手の駒台':'自分の駒台');$('devBoardFrame').insertAdjacentElement(side?'beforebegin':'afterend',tray);}
  const six=document.createElement('option');six.value='6';six.textContent='6枚';$('devDemoCount').append(six);
@@ -101,7 +101,7 @@ export function initDeveloper(getCurrent){
   if(current.signal.aborted)return;
   $('devStatus').textContent=effects.filter(effect=>effect.text).at(-1)?.text||(state.turn?'相手':'自分')+'の手番';
   working=false;$('devTurn').value=String(state.turn);draw();
-  if(tutorial&&(completed||(lessons[lesson].collapse&&state.result))){$('lessonCompleteNext').textContent=lesson===lessons.length-1?'チュートリアルを終える':'次へ';$('lessonComplete').showModal();}
+  if(tutorial&&(completed||(lessons[lesson].collapse&&state.result))){$('lessonCompleteNext').textContent=lesson===lessons.length-1?'仕上げの4問へ':'次へ';$('lessonComplete').showModal();}
  }
  $('openDeveloper').onclick=()=>{prepareMoveSound();tutorial=false;$('developerDialog').classList.remove('tutorial-mode');$('tutorialLesson').hidden=true;$('settingsDialog').close();history=[];reset(copyCurrent(),false);$('devTransfer').hidden=true;$('devStatus').textContent='練習専用の盤面です。配置・陣営・成りを自由に変更できます。';$('developerDialog').showModal();};
  $('closeDeveloper').onclick=()=>$('developerDialog').close();
@@ -120,13 +120,13 @@ export function initDeveloper(getCurrent){
   $('developerDialog').classList.toggle('tutorial-drop',!!lessons[lesson].move.drop);
   history=[];collapseTrial=0;$('devMode').value='play';reset(lessonState(lesson),false);
   $('lessonTitle').textContent=(lesson+1)+' / '+lessons.length+'　'+lessons[lesson].title;
-  $('lessonText').textContent=lessons[lesson].text;$('lessonNext').textContent=lesson===lessons.length-1?'チュートリアルを終える':'次へ';
+  $('lessonText').textContent=lessons[lesson].text;$('lessonNext').textContent=lesson===lessons.length-1?'仕上げの4問へ':'次へ';
   $('devStatus').textContent=lessons[lesson].collapse?'好きな駒を動かして、盤面崩壊を体験してみましょう。':lessons[lesson].move.drop?'駒台の金を選び、矢印の移動先へ打ってください。':'光る駒を選び、矢印の移動先を押してください。';
  }
  const startTutorial=()=>{tutorial=true;lesson=0;history=[];$('developerDialog').classList.add('tutorial-mode');$('tutorialLesson').hidden=false;$('devTransfer').hidden=true;loadLesson();$('developerDialog').showModal();};
  $('openTutorial').onclick=startTutorial;
  $('lessonReset').onclick=()=>{if(!working)loadLesson();};
- const nextLesson=()=>{if(working)return;if(lesson===lessons.length-1){$('developerDialog').close();return;}lesson++;loadLesson();};
+ const nextLesson=()=>{if(working)return;if(lesson===lessons.length-1){$('developerDialog').close();onTutorialComplete();return;}lesson++;loadLesson();};
  $('lessonNext').onclick=nextLesson;$('lessonCompleteNext').onclick=()=>{$('lessonComplete').close();nextLesson();};$('lessonCompleteRepeat').onclick=()=>{if(!working)loadLesson();};
  const exitTutorial=()=>{$('lessonComplete').close();$('developerDialog').close();};$('lessonExit').onclick=exitTutorial;$('lessonCompleteExit').onclick=exitTutorial;
  return {startTutorial};

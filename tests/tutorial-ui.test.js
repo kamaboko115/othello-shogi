@@ -8,7 +8,7 @@ globalThis.window={addEventListener(){}};
 globalThis.matchMedia=()=>({matches:true});
 const {initDeveloper}=await import('../dist/developer.js');
 // Minimal DOM for exercising event handlers and asynchronous dialog transitions.
-function view(){
+function view(onComplete){
  const ids=new Map();
  class Element{
   children=[];dataset={};style={};value='';open=false;events={};
@@ -25,7 +25,7 @@ function view(){
  const html=readFileSync(new URL('../dist/index.html',import.meta.url),'utf8');
  for(const [,id] of html.matchAll(/id="([^"]+)"/g)){assert.ok(!ids.has(id),'unique id '+id);const el=new Element();el.id=id;}
  globalThis.document={getElementById:id=>{assert.ok(ids.has(id),'exists '+id);return ids.get(id);},createElement:()=>new Element(),querySelectorAll:()=>[]};
- initDeveloper(()=>({state:initial(),side:0}));
+ initDeveloper(()=>({state:initial(),side:0}),onComplete);
  const get=id=>ids.get(id),clickSquare=i=>get('devBoard').querySelector(`[data-square="${i}"]`).onclick();
  return {get,clickSquare};
 }
@@ -88,3 +88,11 @@ test('開発者の練習盤は崩壊せず、待ったで盤面を戻せる',asy
  assert.equal(count(),40);get('closeDeveloper').onclick();
  get('openTutorial').onclick();assert.match(get('lessonTitle').textContent,/1 \/ /);get('lessonExit').onclick();
 });
+
+ test('最後の練習から仕上げの4問へ繋がり、途中終了では開かない',()=>{
+ let opened=0;const {get}=view(()=>opened++);get('openTutorial').onclick();
+ for(let i=0;i<lessons.length-1;i++)get('lessonNext').onclick();
+ assert.equal(get('lessonNext').textContent,'仕上げの4問へ');
+ get('lessonNext').onclick();assert.equal(opened,1);assert.equal(get('developerDialog').open,false);
+ get('openTutorial').onclick();get('lessonExit').onclick();assert.equal(opened,1);
+ });
