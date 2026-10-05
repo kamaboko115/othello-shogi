@@ -60,7 +60,7 @@ export function initReplayViewer(document,load){
  $('replaySlider').oninput=()=>{if(record){index=Number($('replaySlider').value);paint();}};
  async function shareURL(){if(!record)throw Error('棋譜を読み込んでください。');const link=await encodeReplayLink(record,new URL('/',document.defaultView.location.href));$('replayLink').value=link;$('replayShareBox').hidden=false;return link;}
  $('replayShare').onclick=async()=>{try{const url=await shareURL();try{await document.defaultView.navigator.clipboard.writeText(url);$('replayStatus').textContent='共有URLをコピーしました。';}catch{$('replayLink').focus();$('replayLink').select();$('replayStatus').textContent='共有URLを選択しました。コピーしてください。';}}catch(error){$('replayStatus').textContent=error.message;}};
- $('replayTwitter').onclick=async()=>{try{const url=await shareURL();document.defaultView.open('https://twitter.com/intent/tweet?'+new URLSearchParams({text:'オセロ将棋の対局を振り返る',url}),'_blank','noopener,noreferrer');}catch(error){$('replayStatus').textContent=error.message;}};
+ $('replayTwitter').onclick=async()=>{try{const url=await shareURL();document.defaultView.open('https://twitter.com/intent/tweet?'+new URLSearchParams({text:'OSE SHOGI（オセロ将棋）の対局を振り返る',url}),'_blank','noopener,noreferrer');}catch(error){$('replayStatus').textContent=error.message;}};
  $('replayDownload').onclick=()=>{if(!record)return;const url=URL.createObjectURL(new Blob([JSON.stringify(record)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='othello-shogi-replay.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
  function evaluationPlot(){
    const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 600 160');

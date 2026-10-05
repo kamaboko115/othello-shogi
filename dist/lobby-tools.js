@@ -12,7 +12,7 @@ export function initBoardPreview(document){
 
 export async function shareInvitation(url,{navigator=globalThis.navigator}={}){
  if(typeof navigator?.share==='function'){
-  try{await navigator.share({title:'オセロ将棋に招待',text:'オセロ将棋で対局しよう！',url});return 'shared';}
+  try{await navigator.share({title:'OSE SHOGI（オセロ将棋）に招待',text:'OSE SHOGI（オセロ将棋）で対局しよう！',url});return 'shared';}
   catch(error){if(error.name==='AbortError')return 'cancelled';}
  }
  try{await navigator.clipboard.writeText(url);return 'copied';}catch{return 'select';}
