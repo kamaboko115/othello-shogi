@@ -22,7 +22,7 @@ test('board preview follows either theme and storage changes without touching th
 test('native sharing submits only the supplied invitation link; cancellation never copies it',async()=>{
  const url='https://oshogi-games.pages.dev/#room=room&invite=invite',sent=[];
  assert.equal(await shareInvitation(url,{navigator:{share:async data=>sent.push(data)}}),'shared');
- assert.deepEqual(sent,[{title:'オセロ将棋に招待',text:'オセロ将棋で対局しよう！',url}]);
+ assert.deepEqual(sent,[{title:'OSE SHOGI（オセロ将棋）に招待',text:'OSE SHOGI（オセロ将棋）で対局しよう！',url}]);
  const cancelled={share:async()=>{throw Object.assign(Error(),{name:'AbortError'});},clipboard:{writeText:()=>assert.fail('a cancelled share must not copy')}};
  assert.equal(await shareInvitation(url,{navigator:cancelled}),'cancelled');
 });

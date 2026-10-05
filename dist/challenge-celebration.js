@@ -1,7 +1,7 @@
 const publicURL='https://oshogi-games.pages.dev/';
 export function victoryShareData(ordinal){
  if(!Number.isSafeInteger(ordinal)||ordinal<1)throw new RangeError('勝利番号が不正です');
- return {title:'オセロ将棋｜オセショ様に勝利！',text:`私はオセショ様に${ordinal}回目に勝ったプレイヤーです！ #オセロ将棋`,url:publicURL};
+ return {title:'OSE SHOGI（オセロ将棋）｜オセショ様に勝利！',text:`私はオセショ様に${ordinal}回目に勝ったプレイヤーです！ #オセロ将棋`,url:publicURL};
 }
 export function victoryTweetURL(ordinal){
  const {text,url}=victoryShareData(ordinal);

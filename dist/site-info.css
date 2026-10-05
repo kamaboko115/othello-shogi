@@ -19,3 +19,9 @@ body.information-page article h1{display:block}
 .information-page .info-list li{margin:8px 0}
 .information-page #contact{scroll-margin-top:24px}
 @media(max-width:600px){.information-page header{height:auto;min-height:70px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px}.site-footer{margin-top:24px;padding:20px}.site-footer nav{gap:4px 20px}}
+
+/* Shared primary name and Japanese subtitle, including narrow screens. */
+body header .brand.ose-brand{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;background:transparent;border-radius:0;padding:0;color:var(--color-ink,#ebeee6);font-family:Arial,'Helvetica Neue',sans-serif;line-height:1.05;letter-spacing:.055em;font-size:clamp(22px,3vw,30px)}
+header .ose-brand b{font-weight:750}
+header .ose-brand small{font:500 11px/1.4 'Yu Gothic UI',Meiryo,sans-serif;letter-spacing:.18em;color:inherit}
+@media(max-width:420px){body header .brand.ose-brand{font-size:22px}header .ose-brand small{font-size:10px}}
