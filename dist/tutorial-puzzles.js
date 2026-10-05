@@ -26,9 +26,9 @@ export function initTutorialPuzzles(doc){
  const $=id=>doc.getElementById(id),dialog=$('tutorialPuzzles');let index=0,state,selected=null,solved=false;const completed=new Set();
  const reset=()=>{state=puzzleState(index);selected=null;solved=false;$('puzzleHintText').hidden=true;$('puzzleStatus').textContent=tutorialPuzzles[index].goal==='defend'?'あなたは先手で、王手されています。1手で王手を外し、次の手に王を取られたり挟まれたりしないように助けてください。':'あなたは先手。1手で相手の王を取るか、挟んでください。';draw();};
  function draw(){
-  const p=tutorialPuzzles[index];$('puzzleTitle').textContent=`第${index+1}問 / ${tutorialPuzzles.length}　${p.title}`;
+  const p=tutorialPuzzles[index];$('puzzleTitle').textContent=`仕上げ 第${index+1}問 / ${tutorialPuzzles.length}　${p.title}`;
   $('puzzleProgress').textContent=`正解 ${completed.size} / ${tutorialPuzzles.length}問`;
-  $('puzzleNext').hidden=!solved;$('puzzleNext').textContent=index===tutorialPuzzles.length-1?'チュートリアルに戻る':'次の問題へ';
+  $('puzzleNext').hidden=!solved;$('puzzleNext').textContent=index===tutorialPuzzles.length-1?'チュートリアルを終える':'次の問題へ';
   $('puzzleHint').disabled=solved;$('puzzleHintText').textContent=p.hint;
   $('puzzleTabs').replaceChildren(...tutorialPuzzles.map((p,i)=>{const b=doc.createElement('button');b.type='button';b.textContent=`第${i+1}問${completed.has(i)?' ✓':''}`;b.setAttribute('aria-pressed',String(index===i));b.onclick=()=>{index=i;reset();};return b;}));
   const legal=selected===null?[]:moves(state,selected);
@@ -51,9 +51,9 @@ export function initTutorialPuzzles(doc){
   else $('puzzleStatus').textContent=tutorialPuzzles[index].goal==='defend'?'この手では王を守れません。元の局面でもう一度考えてみましょう。':'この手ではまだ王を取れません。元の局面でもう一度考えてみましょう。';
   draw();
  }
- $('tutorialPuzzleLaunch').onclick=()=>{$('tutorialMenu').close();reset();dialog.showModal();};
+ $('tutorialPuzzleLaunch').onclick=()=>{$('tutorialMenu').close();index=0;completed.clear();reset();dialog.showModal();};
  $('closePuzzles').onclick=()=>{dialog.close();$('tutorialMenu').showModal();};
  $('puzzleReset').onclick=reset;$('puzzleHint').onclick=()=>{$('puzzleHintText').hidden=false;};
- $('puzzleNext').onclick=()=>{if(index===tutorialPuzzles.length-1){dialog.close();$('tutorialMenu').showModal();}else{index++;reset();}};
+ $('puzzleNext').onclick=()=>{if(index===tutorialPuzzles.length-1){dialog.close();}else{index++;reset();}};
 }
 if(typeof document!=='undefined'&&document.getElementById('tutorialPuzzles'))initTutorialPuzzles(document);
