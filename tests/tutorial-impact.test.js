@@ -16,20 +16,24 @@ test('全レッスンの案内手が合法で、説明どおり反転・勝利�
   if(lesson.collapse){assert.equal(n.ply,150);assert.equal(collapseAfterMove(n,()=>0).destroyed,null);assert.equal(n.paradoxStarted,true);}
  }
 });
-test('崩壊レッスンは穴熊を段階的に壊し、相手の応手後も王を初回で壊さない',()=>{
- const index=lessons.findIndex(lesson=>lesson.collapse),lesson=lessons[index];let s=lessonState(index);
- assert.equal(s.board[lesson.enemyKing].type,'K');assert.equal(s.board[lesson.enemyKing].side,1);
- const collapse=step=>{s=collapseLesson(s,step);return s.destroyed;};
- s=collapseAfterMove(play(s,lesson.move),()=>{throw Error('activation must not select a victim');});assert.equal(s.paradoxStarted,true);
- for(let step=0;step<7;step++){
-  const move=step%2===1?{from:49-Math.floor(step/2)*9,to:40-Math.floor(step/2)*9,prom:false}:collapseReply(s,lesson.collapseSequence.slice(step));
-  assert.ok(move,'応手が存在する');assert.ok(moves(s,move.from).some(m=>m.to===move.to));s=play(s,move);
-  const destroyed=collapse(step);
-  if(step===5){assert.equal(destroyed,null);assert.equal(s.spawned.piece.prom,true);assert.ok(['R','B'].includes(s.spawned.piece.type));}
-  else assert.equal(destroyed.square,lesson.collapseSequence[step]);
-  if(step<6)assert.equal(s.result,'');else assert.match(s.result,/先手の勝ち.*王が崩壊/);
+test('崩壊の練習は王と小駒5枚ずつ、雷から王を保護する',()=>{
+ const s=lessonState(8);
+ assert.equal(s.ply,149);
+ for(const side of [0,1]){
+  assert.equal(s.board.filter(p=>p?.side===side&&p.type!=='K').length,5);
  }
+ assert.ok(s.board.every(p=>!p||!['R','B'].includes(p.type)));
+ s.ply=151;
+ for(let n=0;n<10;n++){
+  collapseAfterMove(s,()=>0,undefined,0,{protectKings:true});
+  assert.notEqual(s.destroyed?.piece.type,'K');
+  assert.equal(s.result,'');
+ }
+ assert.equal(s.board.filter(Boolean).length,2);
+ collapseAfterMove(s,()=>0,undefined,0,{protectKings:true});
+ assert.equal(s.board.filter(p=>p?.type==='K').length,2);
 });
+
 test('直接の王取りだけ検出し、王反転・再受信・投了では発動しない',()=>{
  const captureIndex=lessons.findIndex(l=>l.enemyKing===31),flipIndex=lessons.findIndex(l=>l.enemyKing===38);
  const s=lessonState(captureIndex),n=play(s,lessons[captureIndex].move);

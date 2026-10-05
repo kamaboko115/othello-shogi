@@ -25,3 +25,6 @@ body header .brand.ose-brand{display:inline-flex;flex-direction:column;align-ite
 header .ose-brand b{font-weight:750}
 header .ose-brand small{font:500 11px/1.4 'Yu Gothic UI',Meiryo,sans-serif;letter-spacing:.18em;color:inherit}
 @media(max-width:420px){body header .brand.ose-brand{font-size:22px}header .ose-brand small{font-size:10px}}
+
+header .ose-brand ruby{ruby-align:center}
+header .ose-brand rt{font:500 9px/1.2 "Yu Gothic UI",Meiryo,sans-serif;letter-spacing:.12em;color:inherit}
