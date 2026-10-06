@@ -1,4 +1,4 @@
-import {beforeParadox,paradoxEventTiming,paradoxSummary,label,spearStormTiming} from './engine.js';
+import {beforeParadox,paradoxEventTiming,paradoxSummary,label,pieceGlyph,spearStormTiming} from './engine.js';
 import {playTossCutInSound,playParadoxMotionSound,playParadoxRareSound} from './sound.js';
 
 // Presentation only: the authoritative board has already been resolved once.
@@ -18,7 +18,7 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
  const place=(el,square)=>{const r=rects.get(square);if(r)Object.assign(el.style,{left:r.x+'%',top:r.y+'%',width:r.w+'%',height:r.h+'%'});};
  for(let i=0;i<81;i++){
   const p=old.board[i];if(!p)continue;const wrap=document.createElement('span');wrap.className='paradox-token';place(wrap,i);
-  const piece=document.createElement('span');piece.className='piece'+(p.side!==perspective?' enemy':'')+(p.prom?' prom':'')+(p.wings?' has-wings':'');piece.dataset.side=p.side;piece.textContent=label(p);
+  const piece=document.createElement('span');piece.className='piece'+(p.side!==perspective?' enemy':'')+(p.prom?' prom':'')+(p.wings?' has-wings':'');piece.dataset.side=p.side;piece.textContent=pieceGlyph(p);
   const source=board.querySelector('[data-square="'+i+'"] .piece');if(source)piece.style.fontSize=getComputedStyle(source).fontSize;
   wrap.append(piece);field.append(wrap);tokens.set(i,{wrap,piece});
  }
@@ -88,7 +88,7 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
    await Promise.all([wait(1800),...ordered.map(async(square,index)=>{
     await wait(index*900/Math.max(1,ordered.length-1));if(signal?.aborted)return;
     const p=state.board[square],wrap=document.createElement('span');wrap.className='paradox-token paradox-spirit-arrival';place(wrap,square);
-    const piece=document.createElement('span');piece.className='piece prom'+(p.side!==perspective?' enemy':'');piece.dataset.side=p.side;piece.textContent=label(p);
+    const piece=document.createElement('span');piece.className='piece prom'+(p.side!==perspective?' enemy':'');piece.dataset.side=p.side;piece.textContent=pieceGlyph(p);
     const source=board.querySelector('.piece');if(source)piece.style.fontSize=getComputedStyle(source).fontSize;
     wrap.append(piece);field.append(wrap);
     animate(wrap,[{opacity:0,transform:'translateY(-100%) scale(.15)',filter:'brightness(3)'},{offset:.6,opacity:1,transform:'translateY(0) scale(1.2)',filter:'brightness(2)'},{opacity:1,transform:'translateY(0) scale(1)',filter:'brightness(1)'}],{duration:900,fill:'both',easing:'ease-out'});
@@ -234,7 +234,7 @@ export async function runParadoxEvent(board,state,perspective=0,signal){
     animate(token.piece,[{transform:`rotate(${start}deg) scale(1)`},{offset:.5,transform:`rotate(${start+rotation/2}deg) scale(1.15)`,filter:'brightness(1.5)'},{transform:`rotate(${end}deg) scale(1)`,filter:'brightness(1)'}],{duration:timing.flipMs,easing:'ease-in-out',fill:'both'});
     await wait(timing.flipMs/2);if(signal?.aborted)return;
     token.piece.dataset.side=state.board[square].side;
-    if(event.kind==='promote'){token.piece.classList.add('prom');token.piece.textContent=label(state.board[square]);}
+    if(event.kind==='promote'){token.piece.classList.add('prom');token.piece.textContent=pieceGlyph(state.board[square]);}
     await wait(timing.flipMs/2);if(signal?.aborted)return;
     token.piece.classList.toggle('enemy',state.board[square].side!==perspective);token.wrap.classList.remove('paradox-token-flipping');
    };

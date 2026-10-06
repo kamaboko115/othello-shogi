@@ -3,6 +3,9 @@ export const MAX_GAME_PLIES=1000;
 export const names={K:'玉',R:'飛',B:'角',G:'金',S:'銀',N:'桂',L:'香',P:'歩'};
 export const promoted={R:'龍',B:'馬',S:'成銀',N:'成桂',L:'成香',P:'と'};
 export const label=p=>p.prom?promoted[p.type]:names[p.type];
+// Board glyphs are separate from full names used by records and accessibility.
+const promotedGlyphs={S:'全',N:'圭',L:'杏'};
+export const pieceGlyph=p=>p.prom&&promotedGlyphs[p.type]||label(p);
 export const clone=s=>structuredClone(s);
 export function empty(mode=true){return {board:Array(81).fill(null),hands:[{},{}],turn:0,mode,ply:0,last:[],flipped:[],history:[],result:''};}
 export function initial(mode=true){const s=empty(mode);const row=['L','N','S','G','K','G','S','N','L'];for(let c=0;c<9;c++){s.board[c]={type:row[c],side:1,prom:false};s.board[72+c]={type:row[c],side:0,prom:false};s.board[18+c]={type:'P',side:1,prom:false};s.board[54+c]={type:'P',side:0,prom:false};}for(const [i,t,side] of [[10,'R',1],[16,'B',1],[64,'B',0],[70,'R',0]])s.board[i]={type:t,side,prom:false};return s;}

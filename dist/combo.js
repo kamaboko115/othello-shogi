@@ -1,4 +1,4 @@
-import {label} from './engine.js';
+import {pieceGlyph} from './engine.js';
 export const comboTier=count=>count>=4?'tier-rainbow':count===3?'tier-platinum':count===2?'tier-gold':'';
 export async function runSword(board,square,signal,onImpact=()=>{}){
  if(signal?.aborted)return;
@@ -16,7 +16,7 @@ export function slidingMove(before,after){
  if(after.last.length===1){const to=after.last[0],p=after.board[to];return p&&!before.board[to]?{drop:true,to,major:['R','B'].includes(p.type)}:null;}
  if(after.last.length!==2)return null;
  const [from,to]=after.last,p=before.board[from];
- return p?{from,to,major:['R','B'].includes(p.type),rainbow:['R','B'].includes(p.type)&&!!p.prom,promoting:!p.prom&&!!after.board[to]?.prom,beforeLabel:label(p)}:null;
+ return p?{from,to,major:['R','B'].includes(p.type),rainbow:['R','B'].includes(p.type)&&!!p.prom,promoting:!p.prom&&!!after.board[to]?.prom,beforeLabel:pieceGlyph(p)}:null;
 }
 export async function runSlide(move,board,signal,onLand=()=>{}){
  if(!move||signal?.aborted)return;

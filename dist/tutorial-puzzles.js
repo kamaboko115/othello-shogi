@@ -1,4 +1,4 @@
-import {empty,moves,play,label,inCheck} from './engine.js';
+import {empty,moves,play,label,pieceGlyph,inCheck} from './engine.js';
 
 export const tutorialPuzzles=[
  {title:'まっすぐ王を狙え',pieces:[[61,'R',0],[25,'K',1],[24,'S',1],[20,'P',1],[66,'G',0]],hint:'飛車は縦・横に進めます。飛車と相手の王の間を見てみましょう。',answer:{from:61,to:25},explanation:'飛車で相手の王を取れば勝ち。王を取る最後の一手まで数えます。'},
@@ -35,7 +35,7 @@ export function initTutorialPuzzles(doc){
   $('puzzleBoard').replaceChildren(...state.board.map((p,i)=>{
    const b=doc.createElement('button');b.type='button';b.className='cell'+(selected===i?' selected':'')+(legal.some(m=>m.to===i)?' legal':'')+(state.flipped.includes(i)?' flipped':'');b.disabled=solved;
    b.setAttribute('aria-label',`${9-i%9}列${Math.floor(i/9)+1}段 ${p?(p.side?'相手 ':'自分 ')+label(p):'空き'}`);
-   if(p){const piece=doc.createElement('span');piece.className='piece'+(p.side?' enemy':'')+(p.prom?' prom':'');piece.textContent=label(p);b.append(piece);}
+   if(p){const piece=doc.createElement('span');piece.className='piece'+(p.side?' enemy':'')+(p.prom?' prom':'');piece.textContent=pieceGlyph(p);b.append(piece);}
    b.onclick=()=>choose(i);return b;
   }));
   $('puzzleHand').replaceChildren();
