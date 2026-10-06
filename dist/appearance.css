@@ -156,3 +156,8 @@ html[data-piece-skin="stones"] #replayBoard .piece {height:auto;aspect-ratio:1;}
 #tutorialPuzzles{width:min(94vw,900px);max-width:900px;max-height:92dvh;overflow:auto}#tutorialPuzzles h2{font-size:clamp(18px,3vw,24px)}.puzzle-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(180px,1fr);gap:24px}#puzzleBoard{display:grid;grid-template-columns:repeat(9,1fr);gap:1px;border:1px solid #735532;background:#735532;aspect-ratio:1}#puzzleBoard .cell{margin:0;padding:0;border-radius:0;min-height:0}#puzzleBoard .piece{font-size:clamp(16px,3vw,30px)}#puzzleTabs,.puzzle-actions,#puzzleHand{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#puzzleTabs button[aria-pressed=true],#puzzleHand button[aria-pressed=true]{outline:2px solid var(--color-accent,#237957);outline-offset:2px}#puzzleStatus{font-size:18px;line-height:1.8}#puzzleHintText{border-left:3px solid var(--color-accent,#237957);padding-left:12px}#tutorialPuzzles button{min-height:44px}#tutorialPuzzles #puzzleBoard .cell{min-height:0}@media(max-width:600px){.puzzle-layout{grid-template-columns:1fr;gap:12px}#tutorialPuzzles{padding:16px}#puzzleBoard .piece{font-size:clamp(17px,5vw,30px)}}
 
 #tutorialPuzzles>p{margin:10px 0}#tutorialPuzzles h2{margin:0}#puzzleBoard{width:min(100%,max(240px,calc(92dvh - 350px)));margin-inline:auto}#tutorialPuzzles .rules-title-row{gap:12px;flex-wrap:wrap}
+
+/* Keep board glyph proportions stable when the result layout shrinks the board. */
+#board {container-type:inline-size;}
+#board .piece {font-size:5.6cqw;white-space:nowrap;text-align:center;}
+#board .piece.long {font-size:3.2cqw;}
