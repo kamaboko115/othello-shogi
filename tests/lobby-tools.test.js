@@ -50,6 +50,7 @@ test('record dialog browses the first and latest pages, refreshes after undo, an
  $('recordFirst').events.click();assert.equal($('recordList').children[0].text,'1. 手');assert.equal($('recordPrevious').disabled,true);
  $('recordNext').events.click();assert.equal($('recordList').children[0].text,'51. 手');
  $('recordLast').events.click();viewer.update(logs.slice(0,25),'game1');assert.equal($('recordList').children.length,25);assert.equal($('recordRange').textContent,'全25手 · 1〜25手');
+ for(const length of [0,12,50,51,100]){viewer.update(logs.slice(0,length),'game1');assert.equal($('recordPagination').hidden,length<=50);}
  viewer.update([],'game2');assert.equal($('recordDialog').open,false);assert.equal($('openRecord').hidden,true);
 });
 
