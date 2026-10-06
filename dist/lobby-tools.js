@@ -29,6 +29,7 @@ export function initRecordViewer(document,recordLine){
  let logs=[],page=0,key=null;
  function paint(){
   const data=recordPage(logs,page);page=data.page;
+  $('recordPagination').hidden=data.pages<=1;
   $('recordList').replaceChildren(...data.lines.map(recordLine));$('recordList').scrollTop=0;
   $('recordRange').textContent=logs.length?`全${logs.length}手 · ${data.start+1}〜${data.end}手`:'まだ指されていません。';
   $('recordFirst').disabled=$('recordPrevious').disabled=page===0;
