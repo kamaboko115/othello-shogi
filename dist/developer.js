@@ -4,7 +4,7 @@ import {lessons,lessonState,collapseReply,tutorialMoves,collapseLesson} from './
 import {kingCaptureSquare,runKingImpact} from './impact.js';
 import {paradoxSound,prepareParadoxSounds} from './paradox.js';
 import {encodeBoard,decodeBoard} from './board-code.js';
-import {initial,empty,moves,play,label,collapseAfterMove,arrivalSummary,paradoxSummary,beforeParadox} from './engine.js';
+import {initial,empty,moves,play,label,pieceGlyph,collapseAfterMove,arrivalSummary,paradoxSummary,beforeParadox} from './engine.js';
 import {runCombo,comboTier,decorateFinish,capturedPiece,runCapture,flipNeedsShake,slidingMove,runSlide,runSword} from './combo.js';
 import {moveEffects,runEffects,showVictory,isVictoryFor} from './move-effect.js';
 import {prepareMoveSound,playParadoxArrival,playMoveSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue} from './sound.js';
@@ -34,7 +34,7 @@ export function initDeveloper(getCurrent,onTutorialComplete=()=>{}){
   $('lessonProgress').hidden=true;$('lessonProgress').textContent='';
   const board=$('devBoard');board.replaceChildren();updateTutorialArrow=()=>{};const legal=selected===null?[]:availableMoves(selected),guide=guided()&&!working&&state.ply===0?lessons[lesson].move:null;
   const visible=collapsePhase==='waiting'?beforeParadox(state):state;
-  for(let i=0;i<81;i++){const b=document.createElement('button'),p=visible.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(guide&&i===(guide.from??guide.to))b.classList.add('tutorial-hint');if(guide&&i===guide.to)b.classList.add('tutorial-target');b.dataset.square=i;b.disabled=working||(guided()&&(state.ply!==0||(i!==lessons[lesson].move.from&&!legal.some(m=>m.to===i))));b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き')+(guide&&i===guide.to?' 移動先':guide&&i===guide.from?' この駒を動かす':''));if(p){const el=document.createElement('span');el.className='piece'+((working&&!state.paradoxEvent&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'')+(p.wings?' has-wings':'');el.dataset.side=working&&!state.paradoxEvent&&state.flipped.includes(i)?1-p.side:p.side;el.textContent=label(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
+  for(let i=0;i<81;i++){const b=document.createElement('button'),p=visible.board[i];b.className='cell'+(i===selected?' selected':'')+(legal.some(m=>m.to===i)?' legal':'');if(guide&&i===(guide.from??guide.to))b.classList.add('tutorial-hint');if(guide&&i===guide.to)b.classList.add('tutorial-target');b.dataset.square=i;b.disabled=working||(guided()&&(state.ply!==0||(i!==lessons[lesson].move.from&&!legal.some(m=>m.to===i))));b.setAttribute('aria-label',(9-i%9)+'列'+(Math.floor(i/9)+1)+'段 '+(p?(p.side?'相手 ':'自分 ')+label(p):'空き')+(guide&&i===guide.to?' 移動先':guide&&i===guide.from?' この駒を動かす':''));if(p){const el=document.createElement('span');el.className='piece'+((working&&!state.paradoxEvent&&state.flipped.includes(i)?1-p.side:p.side)?' enemy':'')+(p.prom?' prom':'')+(p.wings?' has-wings':'');el.dataset.side=working&&!state.paradoxEvent&&state.flipped.includes(i)?1-p.side:p.side;el.textContent=pieceGlyph(p);b.append(el);}b.onclick=()=>click(i);board.append(b);}
   if(guide){
    const arrow=document.createElement('div');arrow.className='tutorial-arrow';arrow.setAttribute('aria-hidden','true');
    board.append(arrow);
