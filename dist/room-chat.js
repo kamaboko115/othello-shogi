@@ -1,11 +1,11 @@
 export function initRoomChat(){
  const panel=document.createElement('section');panel.className='room-chat';panel.hidden=true;
- panel.innerHTML=`<h3>友人チャット <small>盤面を流れて3秒で消えます</small></h3><button type="button" data-start>利用条件を確認して開く</button><div data-active hidden><label><input type="checkbox" data-mute> 相手のチャットを非表示</label><button type="button" data-stop>チャットを閉じる</button><form><label>メッセージ <input data-input maxlength="120" autocomplete="off" placeholder="120文字まで"></label><button type="submit">送る</button></form></div><p data-status role="status"></p>`;
+ panel.innerHTML=`<h3>友人チャット <small>画面を流れて3秒で消えます</small></h3><button type="button" data-start>利用条件を確認して開く</button><div data-active hidden><label><input type="checkbox" data-mute> 相手のチャットを非表示</label><button type="button" data-stop>チャットを閉じる</button><form><label>メッセージ <input data-input maxlength="120" autocomplete="off" placeholder="120文字まで"></label><button type="submit">送る</button></form></div><p data-status role="status"></p>`;
  document.querySelector('.actions').after(panel);
  const dialog=document.createElement('dialog');dialog.className='chat-terms';
  dialog.innerHTML=`<h2>友人チャットの利用条件</h2><p>この部屋の対局相手とだけメッセージを送受信します。利用は任意です。</p><ul><li>誹謗中傷、嫌がらせ、違法な内容の送信は禁止です。</li><li>住所・電話番号などの個人情報は送らないでください。</li><li>本文はサーバーの中継中と画面表示中だけ扱い、データベース・棋譜・ブラウザの保存領域には保存しません。受信から3秒で表示を消し、履歴や再送は行いません。</li><li>相手によるコピーや撮影までは防げません。通信・端末の不調で届かない場合もあります。</li><li>困ったときは非表示・チャットを閉じる操作をご利用ください。お問い合わせ：<a href="mailto:yuki.s.115@outlook.jp">yuki.s.115@outlook.jp</a></li></ul><p>同意はこの部屋で開いている間だけ有効です。再読み込み後は再度確認します。</p><button type="button" data-agree>同意してチャットを開く</button> <button type="button" data-cancel>使わない</button>`;
  document.body.append(dialog);
- const messages=document.createElement('div');messages.className='room-chat-stream';messages.setAttribute('role','log');messages.setAttribute('aria-live','polite');messages.setAttribute('aria-label','流れる友人チャット');const frame=document.querySelector('.board-frame');frame.classList.add('chat-stream-host');frame.append(messages);
+ const messages=document.createElement('div');messages.className='room-chat-stream';messages.setAttribute('role','log');messages.setAttribute('aria-live','polite');messages.setAttribute('aria-label','流れる友人チャット');document.body.append(messages);
  const q=s=>panel.querySelector(s),status=q('[data-status]');let lane=0;
  let current=null,socket=null,consented=false,lastSent=0;const timers=new Set();
  function clear(){for(const t of timers)clearTimeout(t);timers.clear();messages.replaceChildren();q('[data-input]').value='';}
