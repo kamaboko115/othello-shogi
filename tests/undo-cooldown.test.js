@@ -23,10 +23,13 @@ test('friend undo cooldown survives reads, cancellation, moves and acceptance; s
   await action(second,'move',{move:{from:18,to:27,prom:false}});
   await action(first,'offer-undo');const deadline=now+undoCooldownMs;
   assert.equal(data.undoCooldowns[seat],deadline);
+  const offeredVersion=data.version;
+  now+=1000;await action(first,'offer-undo');
+  assert.equal(data.version,offeredVersion);assert.equal(data.undoCooldowns[seat],deadline);
   await action(second,'decline-undo');
   const reloaded=await (await call(path,first)).json();assert.equal(reloaded.undoCooldowns[seat],deadline);
   await action(first,'offer-undo',{},429);
-  await action(second,'offer-undo');assert.equal(data.undoCooldowns[1-seat],deadline);
+  await action(second,'offer-undo');assert.equal(data.undoCooldowns[1-seat],now+undoCooldownMs);
   await action(first,'decline-undo');
   now=deadline-1;await action(first,'offer-undo',{},429);
   now=deadline;await action(first,'offer-undo');

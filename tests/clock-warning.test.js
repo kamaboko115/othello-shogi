@@ -33,7 +33,7 @@ test('the existing app clock tick only warns for the local player’s active fri
  const source=readFileSync(new URL('../dist/app.js',import.meta.url),'utf8'),from=source.indexOf('const warnClock='),to=source.indexOf('const advancedOpen=',from),sounds=[];
  const state={turn:0,ply:0,result:''},online={kind:'friend',room:'room',round:1,side:0,joined:true,state,clock:{remaining:[30000,30000],since:1000},settings:{timeControl:'turn30'}};
  let now=0,tick;
- const c={online,state,clockOffset:0,Date:{now:()=>now},document:{hidden:false},$:id=>id==='furigoma'?{hidden:true}:{classList:{toggle(){}}},clockBudget,createClockWarning,playClockWarning:urgent=>sounds.push(urgent),setInterval:fn=>tick=fn};
+ const c={online,state,clockOffset:0,Date:{now:()=>now},document:{hidden:false},$:id=>id==='furigoma'?{hidden:true}:{classList:{toggle(){}}},clockBudget,createClockWarning,paintUndoButton(){},playClockWarning:urgent=>sounds.push(urgent),setInterval:fn=>tick=fn};
  vm.runInNewContext(source.slice(from,to),c);
  tick();assert.deepEqual(sounds,[]); // Animation allowance.
  now=1000;tick();tick();assert.deepEqual(sounds,[false]);

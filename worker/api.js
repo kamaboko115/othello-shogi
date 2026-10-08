@@ -163,6 +163,8 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
     if(!allowsTakeback(data))fail('対オセショ様では待ったを使えません。',403);
    if(body.action==='offer-undo'){const index=undoIndex(data,playingSide);if(index<0)fail('戻せる手がありません。',409);if(data.kind==='ai'){chargeClock(data,now);rewind(data,index);if(data.clock)data.clock.since=now;}else{
     if(data.undoOffer&&data.undoOffer.seat!==side)fail('相手の待ったに返答してください。',409);
+    // Retrying an outstanding offer is a read, not a fresh request or cooldown.
+    if(data.undoOffer?.seat===side)return json(view(row,side));
     const remaining=(data.undoCooldowns?.[side]||0)-now;
     if(remaining>0)fail(`待ったはあと${Math.ceil(remaining/1000)}秒後に申し込めます。`,429);
     data.undoCooldowns||=[0,0];data.undoCooldowns[side]=now+undoCooldownMs;
