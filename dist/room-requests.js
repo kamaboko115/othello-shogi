@@ -1,3 +1,7 @@
+export function undoWaitSeconds(data,now=Date.now()){
+ if(data?.kind!=='friend')return 0;
+ return Math.max(0,Math.ceil(((data.undoCooldowns?.[data.seat??data.side]||0)-now)/1000));
+}
 export function pendingRoomRequests(data){
  if(data?.kind!=='friend'||!data.joined||data.closed)return [];
  const seat=data.seat??data.side,out=[];

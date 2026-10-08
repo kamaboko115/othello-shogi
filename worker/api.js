@@ -15,6 +15,7 @@ import {serializeMatchData,parseMatchData} from '../dist/match-storage.js';
 export const schema=`CREATE TABLE IF NOT EXISTS rooms (id TEXT PRIMARY KEY, host_hash TEXT NOT NULL, guest_hash TEXT, invite_hash TEXT NOT NULL, data TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 0, expires INTEGER NOT NULL); CREATE INDEX IF NOT EXISTS rooms_expires ON rooms(expires);`+roomLimitSchema+challengeWinSchema;
 export const activeHostRoomQuery='SELECT * FROM rooms WHERE host_hash = ? AND expires > ? LIMIT 1';
 export const roomCloseGraceMs=60000;
+export const undoCooldownMs=15000;
 export async function cleanupRooms(env,now=Date.now()){
  await env.DB.prepare('DELETE FROM room_creation_limits WHERE expires <= ?').bind(now).run();
  return env.DB.prepare('DELETE FROM rooms WHERE expires <= ?').bind(now).run();
@@ -44,7 +45,7 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
   if(parts[3]==='chat'){
    const auth=await authorizeChat(request,env);if(auth instanceof Response)return auth;
    if(!env.ROOM_CHAT)return json({error:'チャットは準備中です。'},503);
-   const headers=new Headers(request.headers);headers.set('X-Chat-Seat',String(auth.seat));headers.set('X-Chat-Expires',String(auth.expires));headers.set('X-Chat-Room',auth.room);headers.delete('Sec-WebSocket-Protocol');
+   const headers=new Headers(request.headers);headers.set('X-Chat-Seat',String(auth.seat));headers.set('X-Chat-Expires',String(auth.expires));headers.set('X-Chat-Room',auth.room);headers.set('X-Chat-Can-Send',String(auth.canSend));headers.delete('Sec-WebSocket-Protocol');
    return env.ROOM_CHAT.get(env.ROOM_CHAT.idFromName(auth.room)).fetch(new Request(request,{headers}));
   }
   if(request.method==='POST'){
@@ -160,15 +161,23 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
   const data=parseMatchData(row.data),s=data.state,playingSide=side===0?(data.toss?.hostSide??0):1-(data.toss?.hostSide??0);
   if(['offer-undo','accept-undo','decline-undo'].includes(body.action)){
     if(!allowsTakeback(data))fail('対オセショ様では待ったを使えません。',403);
-   if(body.action==='offer-undo'){const index=undoIndex(data,playingSide);if(index<0)fail('戻せる手がありません。',409);if(data.kind==='ai'){chargeClock(data,now);rewind(data,index);if(data.clock)data.clock.since=now;}else{if(data.undoOffer&&data.undoOffer.seat!==side)fail('相手の待ったに返答してください。',409);data.undoOffer={seat:side,index,ply:data.takebacks[index].state.ply};}}
+   if(body.action==='offer-undo'){const index=undoIndex(data,playingSide);if(index<0)fail('戻せる手がありません。',409);if(data.kind==='ai'){chargeClock(data,now);rewind(data,index);if(data.clock)data.clock.since=now;}else{
+    if(data.undoOffer&&data.undoOffer.seat!==side)fail('相手の待ったに返答してください。',409);
+    // Retrying an outstanding offer is a read, not a fresh request or cooldown.
+    if(data.undoOffer?.seat===side)return json(view(row,side));
+    const remaining=(data.undoCooldowns?.[side]||0)-now;
+    if(remaining>0)fail(`待ったはあと${Math.ceil(remaining/1000)}秒後に申し込めます。`,429);
+    data.undoCooldowns||=[0,0];data.undoCooldowns[side]=now+undoCooldownMs;
+    data.undoOffer={seat:side,index,ply:data.takebacks[index].state.ply};
+   }}
    else if(body.action==='accept-undo'){if(!data.undoOffer||data.undoOffer.seat!==1-side)fail('相手の待った申請がありません。',409);chargeClock(data,now);rewind(data,data.undoOffer.index);if(data.clock)data.clock.since=now;}
    else{if(!data.undoOffer)return json(view(row,side));data.undoOffer=null;}
   }else if(['offer-rematch','accept-rematch','decline-rematch'].includes(body.action)){
 
    if(!s.result)fail('再試合は対局終了後に申し込めます。',409);
-   if(body.action==='offer-rematch'&&data.kind==='ai'){data.state=setupState(data.settings);data.replay=null;data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=matchToss(data.settings);data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
+   if(body.action==='offer-rematch'&&data.kind==='ai'){data.state=setupState(data.settings);data.replay=null;data.takebacks=[];data.undoOffer=null;data.undoCooldowns=[0,0];data.logs=[];data.offer=null;data.rematch=null;data.toss=matchToss(data.settings);data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
    else if(body.action==='offer-rematch'){if(data.rematch===1-side)fail('相手の再試合希望を承諾してください。',409);data.rematch=side;}
-   else if(body.action==='accept-rematch'){if(data.rematch!==1-side)fail('相手からの再試合希望はありません。',409);data.state=setupState(data.settings);data.replay=null;data.takebacks=[];data.undoOffer=null;data.logs=[];data.offer=null;data.rematch=null;data.toss=data.kind==='ai'?matchToss(data.settings):furigoma();data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
+   else if(body.action==='accept-rematch'){if(data.rematch!==1-side)fail('相手からの再試合希望はありません。',409);data.state=setupState(data.settings);data.replay=null;data.takebacks=[];data.undoOffer=null;data.undoCooldowns=[0,0];data.logs=[];data.offer=null;data.rematch=null;data.toss=data.kind==='ai'?matchToss(data.settings):furigoma();data.round=(data.round||1)+1;applyHandicap(data.state,data.kind==='ai'&&data.settings?.handicapSide!=='human'?1-data.toss.hostSide:data.toss.hostSide,data.settings?.handicap);startClock(data,now);}
    else{if(data.rematch==null)return json(view(row,side));data.rematch=null;}
   }else{
   if(s.result)fail('この対局は終了しています。',409);
