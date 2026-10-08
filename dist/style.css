@@ -460,7 +460,7 @@ body.game-ended{padding-top:calc(var(--result-actions-height,160px) + 24px)}
  body.game-ended #resultTitle{grid-column:1/-1;order:0;font-size:24px;line-height:1.15;margin:0}
  body.game-ended #resultReason,body.game-ended #resultDetail{order:1;font-size:12px;line-height:1.3;margin:0}
  body.game-ended #resultDetail{text-align:right}
- body.game-ended .tabletop{grid-column:1/-1;order:2;width:min(100%,calc(100svh - var(--result-actions-height,112px) - 232px));min-width:190px;grid-template-columns:1fr;gap:5px}
+ body.game-ended .tabletop{grid-column:1/-1;order:2;width:min(100%,calc(100svh - var(--result-actions-height,112px) - 252px));min-width:190px;grid-template-columns:1fr;gap:5px}
  body.game-ended .tabletop .player{grid-column:1;width:100%;gap:2px}
  body.game-ended .player.opponent{grid-row:1}
  body.game-ended .board-area{grid-column:1;grid-row:2}
