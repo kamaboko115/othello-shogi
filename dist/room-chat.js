@@ -1,3 +1,4 @@
+const chatDisplayMs=5000;
 // Keep the board in place while only the composer follows the visible viewport.
 export function initChatViewport(form,input,win=window,doc=document){
  let saved=null;
@@ -30,7 +31,7 @@ export function initRoomChat(){
  document.querySelector('.actions').after(panel);
  new ResizeObserver(()=>document.documentElement.style.setProperty('--result-chat-height',panel.getBoundingClientRect().height+'px')).observe(panel);
  const dialog=document.createElement('dialog');dialog.className='chat-terms';
- dialog.innerHTML=`<h2 tabindex="-1" autofocus>友人チャットの利用条件</h2><p>相手のメッセージは自動で表示されます。「非表示」で隠せます。自分から送信する場合は、以下に同意してください。</p><ul><li>誹謗中傷、嫌がらせ、違法な内容の送信は禁止です。</li><li>住所・電話番号などの個人情報は送らないでください。</li><li>本文はサーバーの中継中と画面表示中だけ扱い、データベース・棋譜・ブラウザの保存領域には保存しません。受信から3秒で表示を消し、履歴や再送は行いません。</li><li>相手によるコピーや撮影までは防げません。通信・端末の不調で届かない場合もあります。</li><li>困ったときは非表示の操作をご利用ください。お問い合わせ：<a href="mailto:yuki.s.115@outlook.jp">yuki.s.115@outlook.jp</a></li></ul><p>送信の同意はこの部屋で開いている間だけ有効です。再読み込み後は再度確認します。</p><button type="button" data-agree>同意して送信を始める</button> <button type="button" data-cancel>受信だけにする</button>`;
+ dialog.innerHTML=`<h2 tabindex="-1" autofocus>友人チャットの利用条件</h2><p>相手のメッセージは自動で表示されます。「非表示」で隠せます。自分から送信する場合は、以下に同意してください。</p><ul><li>誹謗中傷、嫌がらせ、違法な内容の送信は禁止です。</li><li>住所・電話番号などの個人情報は送らないでください。</li><li>本文はサーバーの中継中と画面表示中だけ扱い、データベース・棋譜・ブラウザの保存領域には保存しません。受信から${chatDisplayMs/1000}秒で表示を消し、履歴や再送は行いません。</li><li>相手によるコピーや撮影までは防げません。通信・端末の不調で届かない場合もあります。</li><li>困ったときは非表示の操作をご利用ください。お問い合わせ：<a href="mailto:yuki.s.115@outlook.jp">yuki.s.115@outlook.jp</a></li></ul><p>送信の同意はこの部屋で開いている間だけ有効です。再読み込み後は再度確認します。</p><button type="button" data-agree>同意して送信を始める</button> <button type="button" data-cancel>受信だけにする</button>`;
  document.body.append(dialog);
  const messages=document.createElement('div');messages.className='room-chat-stream';messages.setAttribute('role','log');messages.setAttribute('aria-live','polite');messages.setAttribute('aria-label','流れる友人チャット');document.body.append(messages);
  const q=s=>panel.querySelector(s),status=q('[data-status]');let lane=0;
@@ -49,8 +50,8 @@ export function initRoomChat(){
    if(data.type==='error'){status.textContent=data.text;return;}
    if(document.hidden||data.type!=='message'||typeof data.text!=='string'||(q('[data-mute]').checked&&data.seat!==current.seat))return;
    const line=document.createElement('p');line.className='room-chat-flying'+(data.seat===current.seat?' is-self':'');line.textContent=data.text;line.setAttribute('aria-label',(data.seat===current.seat?'あなた：':'相手：')+data.text);line.style.top=(12+(lane++%5)*16)+'%';messages.append(line);
-   if(matchMedia('(prefers-reduced-motion: reduce)').matches){line.classList.add('reduced-motion');}else{line.animate([{transform:'translateX('+messages.clientWidth+'px)'},{transform:'translateX(-'+line.offsetWidth+'px)'}],{duration:3000,easing:'linear',fill:'forwards'});}
-   const timer=setTimeout(()=>{line.remove();timers.delete(timer);},3000);timers.add(timer);
+   if(matchMedia('(prefers-reduced-motion: reduce)').matches){line.classList.add('reduced-motion');}else{line.animate([{transform:'translateX('+messages.clientWidth+'px)'},{transform:'translateX(-'+line.offsetWidth+'px)'}],{duration:chatDisplayMs,easing:'linear',fill:'forwards'});}
+   const timer=setTimeout(()=>{line.remove();timers.delete(timer);},chatDisplayMs);timers.add(timer);
   };
   ws.onclose=()=>{if(socket!==ws)return;disconnect();status.textContent='未接続です。入力欄から再接続できます。';};
   ws.onerror=()=>{if(socket===ws)status.textContent='接続できませんでした。対局はそのまま続けられます。';};

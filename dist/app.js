@@ -179,6 +179,20 @@ function renderHand(n){
   glyph.dataset.side=n;btn.onclick=()=>select(type);h.append(btn);
  }
 }
+let boardViewportKey='';
+function scrollBoardToTop(){
+ if(!compactGameViewport.matches||!online)return;
+ const key=online.room+':'+(online.round||1);
+ requestAnimationFrame(()=>{
+  if(compactGameViewport.matches&&online&&key===online.room+':'+(online.round||1))window.scrollTo({left:0,top:0,behavior:'instant'});
+ });
+}
+function syncBoardViewport(){
+ const key=online?online.room+':'+(online.round||1):'';
+ if(key===boardViewportKey)return;
+ boardViewportKey=key;
+ if(key)scrollBoardToTop();
+}
 function paintUndoButton(now=Date.now()+clockOffset){
  const seconds=undoWaitSeconds(online,now),button=$('requestUndo');
  const text=seconds?`待った（あと${seconds}秒）`:'待った';
@@ -308,6 +322,7 @@ function render(){
  if(!online)$('furigoma').hidden=true;
  if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;if(tossHistory.claim(key,online.state.ply>0||!!online.state.result))presentToss({toss:online.toss,playerSide:online.side,dialog:$('furigoma'),coins:$('tossCoins'),result:$('tossResult'),banner:$('tossSide'),cutin:$('tossCutIn'),close:$('closeToss'),onShatter:playTossShatterSound,onCutIn:playTossCutInSound,isCurrent:()=>lastTossKey===key&&online?.room+':'+online?.round===key});else $('furigoma').hidden=true;}}
 
+ syncBoardViewport();
  roomRequests.update(online,busy||!connected);
  paintLastCollapse();syncAI();
 }
@@ -469,7 +484,7 @@ async function rematchWithAd(action){
  await winAds.betweenMatches();busy=false;render();
  if(online?.room===room&&online.round===round&&state.result)return sendAction(action);
 }
-$('offerRematch').onclick=()=>rematchWithAd('offer-rematch');$('acceptRematch').onclick=()=>rematchWithAd('accept-rematch');$('declineRematch').onclick=()=>sendAction('decline-rematch');$('closeToss').onclick=()=>{playArcadeCue('start');$('furigoma').hidden=true;syncAI();};
+$('offerRematch').onclick=()=>rematchWithAd('offer-rematch');$('acceptRematch').onclick=()=>rematchWithAd('accept-rematch');$('declineRematch').onclick=()=>sendAction('decline-rematch');$('closeToss').onclick=()=>{playArcadeCue('start');$('furigoma').hidden=true;scrollBoardToTop();syncAI();};
 $('acceptDraw').onclick=()=>sendAction('accept-draw');$('declineDraw').onclick=()=>sendAction('decline-draw');
 let routeVersion=0;
 async function restore(){
