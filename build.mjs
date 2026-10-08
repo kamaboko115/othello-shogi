@@ -60,7 +60,16 @@ const worker=helpers+'\n'+actionLimitSource.replace(/^export /gm,'')+'\nconst as
 // truncated module while another build is replacing the same entrypoint.
 async function writeWorker(path){
  const temporary=path+'.'+process.pid+'.tmp';
- await writeFile(temporary,worker);await rename(temporary,path);
+ await writeFile(temporary,worker);
+ for(let attempt=0;;attempt++){
+  try{await rename(temporary,path);break;}
+  catch(error){
+   // Windows briefly locks modules while another test process imports them.
+   // Preserve the existing complete file and retry the atomic replacement.
+   if(process.platform!=='win32'||!['EPERM','EACCES','EBUSY'].includes(error.code)||attempt>=6)throw error;
+   await new Promise(resolve=>setTimeout(resolve,20*2**attempt));
+  }
+ }
 }
 await writeWorker(out+'/server/index.js');
 // Also expose the standard entrypoint used by the Sites packaging workflow.
