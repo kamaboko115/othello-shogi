@@ -202,7 +202,8 @@ function render(){
  const ending=!!online&&!!state.result&&!collapseEffect&&!comboPreparing;
  const enteringResult=ending&&!document.body.classList.contains('game-ended');
  document.body.classList.toggle('game-ended',ending);
- const playing=!!online?.joined&&!ending;
+ // Waiting rooms already show the board and need the same compact mobile layout.
+ const playing=!!online&&!ending;
  document.body.classList.toggle('game-active',playing);
  const chatPanel=document.querySelector('.room-chat');
  const chatAnchor=document.querySelector(ending||(playing&&compactGameViewport.matches)?'.tabletop':'.actions');
