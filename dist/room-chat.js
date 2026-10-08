@@ -1,6 +1,6 @@
 export function initRoomChat(){
  const panel=document.createElement('section');panel.className='room-chat';panel.hidden=true;
- panel.innerHTML=`<h3>友人チャット <small>画面を流れて3秒で消えます</small></h3><button type="button" data-start>利用条件を確認して開く</button><div data-active hidden><form><label>メッセージ <input data-input maxlength="120" autocomplete="off" placeholder="120文字まで"></label><button type="submit">送る</button></form><details><summary>チャット設定</summary><label><input type="checkbox" data-mute> 相手のチャットを非表示</label><button type="button" data-stop>チャットを閉じる</button></details></div><p data-status role="status"></p>`;
+ panel.innerHTML=`<h3>友人チャット <small>画面を流れて3秒で消えます</small></h3><button type="button" data-start>利用条件を確認して開く</button><input data-mobile-start type="text" readonly aria-label="チャットを開く" aria-haspopup="dialog" placeholder="タップしてチャットを入力"><div data-active hidden><form><label>メッセージ <input data-input maxlength="120" autocomplete="off" placeholder="120文字まで"></label><button type="submit">送る</button></form><details><summary>チャット設定</summary><label><input type="checkbox" data-mute> 相手のチャットを非表示</label><button type="button" data-stop>チャットを閉じる</button></details></div><p data-status role="status"></p>`;
  document.querySelector('.actions').after(panel);
  new ResizeObserver(()=>document.documentElement.style.setProperty('--result-chat-height',panel.getBoundingClientRect().height+'px')).observe(panel);
  const dialog=document.createElement('dialog');dialog.className='chat-terms';
@@ -10,12 +10,12 @@ export function initRoomChat(){
  const q=s=>panel.querySelector(s),status=q('[data-status]');let lane=0;
  let current=null,socket=null,consented=false,lastSent=0;const timers=new Set();
  function clear(){for(const t of timers)clearTimeout(t);timers.clear();messages.replaceChildren();q('[data-input]').value='';}
- function disconnect(){socket?.close();socket=null;clear();q('[data-active]').hidden=true;q('[data-start]').hidden=false;}
+ function disconnect(){socket?.close();socket=null;clear();q('[data-active]').hidden=true;q('[data-start]').hidden=false;q('[data-mobile-start]').hidden=false;}
  function connect(){
   if(!current||!consented)return;disconnect();
   const url=new URL('/api/rooms/'+current.room+'/chat',location.href);url.protocol=location.protocol==='https:'?'wss:':'ws:';url.searchParams.set('terms','2026-10-07');
   const ws=new WebSocket(url,['ose-chat','auth.'+current.token]);socket=ws;status.textContent='接続中…';
-  ws.onopen=()=>{if(socket!==ws)return;status.textContent='接続しました。相手も同意すると届きます。';q('[data-active]').hidden=false;q('[data-start]').hidden=true;};
+  ws.onopen=()=>{if(socket!==ws)return;status.textContent='接続しました。相手も同意すると届きます。';q('[data-active]').hidden=false;q('[data-start]').hidden=true;q('[data-mobile-start]').hidden=true;q('[data-input]').focus();};
   ws.onmessage=e=>{if(socket!==ws)return;let data;try{data=JSON.parse(e.data);}catch{return;}
    if(data.type==='error'){status.textContent=data.text;return;}
    if(document.hidden||data.type!=='message'||typeof data.text!=='string'||(q('[data-mute]').checked&&data.seat!==current.seat))return;
@@ -27,6 +27,8 @@ export function initRoomChat(){
   ws.onerror=()=>{if(socket===ws)status.textContent='接続できませんでした。対局はそのまま続けられます。';};
  }
  q('[data-start]').onclick=()=>{if(consented)connect();else dialog.showModal();};
+ q('[data-mobile-start]').onclick=()=>q('[data-start]').click();
+ q('[data-mobile-start]').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();q('[data-start]').click();}};
  dialog.querySelector('[data-agree]').onclick=()=>{consented=true;dialog.close();connect();};
  dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();
  q('[data-stop]').onclick=()=>{disconnect();status.textContent='チャットを閉じました。';};

@@ -500,15 +500,15 @@ body.game-ended{padding-top:0}
 }
 
 /* End-of-game conversation sits between the player's hand and rematch actions. */
-body:is(.game-ended,.game-active) .room-chat{width:100%;max-width:760px;margin:8px auto 0;padding:0;border:0}
-body:is(.game-ended,.game-active) .room-chat h3{display:none}
-body:is(.game-ended,.game-active) .room-chat form{margin:0;align-items:center}
-body:is(.game-ended,.game-active) .room-chat form label{font-size:0}
-body:is(.game-ended,.game-active) .room-chat [data-active]{padding:0}
-body:is(.game-ended,.game-active) .room-chat [data-status]{font-size:12px;margin:2px 0}
-body:is(.game-ended,.game-active) .room-chat [data-status]:empty{display:none}
-body:is(.game-ended,.game-active) .room-chat details{margin:2px 0;padding:0;border:0}
-body:is(.game-ended,.game-active) .room-chat summary{font-size:12px}
+body.game-ended .room-chat{width:100%;max-width:760px;margin:8px auto 0;padding:0;border:0}
+body.game-ended .room-chat h3{display:none}
+body.game-ended .room-chat form{margin:0;align-items:center}
+body.game-ended .room-chat form label{font-size:0}
+body.game-ended .room-chat [data-active]{padding:0}
+body.game-ended .room-chat [data-status]{font-size:12px;margin:2px 0}
+body.game-ended .room-chat [data-status]:empty{display:none}
+body.game-ended .room-chat details{margin:2px 0;padding:0;border:0}
+body.game-ended .room-chat summary{font-size:12px}
 body.game-ended #resultActions{margin:6px auto 0;border:1px solid var(--color-rule,#69806d);border-radius:8px;box-shadow:none;padding:6px 8px}
 @media(max-width:700px){
  body:is(.game-ended,.game-active) .room-chat{grid-column:1/-1;order:3;margin:0}
@@ -520,7 +520,19 @@ body.game-ended #resultActions{margin:6px auto 0;border:1px solid var(--color-ru
  html body.game-ended .ranks{font-size:10px;line-height:1}
 }
 
-/* Use the same board-and-horizontal-hands overview during play. */
+/* Compact live play is limited to phone-width layouts. */
+@media(max-width:700px){
+/* End-of-game conversation sits between the player's hand and rematch actions. */
+body.game-active .room-chat{width:100%;max-width:760px;margin:8px auto 0;padding:0;border:0}
+body.game-active .room-chat h3{display:none}
+body.game-active .room-chat form{margin:0;align-items:center}
+body.game-active .room-chat form label{font-size:0}
+body.game-active .room-chat [data-active]{padding:0}
+body.game-active .room-chat [data-status]{font-size:12px;margin:2px 0}
+body.game-active .room-chat [data-status]:empty{display:none}
+body.game-active .room-chat details{margin:2px 0;padding:0;border:0}
+body.game-active .room-chat summary{font-size:12px}
+
 html body.game-active .tabletop{width:100%;max-width:540px;grid-template-columns:minmax(0,1fr);gap:6px}
 html body.game-active .tabletop .player{grid-column:1;width:100%;max-width:100%;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:3px 8px}
 html body.game-active .player.opponent{grid-row:1}
@@ -536,6 +548,7 @@ html body.game-active .hand .hand-slot.empty{font-size:18px}
 html body.game-active .player>#osesho{grid-column:1/-1;grid-row:4;width:64px;margin:0 auto}
 html body.game-active #boardProgress{font-size:11px;margin:0 0 3px;line-height:16px;min-height:0}
 html body.game-active .room-chat{max-width:540px;margin:6px auto 0}
+}
 @media(max-width:700px){
  html body.game-active header{height:48px!important;min-height:0!important;padding:2px 12px!important}
  html body.game-active header .brand{font-size:16px!important}
@@ -546,4 +559,15 @@ html body.game-active .room-chat{max-width:540px;margin:6px auto 0}
  html body.game-active .files{height:16px;font-size:10px}
  html body.game-active .ranks{font-size:10px;line-height:1}
  html body.game-active #board .piece{font-size:clamp(17px,5vw,26px)}
+}
+
+.room-chat [data-mobile-start]{display:none;}
+@media(max-width:700px){.room-chat [data-start]{display:none}.room-chat [data-mobile-start]{display:block;width:100%;min-height:44px;padding:.6rem;font:inherit;font-size:16px;border:1px solid var(--color-rule,#8c9b90);border-radius:5px;background:var(--color-input,#fff);color:var(--color-ink,#18231d);cursor:text}}
+/* Size glyphs from their actual square, not from the phone's viewport width. */
+@media(max-width:700px){
+ html body:is(.game-active,.game-ended) #board{container-type:inline-size}
+ html body:is(.game-active,.game-ended) #board .piece{font-size:7.5cqw}
+ html body:is(.game-active,.game-ended) .hand .hand-slot{container-type:inline-size}
+ html body:is(.game-active,.game-ended) .hand .piece{width:85%;max-width:none;height:93%;font-size:min(23px,65cqw)}
+ html body:is(.game-active,.game-ended) .hand .hand-slot.empty{font-size:min(18px,55cqw)}
 }

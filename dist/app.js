@@ -34,6 +34,8 @@ import {prepareMoveSound,playMoveSound,playTossShatterSound,playTossCutInSound,p
 import {initial,moves,movementTargets,label,pieceGlyph,names,points,beforeParadox} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const roomChat=initRoomChat();
+const compactGameViewport=matchMedia('(max-width:700px)');
+compactGameViewport.addEventListener('change',()=>render());
 // Reserve the toolbar's actual height, including rematch prompts and safe areas.
 new ResizeObserver(([entry])=>{
  const height=entry.target.getBoundingClientRect().height;
@@ -201,7 +203,7 @@ function render(){
  const playing=!!online?.joined&&!ending;
  document.body.classList.toggle('game-active',playing);
  const chatPanel=document.querySelector('.room-chat');
- if(ending||playing){document.querySelector('.tabletop').after(chatPanel);if(ending)chatPanel.after($('resultActions'));}
+ if(ending||(playing&&compactGameViewport.matches)){document.querySelector('.tabletop').after(chatPanel);if(ending)chatPanel.after($('resultActions'));}
  else document.querySelector('.actions').after(chatPanel);
  if(enteringResult)requestAnimationFrame(()=>{if(document.body.classList.contains('game-ended'))window.scrollTo({top:0,behavior:'instant'});});
  $('resultHeading').hidden=$('resultActions').hidden=!ending;
