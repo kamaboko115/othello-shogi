@@ -1,3 +1,4 @@
+import {initRoomChat} from './room-chat.js';
 import {initEffectsVolume} from './audio-settings.js';
 import {collapseSteps,initCollapseSlider} from './collapse-options.js';
 import {showChallengeCelebration} from './challenge-celebration.js';
@@ -32,6 +33,7 @@ import {playClockWarning} from './sound.js';
 import {prepareMoveSound,playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
 import {initial,moves,movementTargets,label,pieceGlyph,names,points,beforeParadox} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
+const roomChat=initRoomChat();
 const localAI=createLocalAIStore();
 const challengeWins=createChallengeWins();
 let challengeCountShown=false,challengeReportKey='';
@@ -169,6 +171,7 @@ function renderHand(n){
  }
 }
 function render(){
+ roomChat.update(online);
  const oseshoMatch=online?.kind==='ai'&&online.settings?.aiLevel==='osesho';
  const helperVisible=online?.kind==='ai'&&online.joined&&((!state.result&&helperRemaining(online)>0)||helperLingering||helperIdea);
  $('askOsesho').hidden=!oseshoMatch||!helperVisible;$('askOsesho').disabled=!helperAvailable();$('osesho').hidden=!(oseshoMatch||helperVisible);$('tagline').hidden=!!online;

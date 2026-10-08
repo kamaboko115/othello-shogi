@@ -1,3 +1,4 @@
+import {authorizeChat} from './chat.js';
 import {normalizeCollapseAt} from '../dist/collapse-options.js';
 import {limitApiIP,limitRoomActions} from './action-limit.js';
 import {challengeWinSchema,validChallengeWin,challengeWinCount,recordChallengeWin} from './challenge-wins.js';
@@ -39,6 +40,12 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
   if(!env.DB)return json({error:'対戦サーバーの準備ができていません。'},503);
   if(!['GET','POST'].includes(request.method))return json({error:'対応していない操作です。'},405);
   const ipLimited=await limitApiIP(env,{clientIP,required:requireBurstLimiter});if(ipLimited)return ipLimited;
+  if(parts[3]==='chat'){
+   const auth=await authorizeChat(request,env);if(auth instanceof Response)return auth;
+   if(!env.ROOM_CHAT)return json({error:'チャットは準備中です。'},503);
+   const headers=new Headers(request.headers);headers.set('X-Chat-Seat',String(auth.seat));headers.set('X-Chat-Expires',String(auth.expires));headers.set('X-Chat-Room',auth.room);headers.delete('Sec-WebSocket-Protocol');
+   return env.ROOM_CHAT.get(env.ROOM_CHAT.idFromName(auth.room)).fetch(new Request(request,{headers}));
+  }
   if(request.method==='POST'){
    const origin=request.headers.get('Origin');if(origin&&origin!==url.origin)fail('このページから操作してください。',403);
    if(!request.headers.get('Content-Type')?.startsWith('application/json'))fail('JSONが必要です。',415);
