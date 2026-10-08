@@ -212,10 +212,11 @@ function render(){
  const resultInfo=ending?resultView(state,perspective):null;
  if(ending){winAds.counter.record({...online,state});showChallengeVictory({...online,state});}else{$('challengeVictory').hidden=true;$('retryChallengeWin').hidden=true;}
  if(resultInfo){$('resultTitle').textContent=resultInfo.title;$('resultReason').textContent=resultInfo.reason;$('resultDetail').textContent=resultInfo.detail;}
- const rematchHome=ending?$('resultActions'):document.querySelector('aside');
- if($('rematchPanel').parentElement!==rematchHome)rematchHome.prepend($('rematchPanel'));
- const replayHome=ending?$('resultActions'):$('recordDialog');if($('openReplay').parentElement!==replayHome)replayHome.append($('openReplay'));
- const recordHome=ending?$('resultActions'):$('record').parentElement;
+ const rematchHome=ending?$('resultTitleRow'):document.querySelector('aside');
+ if($('rematchPanel').parentElement!==rematchHome)rematchHome.append($('rematchPanel'));
+ const replayHome=ending?$('resultActions'):$('recordDialog');if($('openReplay').parentElement!==replayHome)replayHome.prepend($('openReplay'));
+ $('openReplay').textContent=ending?'盤面で振り返る':'盤面で振り返る・共有';
+ const recordHome=ending?document.querySelector('#replayDialog .replay-tools'):$('record').parentElement;
  if($('openRecord').parentElement!==recordHome){if(ending)recordHome.append($('openRecord'));else recordHome.insertBefore($('openRecord'),$('record'));}
 
  const moveKey=online?online.room+':'+(online.round||1)+':'+state.ply:'';

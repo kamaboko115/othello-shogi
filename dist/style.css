@@ -583,3 +583,18 @@ html body.game-active .room-chat{max-width:540px;margin:6px auto 0}
 .room-request-actions p{margin:0 0 8px;font-size:14px;font-weight:700}
 .room-request-actions button{margin-right:8px}
 .room-request-stream .room-request-flying{color:#ffe38a}
+
+/* Keep rematch beside the result and leave only two actions below the board. */
+#resultTitleRow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#resultTitleRow #resultTitle{margin:0;min-width:0}
+#resultTitleRow #rematchPanel{flex:0 1 auto;border:0;padding:0;margin:0;text-align:right}
+#resultTitleRow #rematchPanel button{font:inherit;font-size:14px;min-height:44px;padding:8px 12px;margin:0;border:1px solid var(--color-rule,#69806d);border-radius:5px;background:var(--color-surface,#24453f);color:var(--color-ink,#eddfb4)}
+#resultTitleRow #rematchText:empty{display:none}
+#resultTitleRow #rematchText{font-size:12px;margin:0 0 4px}
+#replayDialog #openRecord{margin:0}
+@media(max-width:700px){
+ body.game-ended #resultTitleRow{grid-column:1/-1;order:0;gap:8px}
+ html body.game-ended #resultTitleRow #resultTitle{font-size:22px!important;white-space:nowrap}
+ #resultTitleRow #rematchPanel button{font-size:12px;padding:6px 8px}
+ #resultTitleRow #rematchPanel{max-width:52%}
+}
