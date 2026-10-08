@@ -494,3 +494,7 @@ body.game-ended{padding-top:calc(var(--result-actions-height,160px) + 24px)}
  html body.game-ended #resultActions button{min-width:0!important;width:100%!important;margin:0!important}
  html body.game-ended #resultActions{overflow-x:hidden}
 }
+@media(max-width:700px){
+ html body.game-ended .tabletop{grid-template-columns:minmax(0,1fr);gap:5px}
+ html body.game-ended .tabletop .player{width:100%;max-width:100%}
+}
