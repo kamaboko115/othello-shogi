@@ -205,8 +205,9 @@ function render(){
  const playing=!!online?.joined&&!ending;
  document.body.classList.toggle('game-active',playing);
  const chatPanel=document.querySelector('.room-chat');
- if(ending||(playing&&compactGameViewport.matches)){document.querySelector('.tabletop').after(chatPanel);if(ending)chatPanel.after($('resultActions'));}
- else document.querySelector('.actions').after(chatPanel);
+ const chatAnchor=document.querySelector(ending||(playing&&compactGameViewport.matches)?'.tabletop':'.actions');
+ if(chatAnchor.nextElementSibling!==chatPanel)chatAnchor.after(chatPanel);
+ if(ending&&chatPanel.nextElementSibling!==$('resultActions'))chatPanel.after($('resultActions'));
  if(enteringResult)requestAnimationFrame(()=>{if(document.body.classList.contains('game-ended'))window.scrollTo({top:0,behavior:'instant'});});
  $('resultHeading').hidden=$('resultActions').hidden=!ending;
  const resultInfo=ending?resultView(state,perspective):null;

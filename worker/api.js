@@ -44,7 +44,7 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
   if(parts[3]==='chat'){
    const auth=await authorizeChat(request,env);if(auth instanceof Response)return auth;
    if(!env.ROOM_CHAT)return json({error:'チャットは準備中です。'},503);
-   const headers=new Headers(request.headers);headers.set('X-Chat-Seat',String(auth.seat));headers.set('X-Chat-Expires',String(auth.expires));headers.set('X-Chat-Room',auth.room);headers.delete('Sec-WebSocket-Protocol');
+   const headers=new Headers(request.headers);headers.set('X-Chat-Seat',String(auth.seat));headers.set('X-Chat-Expires',String(auth.expires));headers.set('X-Chat-Room',auth.room);headers.set('X-Chat-Can-Send',String(auth.canSend));headers.delete('Sec-WebSocket-Protocol');
    return env.ROOM_CHAT.get(env.ROOM_CHAT.idFromName(auth.room)).fetch(new Request(request,{headers}));
   }
   if(request.method==='POST'){

@@ -606,3 +606,29 @@ html body.game-active .room-chat{max-width:540px;margin:6px auto 0}
  html body:is(.game-active,.game-ended) .hand .slot-label{font-size:min(18px,55cqw);line-height:1}
  html body:is(.game-active,.game-ended) .hand-count{right:0;bottom:0;font-size:10px;line-height:1.1;padding:0 2px;pointer-events:none}
 }
+
+/* Keep the game at its current scroll position while the mobile keyboard opens. */
+.room-chat [data-done]{display:none}
+@media(max-width:700px){
+ html.chat-composing{overflow:hidden;overscroll-behavior:none}
+ html.chat-composing body{position:fixed;top:calc(var(--chat-scroll-top,0px) + var(--chat-viewport-top,0px));left:0;width:var(--chat-page-width,100%);overflow:hidden}
+ html.chat-composing body:is(.game-active,.game-ended) .tabletop{max-width:var(--chat-board-width)!important}
+ html.chat-composing .room-chat form.chat-composer-floating{position:fixed;left:8px;right:8px;bottom:calc(var(--chat-keyboard-inset,0px) + 8px);z-index:100001;padding:8px;margin:0;display:flex;align-items:center;gap:6px;border:1px solid var(--color-rule,#8c9b90);border-radius:8px;background:var(--color-surface,#fff);box-shadow:0 2px 12px #0003}
+ html.chat-composing .room-chat form label{font-size:0!important}
+ html.chat-composing .room-chat [data-done]{display:block;flex:none}
+ html.chat-composing .room-chat [data-input]{font-size:16px}
+}
+
+/* Make an available rematch unmistakable without moving the result layout. */
+#resultTitleRow #rematchPanel :is(#offerRematch,#acceptRematch):not(:disabled){border:2px solid #f4ca58;background:linear-gradient(135deg,#2f624b,#174536);color:#fff8df;font-weight:800;animation:rematch-invite-glow 1.7s ease-in-out infinite}
+@keyframes rematch-invite-glow{0%,100%{border-color:#c99832;box-shadow:0 0 0 1px #e6bc4d44,0 0 5px #edc85833}50%{border-color:#fff2a2;box-shadow:0 0 0 3px #f4d36666,0 0 18px #ffd96899}}
+@media(min-width:701px){
+ #resultTitleRow #rematchPanel :is(#offerRematch,#acceptRematch){font-size:20px;min-height:60px;padding:14px 26px;border-radius:10px}
+}
+@media(max-width:700px){
+ #resultTitleRow #rematchPanel :is(#offerRematch,#acceptRematch):not(:disabled){border-width:2px;animation-duration:2s}
+}
+@media(prefers-reduced-motion:reduce){
+ #resultTitleRow #rematchPanel :is(#offerRematch,#acceptRematch):not(:disabled){animation:none;border-color:#ffe88b;box-shadow:0 0 0 2px #f4d36666,0 0 10px #ffd96866}
+}
+.room-chat [data-compose]{width:100%;text-align:left;font-size:16px;font-weight:400;color:var(--color-muted,#737c72);background:var(--color-input,#fff);cursor:text}

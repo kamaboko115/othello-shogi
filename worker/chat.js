@@ -14,7 +14,8 @@ export async function authorizeChat(request,env,now=Date.now()){
  const deny=(status,error)=>Response.json({error},{status,headers:{'Cache-Control':'no-store'}});
  if(!match||request.method!=='GET'||request.headers.get('Upgrade')?.toLowerCase()!=='websocket')return deny(400,'接続方法が正しくありません。');
  if(request.headers.get('Origin')!==url.origin)return deny(403,'このページから接続してください。');
- if(url.searchParams.get('terms')!==chatTermsVersion)return deny(403,'チャットの利用条件への同意が必要です。');
+ const canSend=url.searchParams.get('terms')===chatTermsVersion;
+ if(!canSend&&url.searchParams.get('receive')!=='1')return deny(403,'チャットの利用条件への同意が必要です。');
  const protocols=(request.headers.get('Sec-WebSocket-Protocol')||'').split(',').map(x=>x.trim());
  const token=protocols.find(x=>/^auth\.[a-f0-9]{64}$/.test(x))?.slice(5);
  if(!token||!protocols.includes('ose-chat'))return deny(401,'参加情報がありません。');
@@ -25,7 +26,7 @@ export async function authorizeChat(request,env,now=Date.now()){
  if(seat===null)return deny(403,'この部屋の対局者だけが使えます。');
  const data=parseMatchData(row.data);
  if(data.kind!=='friend'||data.closed||!row.guest_hash)return deny(403,'参加済みの友人対局だけで使えます。');
- return {room:row.id,seat,expires:row.expires};
+ return {room:row.id,seat,expires:row.expires,canSend};
 }
 
 // Hibernating WebSockets keep only connection metadata. There is no history.
@@ -36,13 +37,14 @@ export class RoomChat {
   for(const socket of this.ctx.getWebSockets(String(seat)))socket.close(1000,'別の画面で接続しました');
   const pair=new WebSocketPair(),client=pair[0],socket=pair[1];
   this.ctx.acceptWebSocket(socket,[String(seat)]);
-  socket.serializeAttachment({seat,expires,lastSent:0,room:request.headers.get('X-Chat-Room')});
+  socket.serializeAttachment({seat,expires,lastSent:0,room:request.headers.get('X-Chat-Room'),canSend:request.headers.get('X-Chat-Can-Send')==='true'});
   return new Response(null,{status:101,webSocket:client,headers:{'Sec-WebSocket-Protocol':'ose-chat'}});
  }
  async webSocketMessage(socket,raw){
   const meta=socket.deserializeAttachment(),now=Date.now();
   if(now-(meta.lastAttempt||0)<1000){socket.close(1008,'連投制限');return;}
   meta.lastAttempt=now;socket.serializeAttachment(meta);
+  if(meta.canSend===false){socket.send(JSON.stringify({type:'error',text:'送信するにはチャットの利用条件に同意してください。'}));return;}
   if(this.env.ROOM_ACTION_BURST&&!(await this.env.ROOM_ACTION_BURST.limit({key:'chat:'+meta.room+':'+meta.seat})).success){socket.close(1008,'送信回数制限');return;}
   const message=chatMessage(raw,now,meta.lastSent);
   if(!message){socket.send(JSON.stringify({type:'error',text:'120文字以内・2秒以上の間隔で送信してください。'}));return;}
