@@ -10,6 +10,19 @@ import {textAssets,binaryAssets} from '../worker/static-assets.js';
 execFileSync(process.execPath,['build-pages.mjs'],{cwd:new URL('..',import.meta.url),stdio:'pipe'});
 const output=new URL('../pages/.sites-runtime/pages/',import.meta.url);
 
+test('every published browser module has all of its local imports in the release',async()=>{
+ const published=new Set(textAssets);
+ for(const name of textAssets.filter(name=>name.endsWith('.js'))){
+  const source=await readFile(new URL(name,output),'utf8');
+  const imports=source.matchAll(/\b(?:import|export)\s+(?:[^'";]*?\s+from\s*)?['"](\.[^'"]+)['"]/g);
+  for(const [,specifier] of imports){
+   const dependency=new URL(specifier,new URL(name,'https://assets.test/')).pathname.slice(1);
+   assert.ok(published.has(dependency),`${name} imports ${dependency}, which is missing from the release`);
+   assert.ok((await readFile(new URL(dependency,output))).length,`${dependency} must be emitted`);
+  }
+ }
+});
+
 test('Pages serves the same public assets and keeps preview/server files private',async()=>{
  for(const name of [...textAssets,...binaryAssets]){
   let actual=await readFile(new URL(name,output));

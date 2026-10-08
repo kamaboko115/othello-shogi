@@ -8,7 +8,7 @@ execFileSync(process.execPath,['build.mjs'],{cwd:new URL('..',import.meta.url),s
 const worker=(await import('../dist/server/index.js')).default;
 const request=(path,options)=>worker.fetch(new Request('http://test.local'+path,{...options,headers:{...options?.headers,'CF-Connecting-IP':'192.0.2.1'}}),{API_REQUEST_BURST:{limit:async()=>({success:true})}});
 test('compiled worker generates content SHA256 ETags and revalidates text, binary, and HEAD requests',async()=>{
- for(const path of ['/','/ad-break.js','/app.js','/room-network.js','/audio-settings.js','/sounds/bell.mp3','/sounds/broken.mp3','/style.css','/osesho.png','/fonts/title-mplus-rounded.woff2']){
+ for(const path of ['/','/ad-break.js','/app.js','/room-requests.js','/room-network.js','/audio-settings.js','/sounds/bell.mp3','/sounds/broken.mp3','/style.css','/osesho.png','/fonts/title-mplus-rounded.woff2']){
   const full=await request(path);assert.equal(full.status,200);const bytes=new Uint8Array(await full.arrayBuffer()),etag='"'+createHash('sha256').update(bytes).digest('hex')+'"';assert.equal(full.headers.get('ETag'),etag);assert.equal(full.headers.get('Cache-Control'),'no-cache');assert.equal(full.headers.get('X-Content-Type-Options'),'nosniff');
   for(const method of ['GET','HEAD']){const cached=await request(path,{method,headers:{'If-None-Match':'"different", W/'+etag}});assert.equal(cached.status,304);assert.equal(await cached.text(),'');assert.equal(cached.headers.get('ETag'),etag);assert.equal(cached.headers.get('Cache-Control'),'no-cache');}
   const changed=await request(path,{headers:{'If-None-Match':'"older-build"'}});assert.equal(changed.status,200);
