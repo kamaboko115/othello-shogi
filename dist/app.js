@@ -198,6 +198,9 @@ function render(){
  const ending=!!online&&!!state.result&&!collapseEffect&&!comboPreparing;
  const enteringResult=ending&&!document.body.classList.contains('game-ended');
  document.body.classList.toggle('game-ended',ending);
+ const chatPanel=document.querySelector('.room-chat');
+ if(ending){document.querySelector('.tabletop').after(chatPanel);chatPanel.after($('resultActions'));}
+ else document.querySelector('.actions').after(chatPanel);
  if(enteringResult)requestAnimationFrame(()=>{if(document.body.classList.contains('game-ended'))window.scrollTo({top:0,behavior:'instant'});});
  $('resultHeading').hidden=$('resultActions').hidden=!ending;
  const resultInfo=ending?resultView(state,perspective):null;
