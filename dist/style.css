@@ -440,3 +440,6 @@ html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 
 /* Transient comments follow the viewport without intercepting any controls. */
 .room-chat-stream{position:fixed;inset:0;overflow:hidden;pointer-events:none!important;z-index:100000}.room-chat-stream .room-chat-flying{position:absolute;left:0;margin:0;white-space:nowrap;width:max-content;max-width:none;font:800 clamp(18px,2.8vw,26px)/1.35 sans-serif;color:#fff;text-shadow:-1px -1px 0 #17231e,1px -1px 0 #17231e,-1px 1px 0 #17231e,1px 1px 0 #17231e,0 2px 4px #000;will-change:transform;pointer-events:none;user-select:none}.room-chat-stream .room-chat-flying.is-self{color:#fff0a8}.room-chat-stream .room-chat-flying.reduced-motion{left:5%;max-width:90%;white-space:normal;overflow-wrap:anywhere;will-change:auto}.room-chat [data-active]{padding-top:.4rem}.room-chat form{margin-top:.8rem}
+
+/* Keep scrolling and pinch zoom while preventing accidental double-tap zoom. */
+html,button,a,input,select,summary,.piece{touch-action:manipulation}
