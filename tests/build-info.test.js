@@ -21,7 +21,7 @@ test('metadata stays in the HTML attribute and does not change the source templa
 test('both deployment builds ship metadata in the homepage without an extra API call',async()=>{
  for(const script of ['build.mjs','build-pages.mjs'])execFileSync(process.execPath,[script],{cwd:new URL('..',import.meta.url),stdio:'pipe'});
  const worker=(await import('../dist/server/index.js')).default;
- const response=await worker.fetch(new Request('https://test.local/'),{});
+ const response=await worker.fetch(new Request('https://test.local/',{headers:{'CF-Connecting-IP':'192.0.2.1'}}),{API_REQUEST_BURST:{limit:async()=>({success:true})}});
  assert.equal(response.status,200);
  const pages=readFileSync(new URL('../pages/.sites-runtime/pages/index.html',import.meta.url),'utf8');
  for(const html of [await response.text(),pages]){

@@ -40,7 +40,7 @@ function showChallengeVictory(data){
  const el=$('challengeVictory'),eligible=challengeWins.eligible(data);el.hidden=!eligible;if(!eligible){el.classList.remove('challenge-crowned');return;}
  const key=data.room+':'+data.round;if(challengeReportKey===key)return;challengeReportKey=key;
  el.textContent='オセショ様に勝利！ 全プレイヤーの勝利数に加算しています…';$('retryChallengeWin').hidden=true;
- challengeWins.report(data).then(({ordinal})=>{if(challengeReportKey===key){showChallengeCelebration(el,ordinal);}}).catch(()=>{if(challengeReportKey===key){el.textContent='オセショ様に勝利！ 集計に接続できませんでした。';$('retryChallengeWin').hidden=false;}});
+ challengeWins.report(data).then(({ordinal})=>{if(challengeReportKey===key){showChallengeCelebration(el,ordinal);}}).catch(error=>{if(challengeReportKey===key){el.textContent='オセショ様に勝利！ '+(error.status===422?error.message:'集計に接続できませんでした。');$('retryChallengeWin').hidden=error.status===422;const link=document.createElement('a');link.className='challenge-share';link.textContent='ツイッターで共有';link.target='_blank';link.rel='noopener noreferrer';link.href='https://x.com/intent/tweet?'+new URLSearchParams({text:'私はオセショ様に勝ちました！ #オセロ将棋 #オセショギ #OSESHOGI',url:'https://oshogi-games.pages.dev/'});el.append(link);}});
 }
 $('retryChallengeWin').onclick=()=>{challengeReportKey='';showChallengeVictory(online);};
 const winAds=createWinAdBreak();

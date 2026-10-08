@@ -1,5 +1,6 @@
+import {verifyChallengeProof,challengeProofMaxBytes} from './challenge-verification.js';
 import {normalizeCollapseAt} from '../dist/collapse-options.js';
-import {limitApiIP,limitRoomActions} from './action-limit.js';
+import {limitApiIP,limitRoomActions,rateAddress} from './action-limit.js';
 import {challengeWinSchema,validChallengeWin,challengeWinCount,recordChallengeWin} from './challenge-wins.js';
 import {allowsTakeback,challengeSettings,helperRemaining,recordHelperUse} from '../dist/challenge-options.js';
 import {normalizeMoveLimit} from '../dist/judge-options.js';
@@ -44,15 +45,21 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
    if(!request.headers.get('Content-Type')?.startsWith('application/json'))fail('JSONが必要です。',415);
   }
   if(parts.length===2&&parts[1]==='challenge-wins'&&request.method==='GET')return Response.json({total:await challengeWinCount(env.DB)},{headers:{...securityHeaders,'Cache-Control':'public, max-age=300'}});
+  const isWinReport=parts.length===2&&parts[0]==='api'&&parts[1]==='challenge-wins'&&request.method==='POST';
+  if(isWinReport){
+   const address=rateAddress(clientIP);if(!address)fail('通信元を確認できません。',503);
+   if(env.ROOM_CREATE_BURST){if(!(await env.ROOM_CREATE_BURST.limit({key:'challenge-win:'+await hash(address)})).success)return roomLimitResponse(60);}
+   else if(requireBurstLimiter)fail('集計サーバーの準備ができていません。',503);
+  }
   const token=(request.headers.get('Authorization')||'').replace(/^Bearer /,'');
   if(!validToken(token))fail('対局の参加情報がありません。招待リンクから参加してください。',401);
-  let body={};if(request.method==='POST'){const text=await readLimitedRequestBody(request);try{body=JSON.parse(text);}catch{fail('不正なリクエストです。');}if(!body||typeof body!=='object'||Array.isArray(body))fail('不正なリクエストです。');}
+  let body={};if(request.method==='POST'){const text=await readLimitedRequestBody(request,isWinReport?challengeProofMaxBytes:undefined);try{body=JSON.parse(text);}catch{fail('不正なリクエストです。');}if(!body||typeof body!=='object'||Array.isArray(body))fail('不正なリクエストです。');}
   const tokenHash=await hash(token),now=Date.now();
   if(parts.length===2&&parts[1]==='challenge-wins'&&request.method==='POST'){
    if(!validChallengeWin(body))fail('集計対象の勝利ではありません。');
-   if(env.ROOM_CREATE_BURST){if(!(await env.ROOM_CREATE_BURST.limit({key:'challenge-win:'+await hash(clientIP||tokenHash)})).success)return roomLimitResponse(60);}
-   else if(requireBurstLimiter)fail('集計サーバーの準備ができていません。',503);
-   return json(await recordChallengeWin(env.DB,body.matchKey,now));
+   if(!verifyChallengeProof(body))fail('棋譜の形式・最終盤面を確認できません。更新後に開始した対局が集計対象です。',422);
+   const proofHash=await hash(JSON.stringify(body.proof.steps.map(({move:m})=>m.drop?[m.drop,m.to]:[m.from,m.to,m.prom])));
+   return json(await recordChallengeWin(env.DB,body.matchKey,now,proofHash));
   }
   if(parts.length===2&&parts[1]==='rooms' &&request.method==='POST'){
    if(!validToken(body.invite))fail('招待情報が不正です。');
@@ -67,7 +74,8 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
    if(data.kind==='ai')startClock(data,now);
    if(data.kind==='friend'){
     if(!clientIP)fail('対戦サーバーの準備ができていません。',503);
-    const ipHash=await hash(clientIP);
+    const address=rateAddress(clientIP);if(!address)fail('通信元を確認できません。',503);
+    const ipHash=await hash(address);
     if(env.ROOM_CREATE_BURST){
      const {success}=await env.ROOM_CREATE_BURST.limit({key:ipHash});
      if(!success)return roomLimitResponse(60);
@@ -85,12 +93,15 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
    if(data.kind==='ai')await env.DB.prepare('UPDATE rooms SET guest_hash = ? WHERE id = ?').bind('ai',id).run();
    row=await env.DB.prepare('SELECT * FROM rooms WHERE id = ?').bind(id).first();return json({...view(row,0),invite:body.invite},201);
   }
-  if(parts[1]!=='rooms'||!/^[a-f0-9]{32}$/.test(parts[2]||''))fail('対局が見つかりません。',404);
+  if(parts[0]!=='api'||parts[1]!=='rooms'||!/^[a-f0-9]{32}$/.test(parts[2]||'')||!(request.method==='GET'&&(parts.length===3||parts.length===4&&parts[3]==='replay')||request.method==='POST'&&parts.length===4&&['preview','join','action'].includes(parts[3])))fail('対局が見つかりません。',404);
   const id=parts[2];let row=await env.DB.prepare('SELECT * FROM rooms WHERE id = ?').bind(id).first();
   if(row&&row.expires<=now){await env.DB.prepare('DELETE FROM rooms WHERE id = ? AND expires <= ?').bind(id,now).run();row=null;}
   if(!row)fail('対局が見つからないか、すでに閉じられています。',404);
-  if(parseMatchData(row.data).state.mode===false)fail('通常将棋モードは終了しました。新しい対局を作成してください。',410);
   const side=row.host_hash===tokenHash?0:row.guest_hash===tokenHash?1:null,action=parts[3];
+  // Reject outsiders before decompressing potentially long match histories.
+  if(side===null&&(!['preview','join'].includes(action)||!validToken(body.invite)||await hash(body.invite)!==row.invite_hash))fail('この対局を操作する権限がありません。',403);
+  if(request.method==='POST'&&action==='action'){const actionLimited=await limitRoomActions(env,{tokenHash,required:requireBurstLimiter});if(actionLimited)return actionLimited;}
+  if(parseMatchData(row.data).state.mode===false)fail('通常将棋モードは終了しました。新しい対局を作成してください。',410);
   if(action==='preview'&&request.method==='POST'){if(!validToken(body.invite)||await hash(body.invite)!==row.invite_hash)fail('招待リンクが正しくありません。',403);return json({settings:parseMatchData(row.data).settings||{moveLimit:true,noDrops:false}});}
   if(action==='join'&&request.method==='POST'){
    if(side!==null)return json(view(row,side));
@@ -102,7 +113,6 @@ export async function api(request,env,{clientIP='127.0.0.1',requireBurstLimiter=
    row=await env.DB.prepare('SELECT * FROM rooms WHERE id = ?').bind(id).first();return json(view(row,1));
   }
   if(side===null)fail('この対局を操作する権限がありません。',403);
-  if(request.method==='POST'&&action==='action'){const actionLimited=await limitRoomActions(env,{tokenHash,required:requireBurstLimiter});if(actionLimited)return actionLimited;}
   const timed=parseMatchData(row.data);
   if(body.action!=='leave'&&row.guest_hash&&!timed.state.result&&clockBudget(timed,timed.state.turn,now)<=0){
    chargeClock(timed,now);timed.state.result=sideName(1-timed.state.turn)+'の勝ち（時間切れ）';timed.offer=null;timed.undoOffer=null;

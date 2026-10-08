@@ -1,3 +1,4 @@
+import {localDB} from '../worker/local-db.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
@@ -5,7 +6,7 @@ import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 execFileSync(process.execPath,['build.mjs'],{cwd:new URL('..',import.meta.url),stdio:'pipe'});
 const worker=(await import('../dist/server/index.js')).default;
-const request=(path,options)=>worker.fetch(new Request('http://test.local'+path,options),{});
+const request=(path,options)=>worker.fetch(new Request('http://test.local'+path,{...options,headers:{...options?.headers,'CF-Connecting-IP':'192.0.2.1'}}),{API_REQUEST_BURST:{limit:async()=>({success:true})}});
 test('compiled worker generates content SHA256 ETags and revalidates text, binary, and HEAD requests',async()=>{
  for(const path of ['/','/ad-break.js','/app.js','/room-network.js','/audio-settings.js','/sounds/bell.mp3','/sounds/broken.mp3','/style.css','/osesho.png','/fonts/title-mplus-rounded.woff2']){
   const full=await request(path);assert.equal(full.status,200);const bytes=new Uint8Array(await full.arrayBuffer()),etag='"'+createHash('sha256').update(bytes).digest('hex')+'"';assert.equal(full.headers.get('ETag'),etag);assert.equal(full.headers.get('Cache-Control'),'no-cache');assert.equal(full.headers.get('X-Content-Type-Options'),'nosniff');
@@ -47,4 +48,24 @@ test('searchable rules, canonical metadata and sitemap are served without exposi
  const sitemap=await request('/sitemap.xml');assert.match(sitemap.headers.get('Content-Type'),/application\/xml/);const xml=await sitemap.text();assert.match(xml,/rules.html/);assert.doesNotMatch(xml,/preview|fixture|#ai/);
  const robots=await request('/robots.txt');assert.match(robots.headers.get('Content-Type'),/text\/plain/);assert.match(await robots.text(),/Sitemap: https:\/\/oshogi-games.pages.dev\/sitemap.xml/);
  for(const file of ['launch-fixture.html','launch-fixture.js'])assert.equal((await request('/'+file)).status,404);
+});
+
+
+test('legacy static requests are rate limited before decoding; missing binding fails closed',async()=>{
+ const req=()=>new Request('http://test.local/sounds/broken.mp3',{headers:{'CF-Connecting-IP':'192.0.2.1'}});
+ assert.equal((await worker.fetch(req(),{})).status,503);
+ assert.equal((await worker.fetch(req(),{API_REQUEST_BURST:{limit:async()=>({success:false})}})).status,429);
+ assert.equal((await request('/sounds/broken.mp3',{method:'POST'})).status,405);
+ const original=globalThis.atob;globalThis.atob=()=>{throw Error('must not decode');};
+ try{assert.equal((await request('/sounds/broken.mp3',{method:'HEAD'})).status,200);assert.equal((await request('/sounds/broken.mp3',{headers:{Range:'bytes=999999999-'}})).status,416);}finally{globalThis.atob=original;}
+});
+
+test('hourly scheduled handler saves a counter recovery point; cleanup schedule does not duplicate it',async()=>{
+ const db=localDB();try{
+  await worker.scheduled({cron:'*/5 * * * *'},{DB:db});
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM challenge_win_backups').first()).n,0);
+  await worker.scheduled({cron:'0 * * * *'},{DB:db});
+  await worker.scheduled({cron:'0 * * * *'},{DB:db});
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM challenge_win_backups').first()).n,1);
+ }finally{db.close();}
 });

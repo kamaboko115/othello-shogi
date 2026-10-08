@@ -1,3 +1,4 @@
+import {winningChallenge} from './helpers/challenge-game.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocalAIStore,localAIStorageKey} from '../dist/local-ai-game.js';
@@ -38,11 +39,11 @@ test('victory API deduplicates reports, assigns contiguous ordinals and rejects 
  const db=localDB();try{
  const call=(method,body,extra={})=>api(new Request('https://test.local/api/challenge-wins',{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+'a'.repeat(64),...extra},...(body?{body:JSON.stringify(body)}:{})}),{DB:db});
  const settings=createLocalAIStore({storage:disk(),random:b=>b.fill(1)}).create({aiLevel:'osesho'}).settings;
- const body={matchKey:'1'.repeat(32)+':1',side:1,result:'後手の勝ち（王を取った）',ply:4,settings};
+ const body={matchKey:'1'.repeat(32)+':1',side:1,...winningChallenge(),settings};
  assert.deepEqual(await (await call('GET')).json(),{total:0});
  assert.deepEqual(await (await call('POST',body)).json(),{ordinal:1,total:1});
  assert.deepEqual(await (await call('POST',body)).json(),{ordinal:1,total:1});
- assert.deepEqual(await (await call('POST',{...body,matchKey:'2'.repeat(32)+':1'})).json(),{ordinal:2,total:2});
+ assert.deepEqual(await (await call('POST',{...body,matchKey:'2'.repeat(32)+':1'})).json(),{ordinal:1,total:1});
  assert.equal((await call('POST',{...body,settings:{...settings,paradoxAt:150}})).status,400);
  assert.equal((await call('POST',{...body,result:'先手の勝ち（王を取った）'})).status,400);
  assert.equal((await call('POST',body,{Origin:'https://foreign.test'})).status,403);

@@ -22,7 +22,7 @@
       "simple": { "limit": 60, "period": 60 }
     }
   ],
-  "triggers": { "crons": ["*/5 * * * *"] },
+  "triggers": { "crons": ["*/5 * * * *", "0 * * * *"] },
   "d1_databases": [
     {
       "binding": "DB",

@@ -8,10 +8,10 @@ export const securityHeaders={
 
 // Content-Length is only an early rejection hint. Always enforce the actual
 // byte count, including chunked requests and multibyte UTF-8 characters.
-export async function readLimitedRequestBody(request){
+export async function readLimitedRequestBody(request,maxBytes=maxRequestBodyBytes){
  const tooLarge=()=>Object.assign(new Error('リクエストが大きすぎます。'),{status:413});
  const length=request.headers.get('Content-Length');
- if(length!==null&&/^\d+$/.test(length)&&Number(length)>maxRequestBodyBytes){
+ if(length!==null&&/^\d+$/.test(length)&&Number(length)>maxBytes){
   request.body?.cancel().catch(()=>{});throw tooLarge();
  }
  if(!request.body)return '';
@@ -20,7 +20,7 @@ export async function readLimitedRequestBody(request){
   while(true){
    const {done,value}=await reader.read();if(done)break;
    bytes+=value.byteLength;
-   if(bytes>maxRequestBodyBytes){reader.cancel().catch(()=>{});throw tooLarge();}
+   if(bytes>maxBytes){reader.cancel().catch(()=>{});throw tooLarge();}
    text+=decoder.decode(value,{stream:true});
   }
   return text+decoder.decode();
