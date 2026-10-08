@@ -10,7 +10,7 @@ const permissions=source.slice(source.indexOf('const canAct='),source.indexOf('f
 test('waiting rooms use the mobile game layout while moves remain locked until the opponent joins',()=>{
  const classes=new Set();
  const context=vm.createContext({
-  online:null,state:{turn:0,result:null},busy:false,connected:true,
+  online:null,showTutorial:true,state:{turn:0,result:null},busy:false,connected:true,
   collapseEffect:null,comboPreparing:false,comboActive:false,effectsActive:false,
   $:()=>({hidden:true}),
   document:{body:{classList:{contains:name=>classes.has(name),toggle(name,on){on?classes.add(name):classes.delete(name);}}}}
@@ -24,7 +24,7 @@ test('waiting rooms use the mobile game layout while moves remain locked until t
   [{joined:false,side:0},null,true,false,false],
   [null,null,false,false,false]
  ]){
-  context.online=online;context.state.result=result;
+  context.online=online;context.showTutorial=!online;context.state.result=result;
   vm.runInContext(`{${layout}}`,context);
   assert.equal(classes.has('game-active'),active);
   assert.equal(classes.has('game-ended'),ended);

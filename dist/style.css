@@ -608,6 +608,13 @@ html body.game-active .room-chat{max-width:540px;margin:6px auto 0}
 }
 
 /* Keep the game at its current scroll position while the mobile keyboard opens. */
+.game-controls{margin:0 0 22px}
+.game-controls .status{margin:0 0 12px}
+.game-action-buttons{display:flex;flex-wrap:wrap;gap:8px}
+.game-action-buttons .actions,.game-action-buttons .end-actions{display:flex;flex-wrap:wrap;gap:8px;margin:0}
+.game-action-buttons button{min-height:44px;font-size:14px;padding:10px 14px}
+.game-action-buttons #requestUndo{min-width:150px;font-variant-numeric:tabular-nums}
+.game-action-buttons #requestUndo:disabled{opacity:.6}
 .room-chat [data-done]{display:none}
 @media(max-width:700px){
  html.chat-composing{overflow:hidden;overscroll-behavior:none}

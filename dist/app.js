@@ -1,5 +1,5 @@
 import {initRoomChat} from './room-chat.js';
-import {initRoomRequests} from './room-requests.js';
+import {initRoomRequests,undoWaitSeconds} from './room-requests.js';
 import {initEffectsVolume} from './audio-settings.js';
 import {collapseSteps,initCollapseSlider} from './collapse-options.js';
 import {showChallengeCelebration} from './challenge-celebration.js';
@@ -32,7 +32,7 @@ import {initBuildInfo,initBoardPreview,shareInvitation,initRecordViewer} from '.
 import {createClockWarning} from './clock-warning.js';
 import {playClockWarning} from './sound.js';
 import {prepareMoveSound,playMoveSound,playTossShatterSound,playTossCutInSound,playMultiFlipSound,playResultSound,playApplauseSound,playArcadeCue,playHelperDeparture,playParadoxArrival} from './sound.js';
-import {initial,moves,movementTargets,label,pieceGlyph,names,points,beforeParadox} from './engine.js';
+import {initial,moves,movementTargets,label,pieceGlyph,names,beforeParadox} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const roomChat=initRoomChat();
 const roomRequests=initRoomRequests();
@@ -179,6 +179,13 @@ function renderHand(n){
   glyph.dataset.side=n;btn.onclick=()=>select(type);h.append(btn);
  }
 }
+function paintUndoButton(now=Date.now()+clockOffset){
+ const seconds=undoWaitSeconds(online,now),button=$('requestUndo');
+ const text=seconds?`待った（あと${seconds}秒）`:'待った';
+ if(button.textContent!==text)button.textContent=text;
+ button.title=!allowsTakeback(online)?'対オセショ様では待ったを使えません。':seconds?'待ったの申し込みは15秒に1回です。':'';
+ button.disabled=!allowsTakeback(online)||!online?.canUndo||busy||!connected||!!online?.undoOffer||seconds>0;
+}
 function render(){
  roomChat.update(online);
  const oseshoMatch=online?.kind==='ai'&&online.settings?.aiLevel==='osesho';
@@ -196,17 +203,19 @@ function render(){
  document.querySelector('.status').classList.toggle('home-message',homeNotice);
  if(homeNotice)$('matchTitle').after(statusPanel);
  else if(statusPanel.parentElement!==statusParent)statusParent.insertBefore(statusPanel,statusNext);
- for(const selector of ['.actions','.end-actions','.record'])document.querySelector(selector).hidden=showTutorial;
+ for(const selector of ['.actions','.end-actions'])document.querySelector(selector).hidden=showTutorial;
+ $('record').hidden=true;
 
  const perspective=online?.side??0;
  const ending=!!online&&!!state.result&&!collapseEffect&&!comboPreparing;
+ $('gameControls').hidden=showTutorial||ending;
  const enteringResult=ending&&!document.body.classList.contains('game-ended');
  document.body.classList.toggle('game-ended',ending);
  // Waiting rooms already show the board and need the same compact mobile layout.
  const playing=!!online&&!ending;
  document.body.classList.toggle('game-active',playing);
  const chatPanel=document.querySelector('.room-chat');
- const chatAnchor=document.querySelector(ending||(playing&&compactGameViewport.matches)?'.tabletop':'.actions');
+ const chatAnchor=document.querySelector(ending||(playing&&compactGameViewport.matches)?'.tabletop':'.game-controls');
  if(chatAnchor.nextElementSibling!==chatPanel)chatAnchor.after(chatPanel);
  if(ending&&chatPanel.nextElementSibling!==$('resultActions'))chatPanel.after($('resultActions'));
  if(enteringResult)requestAnimationFrame(()=>{if(document.body.classList.contains('game-ended'))window.scrollTo({top:0,behavior:'instant'});});
@@ -246,11 +255,11 @@ function render(){
  $('boardProgress').innerHTML=collapseAt!==null?`${collapseAt===0?state.ply+'手目':`終末まで ${state.ply}/${collapseAt}`}${state.ply>=collapseAt?' · <span class="paradox-active-label">盤面崩壊中</span>':''}${adjudicationLimit(state)===false?'':` ／ 決着まで ${Math.min(state.ply,adjudicationLimit(state))}/${adjudicationLimit(state)}`}`:adjudicationLimit(state)===false?`${state.ply}手目`:`決着まで ${Math.min(state.ply,adjudicationLimit(state))}/${adjudicationLimit(state)}`;
  $('boardProgress').title=collapseAt===0?'最初の1手から盤面崩壊が発動します':collapseAt!==null?`盤面崩壊までの手数（${collapseAt}手から開始）`:'';
  $('count').textContent='オセロ将棋';
- const scores=points(state);$('scores').hidden=!state.mode;$('scores').textContent=`盤上：先手 ${scores[0]}枚　／　後手 ${scores[1]}枚`;
+ $('scores').hidden=true;
  $('message').textContent=message.replaceAll('▲','●').replaceAll('▽','○');
+ $('message').hidden=!!online&&message===logs.at(-1);
  $('reset').hidden=!online;
- $('requestUndo').title=allowsTakeback(online)?'':'対オセショ様では待ったを使えません。';
- $('requestUndo').disabled=!allowsTakeback(online)||!online?.canUndo||busy||!connected||!!online?.undoOffer;
+ paintUndoButton();
  $('undoPanel').hidden=!online?.undoOffer;
  const undoMine=online?.undoOffer?.seat===(online?.seat??online?.side);
  $('undoText').textContent=online?.undoOffer?(undoMine?'待ったの承諾を待っています。':'相手が待ったを希望しています。')+' '+online.undoOffer.ply+'手終了時の盤面へ戻します。':'';
@@ -412,6 +421,7 @@ for(const id of ['chooseRules','openRulesAlways','openRulesSettings'])$(id).oncl
 const warnClock=createClockWarning(playClockWarning);
 setInterval(()=>{
  const now=Date.now()+clockOffset;
+ paintUndoButton(now);
  if(online?.local&&online.clock&&!busy&&!state.result&&clockBudget(online,state.turn,now)<=0){adopt(localAI.read(online.room));}
  for(const n of [0,1]){const el=$('clock'+n);if(!el)continue;el.hidden=!online?.clock||online.kind==='ai'&&n!==online.side;if(el.hidden)continue;const ms=Math.max(0,clockBudget(online,n,now)),secs=Math.ceil(ms/1000);el.textContent=(n===(online?.side??0)?'あなた ':'相手 ')+(Number.isFinite(secs)?Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0'):'制限なし')+(!state.result&&n===state.turn&&now<online.clock.since?' · 準備／演出中':'');el.classList.toggle('clock-active',n===state.turn&&!state.result);}
  warnClock({turnKey:online?`${online.room}:${online.round}:${state.ply}:${state.turn}`:null,remaining:online?.clock?clockBudget(online,online.side,now):Infinity,active:!!online?.clock&&online.joined&&!online.closed&&!state.result&&state.turn===online.side&&now>=online.clock.since&&$('furigoma').hidden,audible:!document.hidden});
