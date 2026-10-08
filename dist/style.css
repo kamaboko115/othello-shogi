@@ -566,8 +566,20 @@ html body.game-active .room-chat{max-width:540px;margin:6px auto 0}
 /* Size glyphs from their actual square, not from the phone's viewport width. */
 @media(max-width:700px){
  html body:is(.game-active,.game-ended) #board{container-type:inline-size}
- html body:is(.game-active,.game-ended) #board .piece{font-size:7.5cqw}
+ html body:is(.game-active,.game-ended) #board .piece{font-size:6cqw}
  html body:is(.game-active,.game-ended) .hand .hand-slot{container-type:inline-size}
  html body:is(.game-active,.game-ended) .hand .piece{width:85%;max-width:none;height:93%;font-size:min(23px,65cqw)}
  html body:is(.game-active,.game-ended) .hand .hand-slot.empty{font-size:min(18px,55cqw)}
 }
+/* A single input and a directly visible mute toggle. */
+.room-chat .chat-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px}
+.room-chat .chat-heading h3{display:block;margin:0;font-size:16px}
+.room-chat .chat-mute{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:13px}
+.room-chat form{margin:0}
+.room-chat [data-status]:empty{display:none}
+.room-chat [data-input][readonly]{cursor:text}
+@media(min-width:701px){.room-chat form label{font-size:14px!important}}
+.room-request-actions{margin-top:8px;padding:10px;border:2px solid var(--color-accent,#277659);border-radius:6px;background:var(--color-surface,#fff);color:var(--color-ink,#18231d)}
+.room-request-actions p{margin:0 0 8px;font-size:14px;font-weight:700}
+.room-request-actions button{margin-right:8px}
+.room-request-stream .room-request-flying{color:#ffe38a}

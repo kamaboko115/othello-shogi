@@ -1,4 +1,5 @@
 import {initRoomChat} from './room-chat.js';
+import {initRoomRequests} from './room-requests.js';
 import {initEffectsVolume} from './audio-settings.js';
 import {collapseSteps,initCollapseSlider} from './collapse-options.js';
 import {showChallengeCelebration} from './challenge-celebration.js';
@@ -34,6 +35,7 @@ import {prepareMoveSound,playMoveSound,playTossShatterSound,playTossCutInSound,p
 import {initial,moves,movementTargets,label,pieceGlyph,names,points,beforeParadox} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const roomChat=initRoomChat();
+const roomRequests=initRoomRequests();
 const compactGameViewport=matchMedia('(max-width:700px)');
 compactGameViewport.addEventListener('change',()=>render());
 // Reserve the toolbar's actual height, including rematch prompts and safe areas.
@@ -294,6 +296,7 @@ function render(){
  if(!online)$('furigoma').hidden=true;
  if(online?.joined&&online.toss){const key=online.room+':'+online.round;if(lastTossKey!==key){lastTossKey=key;if(tossHistory.claim(key,online.state.ply>0||!!online.state.result))presentToss({toss:online.toss,playerSide:online.side,dialog:$('furigoma'),coins:$('tossCoins'),result:$('tossResult'),banner:$('tossSide'),cutin:$('tossCutIn'),close:$('closeToss'),onShatter:playTossShatterSound,onCutIn:playTossCutInSound,isCurrent:()=>lastTossKey===key&&online?.room+':'+online?.round===key});else $('furigoma').hidden=true;}}
 
+ roomRequests.update(online,busy||!connected);
  paintLastCollapse();syncAI();
 }
 function interruptMoveEffects(){
