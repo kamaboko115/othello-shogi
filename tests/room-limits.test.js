@@ -134,7 +134,7 @@ execFileSync(process.execPath,['build.mjs'],{cwd:new URL('..',import.meta.url),s
 const compiled=await import('../dist/server/index.js');
 const worker=compiled.default;
 test('公開Workerはヘルパー定数をエントリーポイントとして公開しない',()=>{
- assert.deepEqual(Object.keys(compiled),['default']);
+ assert.deepEqual(Object.keys(compiled),['RoomChat','default']);
 });
 test('公開WorkerはCloudflareのIPで制限・転送ヘッダーを信用せず未設定時は作成を拒否',async()=>{
  const db=localDB();try{

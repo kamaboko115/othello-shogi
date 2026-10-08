@@ -1,3 +1,4 @@
+import {attachLocalChat} from './worker/local-chat.js';
 import {writeBuildInfo,injectBuildInfo} from './scripts/build-info.mjs';
 import http from 'node:http';import {readFile,mkdir} from 'node:fs/promises';import path from 'node:path';
 import {api,cleanupRooms} from './worker/api.js';import {localDB,localRoomBurstLimiter} from './worker/local-db.js';
@@ -33,4 +34,4 @@ const server=http.createServer(async(req,res)=>{try{
   res.writeHead(result.status,Object.fromEntries(result.headers));res.end(await result.text());return;
  }
  let file=path.resolve(root,'.'+(url.pathname==='/'?'/index.html':decodeURIComponent(url.pathname)));if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}let data=await readFile(file);if(file===path.join(root,'index.html')){const info=JSON.parse(await readFile('.sites-runtime/build-info.json','utf8'));data=Buffer.from(injectBuildInfo(data.toString('utf8'),info));}res.setHeader('Content-Type',({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.mp3':'audio/mpeg','.xml':'application/xml; charset=utf-8','.txt':'text/plain; charset=utf-8'})[path.extname(file)]||'application/octet-stream');res.setHeader('Cache-Control','no-store');res.end(data);
- }catch{res.writeHead(404);res.end('Not found');}});const port=Number(process.env.PORT)||4173;server.listen(port,process.env.HOST||'127.0.0.1',()=>console.log('http://127.0.0.1:'+port));
+ }catch{res.writeHead(404);res.end('Not found');}});attachLocalChat(server,DB);const port=Number(process.env.PORT)||4173;server.listen(port,process.env.HOST||'127.0.0.1',()=>console.log('http://127.0.0.1:'+port));

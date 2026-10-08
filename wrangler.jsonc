@@ -22,6 +22,8 @@
       "simple": { "limit": 60, "period": 60 }
     }
   ],
+  "durable_objects": { "bindings": [{ "name": "ROOM_CHAT", "class_name": "RoomChat" }] },
+  "migrations": [{ "tag": "room-chat-v1", "new_sqlite_classes": ["RoomChat"] }],
   "triggers": { "crons": ["*/5 * * * *", "0 * * * *"] },
   "d1_databases": [
     {

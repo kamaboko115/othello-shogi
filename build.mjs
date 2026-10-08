@@ -55,7 +55,8 @@ export default {
 // (including numeric constants) must remain internal to the bundled Worker.
 const replaySource=(await readFile('dist/replay-code.js','utf8')).replace(/^import .*;\r?\n/gm,'');
 const helpers=[engine,(await readFile('dist/match-storage.js','utf8')),(await readFile('dist/collapse-options.js','utf8')),(await readFile('dist/challenge-options.js','utf8')).replace(/^import .*;\r?\n/gm,''),replaySource,(await readFile('dist/match-options.js','utf8')).replace(/^import .*;\r?\n/gm,''),securitySource,limitsSource,(await readFile('worker/challenge-wins.js','utf8')),(await readFile('worker/challenge-verification.js','utf8')).replace(/^import .*;\r?\n/gm,''),apiSource].join('\n').replace(/^export /gm,'');
-const worker=helpers+'\n'+actionLimitSource.replace(/^export /gm,'')+'\nconst assets='+JSON.stringify(assets)+';\nconst binary='+JSON.stringify(binary)+';\nconst etags='+JSON.stringify(etags)+';\n'+staticWorker;
+const chatSource=(await readFile('worker/chat.js','utf8')).replace(/^import .*;\r?\n/gm,'').replace(/^export (?!class RoomChat)/gm,'');
+const worker=chatSource+'\n'+helpers+'\n'+actionLimitSource.replace(/^export /gm,'')+'\nconst assets='+JSON.stringify(assets)+';\nconst binary='+JSON.stringify(binary)+';\nconst etags='+JSON.stringify(etags)+';\n'+staticWorker;
 // Tests and preview builds can run concurrently. Readers must never see a
 // truncated module while another build is replacing the same entrypoint.
 async function writeWorker(path){
