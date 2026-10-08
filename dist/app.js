@@ -196,7 +196,9 @@ function render(){
 
  const perspective=online?.side??0;
  const ending=!!online&&!!state.result&&!collapseEffect&&!comboPreparing;
+ const enteringResult=ending&&!document.body.classList.contains('game-ended');
  document.body.classList.toggle('game-ended',ending);
+ if(enteringResult)requestAnimationFrame(()=>{if(document.body.classList.contains('game-ended'))window.scrollTo({top:0,behavior:'instant'});});
  $('resultHeading').hidden=$('resultActions').hidden=!ending;
  const resultInfo=ending?resultView(state,perspective):null;
  if(ending){winAds.counter.record({...online,state});showChallengeVictory({...online,state});}else{$('challengeVictory').hidden=true;$('retryChallengeWin').hidden=true;}
