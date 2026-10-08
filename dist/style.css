@@ -443,3 +443,8 @@ html:has(.toss-cutin:not([hidden])){overflow-x:clip}
 
 /* Keep scrolling and pinch zoom while preventing accidental double-tap zoom. */
 html,button,a,input,select,summary,.piece{touch-action:manipulation}
+
+/* Keep the post-game choices visible without scrolling past the board. */
+body.game-ended{padding-bottom:calc(var(--result-actions-height,160px) + 24px)}
+.game-ended #resultActions{position:fixed;z-index:100;left:50%;bottom:0;transform:translateX(-50%);width:calc(100% - 24px);max-width:760px;box-sizing:border-box;margin:0;padding:12px 12px calc(12px + env(safe-area-inset-bottom,0px));grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;background:var(--color-surface,#112c2b);color:var(--color-ink,#eddfb4);border:1px solid var(--color-rule,#69806d);border-bottom:0;border-radius:12px 12px 0 0;box-shadow:0 -4px 16px #0002;max-height:45svh;overflow-y:auto}
+.game-ended #resultActions button{min-height:44px;font-size:14px;padding:8px;line-height:1.4}

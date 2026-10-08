@@ -34,6 +34,11 @@ import {prepareMoveSound,playMoveSound,playTossShatterSound,playTossCutInSound,p
 import {initial,moves,movementTargets,label,pieceGlyph,names,points,beforeParadox} from './engine.js';
 const $=id=>document.getElementById(id),side=n=>n===0?'先手':'後手',coord=i=>`${9-i%9}${'一二三四五六七八九'[Math.floor(i/9)]}`;
 const roomChat=initRoomChat();
+// Reserve the toolbar's actual height, including rematch prompts and safe areas.
+new ResizeObserver(([entry])=>{
+ const height=entry.target.getBoundingClientRect().height;
+ document.documentElement.style.setProperty('--result-actions-height',height+'px');
+}).observe($('resultActions'));
 const localAI=createLocalAIStore();
 const challengeWins=createChallengeWins();
 let challengeCountShown=false,challengeReportKey='';
