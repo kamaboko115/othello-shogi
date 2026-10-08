@@ -598,3 +598,11 @@ html body.game-active .room-chat{max-width:540px;margin:6px auto 0}
  #resultTitleRow #rematchPanel button{font-size:12px;padding:6px 8px}
  #resultTitleRow #rematchPanel{max-width:52%}
 }
+
+/* Match the occupied hand-piece footprint and lettering to its dashed slot. */
+@media(max-width:700px){
+ html body:is(.game-active,.game-ended) .hand .hand-slot{border:1px dashed #8d693d}
+ html body:is(.game-active,.game-ended) .hand .piece{width:100%;height:100%;max-width:none;padding-top:0;font-size:min(18px,55cqw);line-height:1;clip-path:none;border-radius:5px}
+ html body:is(.game-active,.game-ended) .hand .slot-label{font-size:min(18px,55cqw);line-height:1}
+ html body:is(.game-active,.game-ended) .hand-count{right:0;bottom:0;font-size:10px;line-height:1.1;padding:0 2px;pointer-events:none}
+}
