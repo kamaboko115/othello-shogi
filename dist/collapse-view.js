@@ -1,4 +1,4 @@
-import {label,arrivals,paradoxSummary} from './engine.js';
+import {label,pieceGlyph,arrivals,paradoxSummary} from './engine.js';
 
 export function paintParadoxEvent(board,state){
  board.querySelectorAll('.paradox-event-marker').forEach(el=>el.remove());
@@ -55,7 +55,7 @@ export function paintCollapse(board,destroyed,{perspective=0,phase='ash',eventKe
  cell.setAttribute('aria-label',(cell.getAttribute('aria-label')||'')+'（直前の崩壊で'+name+'が消滅）');
  const add=(className)=>{const el=document.createElement('span');el.className='collapse-marker '+className;el.setAttribute('aria-hidden','true');cell.append(el);return el;};
  if(phase!=='ash'){
-  const ghost=add('piece paradox-ghost'+(destroyed.piece.side!==perspective?' enemy':'')+(phase==='breaking'?' paradox-breaking':''));ghost.textContent=name;
+  const ghost=add('piece paradox-ghost'+(destroyed.piece.side!==perspective?' enemy':'')+(destroyed.piece.prom?' prom':'')+(phase==='breaking'?' paradox-breaking':''));ghost.dataset.side=destroyed.piece.side;ghost.textContent=pieceGlyph(destroyed.piece);
  }
  if(phase==='breaking')add('collapse-lightning');
  if(phase==='ash'){

@@ -51,3 +51,16 @@ test('灰は破壊から1.7秒で消え、定期更新・再描画で復活し�
  assert.ok(cells.get(4).children.length>0,'次の破壊は新しく表示する');
  t.mock.timers.tick(1700);assert.equal(cells.get(4).children.length,0);
 });
+
+test('破壊待機・落雷中も成り駒の一文字表記と色・陣営を維持する',()=>{
+ for(const side of [0,1])for(const perspective of [0,1])for(const [type,glyph]of [['L','杏'],['N','圭'],['S','全'],['P','と'],['R','龍'],['B','馬']]){
+  const {board,cells}=boardView(),destroyed={square:4,piece:{type,side,prom:true}};
+  for(const phase of ['waiting','breaking']){
+   paintCollapse(board,destroyed,{perspective,phase});
+   const ghost=cells.get(4).children.find(el=>el.className.includes('paradox-ghost'));
+   assert.equal(ghost.textContent,glyph);assert.ok(ghost.className.split(' ').includes('prom'));
+   assert.equal(Number(ghost.dataset.side),side);assert.equal(ghost.className.split(' ').includes('enemy'),side!==perspective);
+  }
+  paintCollapse(board,null);
+ }
+});
